@@ -1,5 +1,7 @@
 #!/usr/bin/env bun
 
-import { run } from "./frontend";
+import { runInit } from "./commands/init/handler.js";
 
-run();
+// Simple routing for now since we don't have commander yet
+// In future: parse argv
+runInit();
