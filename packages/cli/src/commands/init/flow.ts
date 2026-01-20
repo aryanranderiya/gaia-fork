@@ -81,11 +81,17 @@ export async function runInitFlow(store: CLIStore) {
     store.setStep('Repository Setup');
     store.setStatus('Preparing repository...');
     store.updateData('repoProgress', 0);
+    store.updateData('repoPhase', '');
 
     try {
-        await git.setupRepo(repoPath, 'https://github.com/theexperiencecompany/gaia.git', (progress) => {
+        await git.setupRepo(repoPath, 'https://github.com/theexperiencecompany/gaia.git', (progress, phase) => {
             store.updateData('repoProgress', progress);
-            store.setStatus(`Cloning repository to ${repoPath}... ${progress}%`);
+            if (phase) {
+                store.updateData('repoPhase', phase);
+                store.setStatus(`${phase}...`);
+            } else {
+                store.setStatus(`Cloning repository to ${repoPath}... ${progress}%`);
+            }
         });
         store.setStatus('Repository ready!');
     } catch (e) {
