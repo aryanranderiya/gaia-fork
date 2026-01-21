@@ -36,6 +36,15 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     store.setStatus('Waiting for user input...');
     await store.waitForInput('welcome');
 
+    const logHandler = (chunk: string) => {
+        const currentLogs = store.currentState.data.dependencyLogs || [];
+        // Split chunk into lines and clean up empty lines
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+        // Keep only the last 10 lines
+        const newLogs = [...currentLogs, ...lines].slice(-10);
+        store.updateData('dependencyLogs', newLogs);
+    };
+
     
     // 1. Prerequisites
     store.setStep('Prerequisites');
@@ -70,6 +79,18 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
         const installed = await prereqs.installMise();
         miseStatus = installed ? 'success' : 'error';
         store.updateData('checks', { ...store.currentState.data.checks, mise: miseStatus });
+    }
+
+    // Check Ports (only if not in dev mode or explicitly requested)
+    store.setStatus('Checking Ports...');
+    // Ports: API(8000), Postgres(5432), Redis(6379), Mongo(27017), RabbitMQ(5672), Web(3000)
+    // For selfhost, we need these ports free on the host to bind containers/run web
+    const requiredPorts = [8000, 5432, 6379, 27017, 5672, 3000];
+    const { available: portsAvailable, conflict } = await prereqs.checkPorts(requiredPorts);
+    
+    if (!portsAvailable) {
+        store.setError(new Error(`Port ${conflict} is in use. Please free this port to continue.`));
+        return;
     }
 
     if (gitStatus === 'error' || dockerStatus === 'error' || miseStatus === 'error') {
@@ -148,6 +169,35 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
             store.setError(e as Error);
             return;
         }
+    }
+
+    await delay(1000);
+
+    // 2.5 Install Tools (Check & Install Mise Tools)
+    // We do this BEFORE environment setup so we have python available for parsing settings
+    store.setStep('Install Tools');
+    store.setStatus('Installing toolchain...');
+    store.updateData('dependencyPhase', 'Initializing mise...');
+    store.updateData('dependencyProgress', 0);
+    store.updateData('dependencyLogs', []);
+    
+    try {
+        // Trust mise config
+        store.updateData('dependencyPhase', 'Trusting mise configuration...');
+        await runCommand('mise', ['trust'], repoPath, undefined, logHandler);
+        store.updateData('dependencyProgress', 50);
+        
+        // Install mise tools (node, python, uv, nx, etc.)
+        store.updateData('dependencyPhase', 'Installing tools (node, python, uv, nx)...');
+        await runCommand('mise', ['install'], repoPath, (progress) => {
+            store.updateData('dependencyProgress', 50 + progress * 0.5);
+        }, logHandler);
+        
+        store.updateData('dependencyProgress', 100);
+        store.updateData('toolComplete', true); 
+    } catch (e) {
+        store.setError(new Error(`Failed to install tools: ${(e as Error).message}`));
+        return;
     }
 
     await delay(1000);
@@ -231,7 +281,7 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
         let categories: envParser.EnvCategory[];
         try {
             console.error('DEBUG repoPath:', repoPath);
-            categories = envParser.parseSettings(repoPath);
+            categories = await envParser.parseSettings(repoPath);
             console.error('DEBUG BEFORE applyModeDefaults:', categories.filter(c => c.alternativeGroup).map(c => ({ name: c.name, alt: c.alternativeGroup })));
             // Apply mode-specific defaults
             categories = envParser.applyModeDefaults(categories, setupMode);
@@ -409,38 +459,32 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
         await delay(1000);
     } // End of manual setup else block
 
-    // 4. Install Dependencies via mise setup
-    store.setStep('Dependencies');
-    store.updateData('dependencyPhase', 'Initializing mise...');
+    // 4. Project Setup (Dependencies: Mise Setup)
+    store.setStep('Project Setup');
+    store.updateData('dependencyPhase', 'Setting up project...');
     store.updateData('dependencyProgress', 0);
     store.updateData('dependencyComplete', false);
     store.updateData('repoPath', repoPath);
+    store.updateData('dependencyLogs', []);
+
+    // logHandler is defined at the top
 
     try {
-        // Trust mise config
-        store.updateData('dependencyPhase', 'Trusting mise configuration...');
-        await runCommand('mise', ['trust'], repoPath);
-        store.updateData('dependencyProgress', 10);
+        // We already did 'trust' and 'install' in step 2.5
         
-        // Install mise tools (node, python, uv, nx, etc.)
-        store.updateData('dependencyPhase', 'Installing tools (node, python, uv, nx)...');
-        await runCommand('mise', ['install'], repoPath, (progress) => {
-            store.updateData('dependencyProgress', 10 + progress * 0.3); // 10-40%
-        });
-        
-        store.updateData('dependencyProgress', 40);
+        store.updateData('dependencyProgress', 0);
         store.updateData('dependencyPhase', 'Running mise setup (all dependencies)...');
         
         // Run mise setup - handles pnpm install, uv sync, Docker, seeding
         await runCommand('mise', ['setup'], repoPath, (progress) => {
-            store.updateData('dependencyProgress', 40 + progress * 0.6); // 40-100%
-        });
+            store.updateData('dependencyProgress', progress);
+        }, logHandler);
         
         store.updateData('dependencyProgress', 100);
         store.updateData('dependencyPhase', 'Setup complete!');
         store.updateData('dependencyComplete', true);
     } catch (e) {
-        store.setError(new Error(`Failed to install dependencies: ${(e as Error).message}`));
+        store.setError(new Error(`Failed to setup project: ${(e as Error).message}`));
         return;
     }
 
@@ -458,13 +502,29 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
         
         try {
             if (setupMode === 'selfhost') {
-                // Self-host mode: Use mise dev:full to start everything
-                // This starts: Docker services + API + web + arq worker + voice agent
-                store.setStatus('Starting all services (mise dev:full)...');
-                await runCommand('mise', ['dev:full'], repoPath);
+                // Self-host mode: 
+                // 1. Run Backend Stack in Docker (API + DBs + Workers)
+                store.setStatus('Starting backend stack (Docker)...');
+                await runCommand('docker', ['compose', '--profile', 'all', 'up', '-d', '--remove-orphans'], path.join(repoPath, 'infra/docker'));
+                
+                // 2. Build Web Frontend (Locally)
+                store.setStatus('Building web frontend...');
+                await runCommand('nx', ['build', 'web'], repoPath);
+
+                // 3. Start Web Frontend (Locally)
+                store.setStatus('Starting web frontend...');
+                const { spawn } = await import('child_process');
+                const webLog = fs.openSync(path.join(repoPath, 'web-start.log'), 'a');
+                spawn('nx', ['next:start', 'web'], {
+                    cwd: repoPath,
+                    stdio: ['ignore', webLog, webLog],
+                    detached: true,
+                    shell: true
+                }).unref();
+                
                 store.setStatus('All services started!');
             } else {
-                // Developer mode: Use mise dev (starts Docker + API + web)
+                // Developer mode: Use mise dev (starts Docker DBs + local API + local Web)
                 store.setStatus('Starting development servers (mise dev)...');
                 await runCommand('mise', ['dev'], repoPath);
             }
@@ -484,6 +544,25 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
         await store.waitForInput('manual_commands');
     }
 
+    // 6. Health Checks (Post-Start)
+    if (startChoice === 'start') {
+         store.setStatus('Verifying deployment...');
+         const apiHealth = await checkUrl('http://localhost:8000/health');
+         const webHealth = await checkUrl('http://localhost:3000');
+         
+         if (!apiHealth || !webHealth) {
+             store.setError(new Error(`Verification failed. API: ${apiHealth ? 'OK' : 'FAIL'}, Web: ${webHealth ? 'OK' : 'FAIL'}. Check logs.`));
+             // Don't return, just warn? returning blocks "Finished" screen.
+             // store.setError implies block.
+             // Maybe just set status?
+             store.setStatus(`Warning: Services might not be ready. API: ${apiHealth ? 'UP' : 'DOWN'}, Web: ${webHealth ? 'UP' : 'DOWN'}`);
+             await delay(3000);
+         } else {
+             store.setStatus('All systems operational! ✅');
+             await delay(1500);
+         }
+    }
+
     // Exit
     store.setStep('Finished');
     store.setStatus('Setup complete!');
@@ -500,7 +579,8 @@ async function runCommand(
     cmd: string, 
     args: string[], 
     cwd: string,
-    onProgress?: (progress: number) => void
+    onProgress?: (progress: number) => void,
+    onLog?: (chunk: string) => void
 ): Promise<void> {
     const { spawn } = await import('child_process');
     
@@ -515,14 +595,18 @@ async function runCommand(
         let progress = 0;
         
         proc.stdout?.on('data', (data) => {
-            output += data.toString();
+            const chunk = data.toString();
+            output += chunk;
+            onLog?.(chunk);
             // Estimate progress based on output length
             progress = Math.min(progress + 5, 95);
             onProgress?.(progress);
         });
         
         proc.stderr?.on('data', (data) => {
-            output += data.toString();
+            const chunk = data.toString();
+            output += chunk;
+            onLog?.(chunk);
         });
         
         proc.on('close', (code) => {
@@ -538,4 +622,22 @@ async function runCommand(
             reject(err);
         });
     });
+}
+
+/**
+ * Checks if a URL is reachable.
+ * @param url - URL to check
+ * @param retries - Number of retries (default 30 ~ 30 seconds)
+ */
+async function checkUrl(url: string, retries = 30): Promise<boolean> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const res = await fetch(url);
+            if (res.ok) return true;
+        } catch {
+            // ignore
+        }
+        await delay(1000);
+    }
+    return false;
 }

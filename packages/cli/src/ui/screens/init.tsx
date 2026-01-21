@@ -145,7 +145,9 @@ const DependencyInstallStep: React.FC<{
   phase: string;
   progress: number;
   isComplete: boolean;
-}> = ({ phase, progress, isComplete }) => {
+  logs?: string[];
+  title?: string;
+}> = ({ phase, progress, isComplete, logs, title }) => {
   return (
     <Box
       flexDirection="column"
@@ -156,7 +158,7 @@ const DependencyInstallStep: React.FC<{
     >
       <Box marginBottom={1}>
         <Text bold color={THEME_COLOR}>
-          Installing Dependencies
+          {title || "Installing Dependencies"}
         </Text>
       </Box>
 
@@ -171,6 +173,23 @@ const DependencyInstallStep: React.FC<{
         {!isComplete && progress > 0 && (
           <Box width={50}>
             <ProgressBar value={progress} />
+          </Box>
+        )}
+
+        {/* Logs Window */}
+        {!isComplete && logs && logs.length > 0 && (
+          <Box
+            flexDirection="column"
+            marginTop={1}
+            borderStyle="single"
+            borderColor="gray"
+            paddingX={1}
+            paddingY={0}
+            minHeight={6}
+          >
+            {logs.map((log, i) => (
+              <Text key={i} color="gray" wrap="truncate">{log}</Text>
+            ))}
           </Box>
         )}
       </Box>
@@ -240,11 +259,17 @@ const StartServicesStep: React.FC<{
         borderColor="gray"
       >
         <Text dimColor>Command that will run:</Text>
-        <Text color="cyan">$ cd {repoPath}</Text>
         {setupMode === "selfhost" ? (
-          <Text color="cyan">$ mise dev:full</Text>
+          <Box flexDirection="column">
+            <Text color="cyan">$ docker compose --profile all up -d</Text>
+            <Text color="cyan">$ nx build web</Text>
+            <Text color="cyan">$ nx start web</Text>
+          </Box>
         ) : (
-          <Text color="cyan">$ mise dev</Text>
+            <Box flexDirection="column">
+              <Text color="cyan">$ cd {repoPath}</Text>
+              <Text color="cyan">$ mise dev</Text>
+            </Box>
         )}
       </Box>
 
@@ -359,23 +384,30 @@ const ManualCommandsStep: React.FC<{
         borderStyle="single"
         borderColor="gray"
       >
-        <Text color="cyan">$ cd {repoPath}</Text>
         {setupMode === "selfhost" ? (
-          <Text color="cyan">$ mise dev:full</Text>
+          <Box flexDirection="column">
+            <Text color="cyan">$ docker compose --profile all up -d</Text>
+            <Text color="cyan">$ nx build web</Text>
+            <Text color="cyan">$ nx start web</Text>
+          </Box>
         ) : (
-          <Text color="cyan">$ mise dev</Text>
+            <Box flexDirection="column">
+              <Text color="cyan">$ cd {repoPath}</Text>
+              <Text color="cyan">$ mise dev</Text>
+            </Box>
         )}
       </Box>
 
       <Box marginTop={1} flexDirection="column">
         <Text dimColor>Other useful commands:</Text>
-        <Text color="gray">
-          {" "}
-          mise dev:full - API + web + workers + voice agent
-        </Text>
-        <Text color="gray"> mise dev - API + web only</Text>
-        <Text color="gray"> mise dev:api - API only</Text>
-        <Text color="gray"> mise dev:web - Web only</Text>
+        {setupMode === "selfhost" ? (
+          <Text color="gray"> docker compose logs -f - View backend logs</Text>
+        ) : (
+          <>
+            <Text color="gray"> mise dev:full - Run everything locally</Text>
+            <Text color="gray"> mise dev - API + web only</Text>
+          </>
+        )}
       </Box>
 
       <Box marginTop={1}>
@@ -1429,11 +1461,13 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         <FinishedStep onConfirm={() => store.submitInput(true)} />
       )}
 
-      {state.step === "Dependencies" && (
+      {(state.step === "Install Tools" || state.step === "Project Setup") && (
         <DependencyInstallStep
+          title={state.step === "Install Tools" ? "Installing Tools" : "Project Setup"}
           phase={state.data.dependencyPhase || ""}
           progress={state.data.dependencyProgress || 0}
           isComplete={state.data.dependencyComplete || false}
+          logs={state.data.dependencyLogs || []}
         />
       )}
 

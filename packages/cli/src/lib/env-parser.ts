@@ -7,6 +7,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execa } from 'execa';
 
 /** Setup mode for the application - affects default infrastructure URLs */
 export type SetupMode = 'selfhost' | 'developer';
@@ -57,15 +58,7 @@ export interface EnvCategory {
  * Variables that are required in DevelopmentSettings (non-Optional fields in CommonSettings)
  * These are parsed from settings.py - fields without Optional[] type annotation
  */
-const REQUIRED_IN_DEV: Set<string> = new Set([
-  'MONGO_DB',
-  'REDIS_URL',
-  'POSTGRES_URL',
-  'RABBITMQ_URL',
-  'WORKOS_API_KEY',
-  'WORKOS_CLIENT_ID',
-  'WORKOS_COOKIE_PASSWORD',
-]);
+// REQUIRED_IN_DEV set removed as it is now determined dynamically by the python script
 
 /**
  * Default values for infrastructure services based on setup mode
@@ -110,132 +103,33 @@ export function getDefaultValue(varName: string, mode: SetupMode): string | unde
 }
 
 /**
- * Parses settings_validator.py and extracts all SettingsGroup definitions.
- * This is the main entry point for reading environment variable configuration
- * from the Python backend.
+ * Parses settings_validator.py and settings.py by running a Python script.
+ * This ensures strict adherence to the backend's actual configuration logic.
  * @param repoPath - Path to the repository root
  * @returns Array of environment categories with their variables
- * @throws Error if settings_validator.py is not found
  */
-export function parseSettingsValidator(repoPath: string): EnvCategory[] {
+export async function parseSettings(repoPath: string): Promise<EnvCategory[]> {
+  const scriptPath = path.join(repoPath, 'apps/api/scripts/dump_config_schema.py');
   const validatorPath = path.join(repoPath, 'apps/api/app/config/settings_validator.py');
+  const settingsPath = path.join(repoPath, 'apps/api/app/config/settings.py');
   
-  if (!fs.existsSync(validatorPath)) {
-    throw new Error('settings_validator.py not found');
+  if (!fs.existsSync(scriptPath)) {
+    throw new Error('dump_config_schema.py not found in apps/api/scripts');
   }
 
-  const content = fs.readFileSync(validatorPath, 'utf-8');
-  const categories: EnvCategory[] = [];
-  
-  // Match SettingsGroup constructor calls
-  // Pattern: SettingsGroup(name="...", keys=[...], description="...", affected_features="...", ...)
-  const groupRegex = /self\.register_group\(\s*SettingsGroup\(\s*([\s\S]*?)\s*\)\s*\)/g;
-  
-  let match = groupRegex.exec(content);
-  while (match !== null) {
-    const groupContent = match[1];
-    if (!groupContent) {
-      match = groupRegex.exec(content);
-      continue;
-    }
-    
-    // Extract fields from the group
-    const name = extractStringField(groupContent, 'name');
-    const keys = extractListField(groupContent, 'keys');
-    const description = extractStringField(groupContent, 'description');
-    const affectedFeatures = extractStringField(groupContent, 'affected_features');
-    const requiredInProd = extractBoolField(groupContent, 'required_in_prod', true);
-    const allRequired = extractBoolField(groupContent, 'all_required', true);
-    const docsUrl = extractStringField(groupContent, 'docs_url') || undefined;
-    const alternativeGroup = extractStringField(groupContent, 'alternative_group') || undefined;
-    
-    if (name && keys.length > 0) {
-      const variables: EnvVar[] = keys.map(key => ({
-        name: key,
-        // Use development settings - only truly required if in REQUIRED_IN_DEV set
-        required: REQUIRED_IN_DEV.has(key),
-        category: name,
-        description: description || `Configuration for ${name}`,
-        affectedFeatures: affectedFeatures || '',
-        docsUrl,
-      }));
-      
-      categories.push({
-        name,
-        description: description || '',
-        affectedFeatures: affectedFeatures || '',
-        requiredInProd,
-        allRequired,
-        docsUrl,
-        alternativeGroup,
-        variables,
-      });
-    }
-    
-    match = groupRegex.exec(content);
+  try {
+     // Try running with python3 first
+     try {
+        const { stdout } = await execa('python3', [scriptPath, validatorPath, settingsPath], { cwd: repoPath });
+        return JSON.parse(stdout);
+     } catch {
+        // Fallback to 'python' (some systems like Windows or older Linux)
+        const { stdout } = await execa('python', [scriptPath, validatorPath, settingsPath], { cwd: repoPath });
+        return JSON.parse(stdout);
+     }
+  } catch (e) {
+    throw new Error(`Failed to parse settings schema: ${(e as Error).message}. Ensure python is installed.`);
   }
-  
-  return categories;
-}
-
-/**
- * Extracts a string field value from a Python SettingsGroup constructor call.
- * @param content - The raw content of the SettingsGroup constructor
- * @param fieldName - The name of the field to extract (e.g., "name", "description")
- * @returns The extracted string value, or empty string if not found
- * @example
- * // For content like: name="OpenAI Integration"
- * extractStringField(content, 'name') // returns "OpenAI Integration"
- */
-function extractStringField(content: string, fieldName: string): string {
-  // Match both single and double quotes, and handle multi-line strings
-  const regex = new RegExp(`${fieldName}\\s*=\\s*["']([^"']*?)["']`, 's');
-  const match = content.match(regex);
-  return match?.[1] || '';
-}
-
-/**
- * Extracts a list field value from a Python SettingsGroup constructor call.
- * @param content - The raw content of the SettingsGroup constructor
- * @param fieldName - The name of the list field to extract (e.g., "keys")
- * @returns Array of string values from the list, or empty array if not found
- * @example
- * // For content like: keys=["OPENAI_API_KEY", "OPENAI_ORG_ID"]
- * extractListField(content, 'keys') // returns ["OPENAI_API_KEY", "OPENAI_ORG_ID"]
- */
-function extractListField(content: string, fieldName: string): string[] {
-  const regex = new RegExp(`${fieldName}\\s*=\\s*\\[([^\\]]*?)\\]`, 's');
-  const match = content.match(regex);
-  if (!match?.[1]) return [];
-  
-  // Parse the list items (quoted strings)
-  const items: string[] = [];
-  const itemRegex = /["']([^"']+)["']/g;
-  let itemMatch = itemRegex.exec(match[1]);
-  while (itemMatch !== null) {
-    if (itemMatch[1]) {
-      items.push(itemMatch[1]);
-    }
-    itemMatch = itemRegex.exec(match[1]);
-  }
-  return items;
-}
-
-/**
- * Extracts a boolean field value from a Python SettingsGroup constructor call.
- * @param content - The raw content of the SettingsGroup constructor
- * @param fieldName - The name of the boolean field to extract
- * @param defaultValue - Default value to return if field is not found
- * @returns The extracted boolean value, or defaultValue if not found
- * @example
- * // For content like: required_in_prod=False
- * extractBoolField(content, 'required_in_prod', true) // returns false
- */
-function extractBoolField(content: string, fieldName: string, defaultValue: boolean): boolean {
-  const regex = new RegExp(`${fieldName}\\s*=\\s*(True|False)`, 'i');
-  const match = content.match(regex);
-  if (!match?.[1]) return defaultValue;
-  return match[1].toLowerCase() === 'true';
 }
 
 /**
@@ -321,5 +215,5 @@ export function isCategorySatisfied(
   return alternative ? configuredCategories.has(alternative) : false;
 }
 
-/** @deprecated Use parseSettingsValidator instead */
-export const parseSettings = parseSettingsValidator;
+// parseSettingsValidator name is deprecated, kept for safety refactoring but not used.
+// export const parseSettings = parseSettingsValidator; // Removed

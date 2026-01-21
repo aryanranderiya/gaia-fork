@@ -1,5 +1,9 @@
 """Validate presence of env-backed settings, grouped by feature.
 
+WARNING: This file is parsed by the GAIA CLI (packages/cli/src/lib/env-parser.ts) using regex.
+Any changes to the structure of SettingsGroup or how groups are registered MUST be reflected in the CLI parser.
+If you change the syntax, please update the CLI parser accordingly.
+
 Why
 - Make missing config obvious with actionable logs.
 
