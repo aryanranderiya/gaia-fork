@@ -31,4 +31,3 @@ ${SITEMAP_IDS.map(
     },
   });
 }
-

@@ -1,18 +1,15 @@
 import Link from "next/link";
 
-import { Github } from "@/components";
 import ShinyText from "@/components/ui/shimmering-chip";
-import { useLatestRelease } from "@/hooks/useLatestRelease";
-import { ChevronRight } from "@/icons";
 import { MotionContainer } from "@/layouts/MotionContainer";
 
 import GetStartedButton from "../shared/GetStartedButton";
 import { SplitTextBlur } from "./SplitTextBlur";
 
 export default function HeroSection() {
-  const { data: release, isLoading: isReleaseLoading } = useLatestRelease(
-    "theexperiencecompany/gaia",
-  );
+  // const { data: release, isLoading: isReleaseLoading } = useLatestRelease(
+  //   "theexperiencecompany/gaia",
+  // );
 
   return (
     <div className="relative w-screen flex-col gap-8 pb-30">
