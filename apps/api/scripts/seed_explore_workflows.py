@@ -106,7 +106,7 @@ def get_productivity_workflows() -> list[dict[str, Any]]:
                 create_step(
                     3,
                     "Create Follow-up Tasks",
-                    "productivity",
+                    "todos",
                     "Create prioritized todo items for emails requiring action",
                 ),
             ],
@@ -131,7 +131,7 @@ def get_productivity_workflows() -> list[dict[str, Any]]:
                 create_step(
                     1,
                     "Fetch Today's Tasks",
-                    "productivity",
+                    "todos",
                     "Retrieve all todos and tasks due today or overdue",
                 ),
                 create_step(
@@ -200,7 +200,7 @@ def get_productivity_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Create Structured Tasks",
-                    "productivity",
+                    "todos",
                     "Generate detailed todos from email content",
                 ),
             ],
@@ -231,7 +231,7 @@ def get_productivity_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Extract Action Items",
-                    "productivity",
+                    "todos",
                     "Parse email content and create todos for action items",
                 ),
             ],
@@ -307,7 +307,7 @@ def get_engineering_workflows() -> list[dict[str, Any]]:
                 create_step(
                     3,
                     "Create Review Priority List",
-                    "productivity",
+                    "todos",
                     "Generate prioritized review tasks based on PR size and age",
                 ),
             ],
@@ -497,7 +497,7 @@ def get_founders_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Check Pending Tasks",
-                    "productivity",
+                    "todos",
                     "Get all todos with upcoming deadlines",
                 ),
                 create_step(
@@ -603,7 +603,7 @@ def get_founders_workflows() -> list[dict[str, Any]]:
                 create_step(
                     3,
                     "Create Interview Todo",
-                    "productivity",
+                    "todos",
                     "Set up follow-up task to review candidate submission",
                 ),
             ],
@@ -704,7 +704,7 @@ def get_marketing_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Create Content Tasks",
-                    "productivity",
+                    "todos",
                     "Generate content brief tasks with keyword targets and outlines",
                 ),
             ],
@@ -830,7 +830,7 @@ def get_marketing_workflows() -> list[dict[str, Any]]:
                 create_step(
                     3,
                     "Create Response Tasks",
-                    "productivity",
+                    "todos",
                     "Generate response tasks for mentions requiring engagement",
                 ),
             ],
@@ -899,7 +899,7 @@ def get_knowledge_worker_workflows() -> list[dict[str, Any]]:
                 create_step(
                     1,
                     "Fetch Completed Tasks",
-                    "productivity",
+                    "todos",
                     "Get all tasks completed this week across your todo lists",
                 ),
                 create_step(
@@ -999,7 +999,7 @@ def get_knowledge_worker_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Create Action Tasks",
-                    "productivity",
+                    "todos",
                     "Extract and create todos for action items found in the email thread",
                 ),
             ],
@@ -1025,7 +1025,7 @@ def get_knowledge_worker_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Create Follow-up Tasks",
-                    "productivity",
+                    "todos",
                     "Generate action items based on the documented idea",
                 ),
             ],
@@ -1089,7 +1089,7 @@ def get_student_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Review Pending Tasks",
-                    "productivity",
+                    "todos",
                     "Fetch assignments and study tasks with upcoming deadlines",
                 ),
                 create_step(
@@ -1152,7 +1152,7 @@ def get_student_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Create Assignment Tasks",
-                    "productivity",
+                    "todos",
                     "Generate prioritized tasks for each assignment with milestone dates",
                 ),
             ],
@@ -1209,7 +1209,7 @@ def get_student_workflows() -> list[dict[str, Any]]:
                 create_step(
                     2,
                     "Create Class Tasks",
-                    "productivity",
+                    "todos",
                     "Generate tasks from extracted deadlines and requirements with due dates",
                 ),
                 create_step(
@@ -1414,6 +1414,13 @@ async def seed_explore_workflows(
         if response.lower() != "y":
             print("❌ Cancelled.")
             return
+
+    if existing_explore > 0 and not clear_existing and not force:
+        clear_response = input(
+            f"\n❓ Found {existing_explore} existing explore workflows. Clear and re-seed them? (y/N): "
+        )
+        if clear_response.lower() == "y":
+            clear_existing = True
 
     if backup:
         await create_backup()
