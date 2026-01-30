@@ -32,6 +32,7 @@ class BaseAppSettings(BaseSettings):
     """Base configuration settings for the application."""
 
     ENV: Literal["production", "development"] = "production"
+
     SHOW_MISSING_KEY_WARNINGS: bool = True
 
     model_config = SettingsConfigDict(

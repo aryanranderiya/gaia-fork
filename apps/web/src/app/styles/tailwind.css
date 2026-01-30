@@ -21,8 +21,11 @@
   --error-bg: hsl(358, 76%, 10%);
   --error-border: hsl(357, 89%, 16%);
   --error-text: hsl(358, 100%, 81%);  */
+  /* biome-ignore lint/complexity/noImportantStyles: need to override */
   --info-bg: #00161e !important;
+  /* biome-ignore lint/complexity/noImportantStyles: need to override */
   --info-border: #173945 !important;
+  /* biome-ignore lint/complexity/noImportantStyles: need to override */
   --info-text: var(--color-primary) !important;
 }
 
