@@ -398,7 +398,7 @@ export default function WorkflowModal({
   };
 
   const handleClose = () => {
-    resetFormValues(getDefaultFormValues());
+    handleFormReset();
     onOpenChange(false);
   };
 
