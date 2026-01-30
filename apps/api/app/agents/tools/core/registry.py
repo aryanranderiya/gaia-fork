@@ -16,7 +16,6 @@ from app.agents.tools import (
     memory_tools,
     notification_tool,
     reminder_tool,
-    search_tool,
     support_tool,
     todo_tool,
     weather_tool,
@@ -196,7 +195,7 @@ class ToolRegistry:
         self._add_category(
             "search",
             tools=[
-                search_tool.web_search_tool,
+                webpage_tool.web_search_tool,
                 webpage_tool.fetch_webpages,
             ],
         )

@@ -48,12 +48,12 @@ from app.models.mcp_config import (
     ProviderMetadataConfig,
     SubAgentConfig,
 )
+from app.models.oauth_models import OAuthIntegration
 from app.models.trigger_config import (
     TriggerConfig,
     TriggerConfigFieldSchema,
     WorkflowTriggerSchema,
 )
-from app.models.oauth_models import OAuthIntegration
 
 # Define all integrations dynamically
 OAUTH_INTEGRATIONS: List[OAuthIntegration] = [
@@ -253,8 +253,6 @@ OAUTH_INTEGRATIONS: List[OAuthIntegration] = [
             capabilities="creating todos, managing tasks, organizing projects, tracking priorities, setting due dates, using labels, bulk operations, searching tasks, and providing productivity insights",
             use_cases="managing personal todos, organizing tasks by project, tracking deadlines, bulk task operations, or any productivity-related task",
             system_prompt=TODO_AGENT_SYSTEM_PROMPT,
-            use_direct_tools=True,
-            disable_retrieve_tools=True,
         ),
     ),
     # Internal Reminders System (no OAuth required)
@@ -826,7 +824,6 @@ OAUTH_INTEGRATIONS: List[OAuthIntegration] = [
             capabilities="creating issues, managing projects, tracking progress, assigning tasks, organizing sprints, and automating development workflows",
             use_cases="issue management, project tracking, sprint planning, or any Linear development workflow task",
             system_prompt=LINEAR_AGENT_SYSTEM_PROMPT,
-            use_direct_tools=True,
         ),
     ),
     OAuthIntegration(

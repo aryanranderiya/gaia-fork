@@ -26,6 +26,7 @@ from app.agents.core.subagents.subagent_helpers import (
 from app.config.loggers import common_logger as logger
 from app.config.oauth_config import OAUTH_INTEGRATIONS
 from app.core.lazy_loader import providers
+from app.core.stream_manager import stream_manager
 from app.helpers.agent_helpers import build_agent_config
 from app.models.models_models import ModelConfig
 from app.services.oauth.oauth_service import check_integration_status
@@ -50,6 +51,7 @@ class SubagentExecutionContext:
         integration_id: str,
         initial_state: dict,
         user_id: Optional[str] = None,
+        stream_id: Optional[str] = None,
     ):
         self.subagent_graph = subagent_graph
         self.agent_name = agent_name
@@ -58,6 +60,7 @@ class SubagentExecutionContext:
         self.integration_id = integration_id
         self.initial_state = initial_state
         self.user_id = user_id
+        self.stream_id = stream_id
 
 
 def get_subagent_integrations() -> List:
@@ -133,6 +136,7 @@ async def prepare_subagent_execution(
     conversation_id: str,
     base_configurable: Optional[dict] = None,
     user_model_config: Optional[ModelConfig] = None,
+    stream_id: Optional[str] = None,
 ) -> tuple[Optional[SubagentExecutionContext], Optional[str]]:
     """
     Prepare everything needed to execute a subagent.
@@ -212,6 +216,7 @@ async def prepare_subagent_execution(
         integration_id=integration.id,
         initial_state=initial_state,
         user_id=user_id,
+        stream_id=stream_id,
     ), None
 
 
@@ -245,6 +250,11 @@ async def execute_subagent_stream(
         stream_mode=["messages", "custom", "updates"],
         config=ctx.config,
     ):
+        # Check for cancellation
+        if ctx.stream_id and await stream_manager.is_cancelled(ctx.stream_id):
+            logger.info(f"Subagent stream {ctx.stream_id} cancelled by user")
+            break
+
         # Handle 2-tuple format only (no subgraphs)
         if len(event) != 2:
             continue
@@ -298,6 +308,7 @@ async def prepare_executor_execution(
     task: str,
     configurable: dict,
     user_time: datetime,
+    stream_id: Optional[str] = None,
 ) -> tuple[Optional[SubagentExecutionContext], Optional[str]]:
     """
     Prepare execution context for the executor agent.
@@ -371,6 +382,7 @@ async def prepare_executor_execution(
         integration_id="executor",
         initial_state={"messages": messages},
         user_id=user_id,
+        stream_id=stream_id,
     ), None
 
 
@@ -403,6 +415,7 @@ async def call_subagent(
     user_time: datetime,
     skip_integration_check: bool = True,
     user_model_config: Optional[ModelConfig] = None,
+    stream_id: Optional[str] = None,
 ) -> AsyncGenerator[str, None]:
     """
     Directly invoke a subagent with streaming - drop-in for call_agent in chat_service.
@@ -451,6 +464,7 @@ async def call_subagent(
         user_time=user_time,
         conversation_id=conversation_id,
         user_model_config=user_model_config,
+        stream_id=stream_id,
     )
 
     if error or ctx is None:
@@ -463,7 +477,6 @@ async def call_subagent(
         f"[DIRECT] Invoking subagent '{ctx.agent_name}' with query: {query[:80]}..."
     )
 
-    # Stream execution with SSE formatting
     complete_message = ""
     emitted_tool_calls: set[str] = set()
 
@@ -472,6 +485,10 @@ async def call_subagent(
         stream_mode=["messages", "custom", "updates"],
         config=ctx.config,
     ):
+        # Check for cancellation
+        if stream_id and await stream_manager.is_cancelled(stream_id):
+            logger.info(f"Subagent stream {stream_id} cancelled by user")
+            break
         # Handle 2-tuple format only (no subgraphs)
         if len(event) != 2:
             continue

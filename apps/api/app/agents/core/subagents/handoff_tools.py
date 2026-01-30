@@ -28,6 +28,7 @@ from app.config.oauth_config import (
     get_integration_by_id,
     get_subagent_integrations,
 )
+from app.constants.cache import SUBAGENT_CACHE_PREFIX, SUBAGENT_CACHE_TTL
 from app.core.lazy_loader import providers
 from app.db.mongodb.collections import integrations_collection
 from app.db.redis import get_cache, set_cache
@@ -42,8 +43,6 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 from langgraph.config import get_stream_writer
 from langgraph.store.base import BaseStore, PutOp
-
-from app.constants.cache import SUBAGENT_CACHE_PREFIX, SUBAGENT_CACHE_TTL
 
 SUBAGENTS_NAMESPACE = ("subagents",)
 
@@ -361,6 +360,7 @@ async def handoff(
     try:
         configurable = config.get("configurable", {})
         user_id = configurable.get("user_id")
+        stream_id = configurable.get("stream_id")  # Extract stream_id for cancellation
 
         # Resolve subagent and get graph
         (
@@ -422,7 +422,7 @@ async def handoff(
             user_id=user_id,
         )
 
-        # Create execution context
+        # Create execution context with stream_id for cancellation
         ctx = SubagentExecutionContext(
             subagent_graph=subagent_graph,
             agent_name=agent_name,
@@ -431,6 +431,7 @@ async def handoff(
             integration_id=int_id,
             initial_state={"messages": messages},
             user_id=user_id,
+            stream_id=stream_id,
         )
 
         writer = get_stream_writer()

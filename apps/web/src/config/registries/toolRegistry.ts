@@ -122,7 +122,9 @@ type ToolsMessageSchema = {
   tool_data?: ToolDataEntry[] | null;
 };
 
-export const TOOLS_MESSAGE_SCHEMA: ToolsMessageSchema = {};
+export const TOOLS_MESSAGE_SCHEMA: ToolsMessageSchema = {
+  tool_data: undefined,
+};
 export type ToolsMessageKey = keyof ToolsMessageSchema;
 export type ToolsMessageData = ToolsMessageSchema;
 export const TOOLS_MESSAGE_KEYS = Object.keys(

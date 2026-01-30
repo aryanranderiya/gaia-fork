@@ -19,8 +19,8 @@ import asyncio
 from app.agents.core.graph_builder.checkpointer_manager import get_checkpointer_manager
 from app.agents.core.nodes import (
     manage_system_prompts_node,
-    trim_messages_node,
     memory_learning_node,
+    trim_messages_node,
 )
 from app.agents.core.nodes.filter_messages import filter_messages_node
 from app.agents.tools.core.retrieval import get_retrieve_tools_function
