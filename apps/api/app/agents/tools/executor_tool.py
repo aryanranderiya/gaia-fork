@@ -31,6 +31,7 @@ async def call_executor(
     try:
         configurable = config.get("configurable", {})
         user_id = configurable.get("user_id")
+        stream_id = configurable.get("stream_id")  # Extract stream_id for cancellation
 
         # Load user's MCP tools if they have any connected
         if user_id:
@@ -55,6 +56,7 @@ async def call_executor(
             task=task,
             configurable=configurable,
             user_time=user_time,
+            stream_id=stream_id,
         )
 
         if error or ctx is None:

@@ -32,7 +32,7 @@
             "group": "Get Started",
             "pages": ["introduction", "quick-start", "resources", "manifesto"]
           },
-            {
+          {
             "group": "Self-Hosting",
             "pages": ["self-hosting/overview", "self-hosting/docker-setup"]
           },
@@ -48,7 +48,7 @@
               "developers/conventional-commits"
             ]
           },
-        
+
           {
             "group": "Configuration",
             "pages": [

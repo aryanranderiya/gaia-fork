@@ -22,6 +22,7 @@ from typing import (
 )
 
 from app.agents.tools.core.registry import get_tool_registry
+from app.agents.tools.webpage_tool import fetch_webpages, web_search_tool
 from app.config.loggers import langchain_logger as logger
 from app.config.oauth_config import OAUTH_INTEGRATIONS, get_integration_by_id
 from app.db.chroma.public_integrations_store import search_public_integrations
@@ -31,6 +32,8 @@ from app.services.integrations.integration_service import (
 from langchain_core.runnables import RunnableConfig
 from langgraph.prebuilt import InjectedStore
 from langgraph.store.base import BaseStore, SearchItem
+
+WEBPAGE_TOOLS = [web_search_tool.name, fetch_webpages.name]
 
 
 class RetrieveToolsResult(TypedDict):
@@ -126,6 +129,12 @@ def _build_search_tasks(
         logger.info(f"Adding search for tool_space: {tool_space}")
         search_tasks.append(store.asearch((tool_space,), query=query, limit=limit))
 
+    # For subagents, also search 'general' namespace with small limit
+    # to discover core tools like webpage tools
+    if tool_space != "general" and "general" in user_namespaces:
+        logger.info("Adding search for general namespace (limited to 5 for core tools)")
+        search_tasks.append(store.asearch(("general",), query=query, limit=5))
+
     # Search subagents namespace
     if include_subagents:
         logger.info("Adding search for subagents namespace")
@@ -162,6 +171,7 @@ def _process_chroma_search_result(
     available_tool_names: Set[str],
     tool_registry,
     include_subagents: bool,
+    tool_space: str = "general",
 ) -> List[dict[str, str | float | None]]:
     """Process Chroma store search results."""
     processed: List[dict[str, str | float | None]] = []
@@ -181,6 +191,16 @@ def _process_chroma_search_result(
         if tool_key.startswith("subagent:"):
             processed.append({"id": tool_key, "score": item.score})
             continue
+
+        # Filter general namespace results for subagents - only allow webpage tools
+        if (
+            hasattr(item, "namespace")
+            and item.namespace == ("general",)
+            and tool_space != "general"
+        ):
+            # Only include webpage tools from general namespace for subagents
+            if tool_key not in WEBPAGE_TOOLS:
+                continue
 
         # Filter delegated tools in main agent context
         if include_subagents:
@@ -202,6 +222,7 @@ async def _process_search_results(
     available_tool_names: Set[str],
     tool_registry,
     include_subagents: bool,
+    tool_space: str = "general",
 ) -> List[dict[str, str | float | None]]:
     """Process all search results and return unified list."""
     all_results = []
@@ -221,7 +242,12 @@ async def _process_search_results(
             processed = _process_public_integration_result(result, idx)
         else:
             processed = _process_chroma_search_result(
-                result, idx, available_tool_names, tool_registry, include_subagents
+                result,
+                idx,
+                available_tool_names,
+                tool_registry,
+                include_subagents,
+                tool_space,
             )
 
         all_results.extend(processed)
@@ -241,7 +267,6 @@ def _deduplicate_and_sort(
         if r["id"] not in seen:
             seen.add(r["id"])
             unique_results.append(r)
-
     unique_results.sort(key=lambda x: x["score"] or 0.0, reverse=True)
     return [str(r["id"]) for r in unique_results[:limit]]
 
@@ -445,9 +470,13 @@ def get_retrieve_tools_function(
         results = await asyncio.gather(*search_tasks, return_exceptions=True)
         logger.info(f"Got {len(results)} search results")
 
-        # Process results
+        # Process results (includes filtering webpage tools from general namespace for subagents)
         all_results = await _process_search_results(
-            results, set(available_tool_names), tool_registry, include_subagents
+            results,
+            set(available_tool_names),
+            tool_registry,
+            include_subagents,
+            tool_space,
         )
 
         # Deduplicate and sort
