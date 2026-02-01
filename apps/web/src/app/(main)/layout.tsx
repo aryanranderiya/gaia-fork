@@ -19,6 +19,7 @@ import { isOnboardingPhaseUpdateMessage } from "@/features/onboarding/types/webs
 import CommandMenu from "@/features/search/components/CommandMenu";
 import { useIsMobile } from "@/hooks/ui/useMobile";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
+import { useOAuthSuccessToast } from "@/hooks/useOAuthSuccessToast";
 import SidebarLayout, { CustomSidebarTrigger } from "@/layouts/SidebarLayout";
 import { apiService } from "@/lib/api";
 import { wsManager } from "@/lib/websocket";
@@ -33,7 +34,7 @@ import { useUIStoreSidebar } from "@/stores/uiStore";
 
 const HeaderSidebarTrigger = () => {
   return (
-    <div className="pt-1">
+    <div className="">
       <CustomSidebarTrigger />
     </div>
   );
@@ -62,6 +63,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   // Check if user needs onboarding
   useOnboardingGuard();
   useBackgroundSync();
+  useOAuthSuccessToast(); // Global OAuth success/error toast handling
 
   // Determine visibility of onboarding UI elements:
   const hasCompletedInitialOnboarding = user.onboarding?.completed === true;

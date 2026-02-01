@@ -1,4 +1,7 @@
-import type { IntegrationConnectionData } from "@/features/integrations/types";
+import type {
+  IntegrationConnectionData,
+  IntegrationListStreamData,
+} from "@/features/integrations/types";
 import type {
   CalendarDeleteOptions,
   CalendarEditOptions,
@@ -98,7 +101,7 @@ export const TOOL_REGISTRY = {
   goal_data: null as unknown as GoalDataMessageType,
   notification_data: null as unknown as { notifications: NotificationRecord[] },
   integration_connection_required: null as unknown as IntegrationConnectionData,
-  integration_list_data: null as unknown as Record<string, never>,
+  integration_list_data: null as unknown as IntegrationListStreamData,
   tool_calls_data: null as unknown as ToolCallEntry[],
   twitter_search_data: null as unknown as TwitterSearchData,
   twitter_user_data: null as unknown as TwitterUserData[],
@@ -122,7 +125,9 @@ type ToolsMessageSchema = {
   tool_data?: ToolDataEntry[] | null;
 };
 
-export const TOOLS_MESSAGE_SCHEMA: ToolsMessageSchema = {};
+export const TOOLS_MESSAGE_SCHEMA: ToolsMessageSchema = {
+  tool_data: undefined,
+};
 export type ToolsMessageKey = keyof ToolsMessageSchema;
 export type ToolsMessageData = ToolsMessageSchema;
 export const TOOLS_MESSAGE_KEYS = Object.keys(
@@ -134,6 +139,8 @@ export const TOOLS_MESSAGE_KEYS = Object.keys(
 export const GROUPED_TOOLS = new Set<ToolName>([
   "reddit_data",
   "tool_calls_data",
+  "integration_connection_required",
+  "integration_list_data",
   // "email_fetch_data",
   // "test_data",
   // Add any tool you want to group here

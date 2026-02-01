@@ -13,9 +13,12 @@ const withBundleAnalyzer = bundleAnalyzer({
 
 const nextConfig = {
   compiler: {
-    removeConsole: {
-      exclude: ["error"],
-    },
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error"],
+          }
+        : false,
   },
   reactStrictMode: true,
   // Enable standalone output for Electron desktop app bundling
