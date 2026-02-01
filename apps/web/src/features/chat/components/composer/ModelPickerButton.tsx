@@ -29,18 +29,12 @@ const ModelPickerButton: React.FC = () => {
       const previousModel = user.selected_model;
 
       // Optimistically update the UI
-      setUser({
-        ...user,
-        selected_model: selectedKey,
-      });
+      updateUser({ selected_model: selectedKey });
 
       selectModelMutation.mutate(selectedKey, {
         onError: () => {
           // Revert to the previous model on failure
-          setUser({
-            ...user,
-            selected_model: previousModel,
-          });
+          updateUser({ selected_model: previousModel });
         },
       });
     }
