@@ -282,20 +282,49 @@ const TOOL_RENDERERS: Partial<RendererMap> = {
     />
   ),
   integration_connection_required: (data, index) => {
+    // Data can be a single item or an array (when grouped)
+    const items = (
+      Array.isArray(data) ? data : [data]
+    ) as IntegrationConnectionData[];
+    // De-duplicate by integration_id
+    const seen = new Set<string>();
+    const uniqueItems = items.filter((item) => {
+      if (seen.has(item.integration_id)) return false;
+      seen.add(item.integration_id);
+      return true;
+    });
     return (
-      <IntegrationConnectionPrompt
-        key={`tool-integration-connection-${index}`}
-        integration_connection_required={data as IntegrationConnectionData}
-      />
+      <>
+        {uniqueItems.map((item) => (
+          <IntegrationConnectionPrompt
+            key={`tool-integration-connection-${index}-${item.integration_id}`}
+            integration_connection_required={item}
+          />
+        ))}
+      </>
     );
   },
 
   integration_list_data: (data, index) => {
-    const streamData = data as IntegrationListStreamData;
+    // Handle grouped data (array of IntegrationListStreamData)
+    const items = (
+      Array.isArray(data) ? data : [data]
+    ) as IntegrationListStreamData[];
+
+    // Merge all suggested integrations and de-duplicate by id
+    const seen = new Set<string>();
+    const mergedSuggested = items
+      .flatMap((item) => item.suggested || [])
+      .filter((s) => {
+        if (seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      });
+
     return (
       <IntegrationListSection
         key={`tool-integration-list-${index}`}
-        suggestedIntegrations={streamData.suggested}
+        suggestedIntegrations={mergedSuggested}
       />
     );
   },
