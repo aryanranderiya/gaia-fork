@@ -269,7 +269,7 @@ function IntegrationListSection({
           />
         }
       >
-        <ScrollShadow className="max-h-[200px] divide-y divide-zinc-700">
+        <ScrollShadow className="max-h-[150px] divide-y divide-zinc-700">
           {suggestedIntegrations.map(renderSuggested)}
         </ScrollShadow>
         <div className="mt-3 flex justify-center">

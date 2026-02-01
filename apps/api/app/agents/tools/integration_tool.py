@@ -205,22 +205,22 @@ async def list_integrations(
                     mcp_config = doc.get("mcp_config", {})
                     logger.info(f"Found public integration: {iid} - {doc.get('name')}")
 
-                suggested_list.append(
-                    {
-                        "id": iid,
-                        "name": doc.get("name", ""),
-                        "description": doc.get("description", ""),
-                        "category": doc.get("category", "custom"),
-                        "icon_url": doc.get("icon_url"),
-                        "auth_type": mcp_config.get("auth_type"),
-                        "relevance_score": 1.0,  # All matches are equal with regex
-                        "slug": generate_integration_slug(
-                            name=doc.get("name", ""),
-                            category=doc.get("category", "custom"),
-                            integration_id=iid,
-                        ),
-                    }
-                )
+                    suggested_list.append(
+                        {
+                            "id": iid,
+                            "name": doc.get("name", ""),
+                            "description": doc.get("description", ""),
+                            "category": doc.get("category", "custom"),
+                            "icon_url": doc.get("icon_url"),
+                            "auth_type": mcp_config.get("auth_type"),
+                            "relevance_score": 1.0,  # All matches are equal with regex
+                            "slug": generate_integration_slug(
+                                name=doc.get("name", ""),
+                                category=doc.get("category", "custom"),
+                                integration_id=iid,
+                            ),
+                        }
+                    )
 
                 logger.info(f"Found {len(suggested_list)} public integrations")
 

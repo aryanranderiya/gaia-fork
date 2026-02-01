@@ -103,7 +103,13 @@ export function TriggerAutocomplete({
     // Handle connection items
     if (trigger.startsWith("connect-")) {
       const integrationId = trigger.replace("connect-", "");
-      onConnectIntegration(integrationId);
+      // Only allow connection for real integration IDs (not fallback like "other")
+      if (
+        integrationStatusMap.has(integrationId) &&
+        integrationStatusMap.get(integrationId) === false
+      ) {
+        onConnectIntegration(integrationId);
+      }
       // Reset filter/selection logic if needed, but since we're opening a popup/redirect,
       // creating a seamless flow is better. We just don't select it as a trigger.
       return;
@@ -183,8 +189,6 @@ export function TriggerAutocomplete({
             return 0;
           })
           .map(([integrationId, schemas]) => {
-            const isConnected =
-              integrationStatusMap.get(integrationId) ?? false;
             // Ensure schemas exists before mapping
             const schemaList = schemas || [];
 
@@ -208,17 +212,21 @@ export function TriggerAutocomplete({
               </AutocompleteItem>
             ));
 
-            const connectionItem = !isConnected ? (
-              <AutocompleteItem
-                key={`connect-${integrationId}`}
-                textValue={`Connect ${formatIntegrationName(integrationId)}`}
-                className="my-2 bg-primary text-primary-foreground font-medium data-[hover=true]:bg-primary/90 data-[hover=true]:text-primary-foreground/90 text-center"
-              >
-                <div className="text-center">
-                  Connect {formatIntegrationName(integrationId)}
-                </div>
-              </AutocompleteItem>
-            ) : null;
+            // Only show connectionItem for real integration IDs (not fallback like "other")
+            // that are explicitly disconnected (false)
+            const connectionItem =
+              integrationStatusMap.has(integrationId) &&
+              integrationStatusMap.get(integrationId) === false ? (
+                <AutocompleteItem
+                  key={`connect-${integrationId}`}
+                  textValue={`Connect ${formatIntegrationName(integrationId)}`}
+                  className="my-2 bg-primary text-primary-foreground font-medium data-[hover=true]:bg-primary/90 data-[hover=true]:text-primary-foreground/90 text-center"
+                >
+                  <div className="text-center">
+                    Connect {formatIntegrationName(integrationId)}
+                  </div>
+                </AutocompleteItem>
+              ) : null;
 
             if (connectionItem) {
               triggerItems.unshift(connectionItem);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
@@ -18,6 +18,7 @@ const processedOAuthCallbacks = new Set<string>();
 export function useOAuthSuccessToast() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
   const sendMessage = useSendMessage();
   // Use ref to hold stable reference to sendMessage
@@ -61,8 +62,11 @@ export function useOAuthSuccessToast() {
       queryClient.invalidateQueries({ queryKey: ["integrations"] });
       queryClient.invalidateQueries({ queryKey: ["tools", "available"] });
 
-      // Automatically send a message to continue the chat
-      sendMessageRef.current(`Hey I just connected ${displayName}`);
+      // Automatically send a message to continue the chat (only on chat routes)
+      // Only send the message if we're on a chat page to avoid creating unwanted conversations
+      const isChatRoute = pathname === "/c" || pathname.startsWith("/c/");
+      if (isChatRoute)
+        sendMessageRef.current(`Hey I just connected ${displayName}`);
     }
 
     // Handle OAuth errors
@@ -94,5 +98,5 @@ export function useOAuthSuccessToast() {
 
     // Replace URL without the OAuth params, keeping other params intact
     router.replace(url.pathname + url.search, { scroll: false });
-  }, [searchParams, router, queryClient]);
+  }, [searchParams, router, pathname, queryClient]);
 }
