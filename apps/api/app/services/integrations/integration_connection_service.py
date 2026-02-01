@@ -162,6 +162,9 @@ async def _connect_with_bearer_token(
             message="Integration connected successfully",
         )
     except Exception as e:
+        # Rollback: clean up stored credentials on connection failure
+        await token_store.delete_credentials(integration_id)
+        await invalidate_mcp_status_cache(user_id)
         return ConnectIntegrationResponse(
             status="error",
             integration_id=integration_id,
