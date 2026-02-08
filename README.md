@@ -66,13 +66,35 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
   </table>
 </div>
 
+## Installation
+
+### Self-Hosted Setup (Recommended)
+
+Get started with GAIA's interactive CLI setup wizard:
+
+```bash
+bunx @heygaia/cli init
+```
+
+The CLI wizard will:
+- Check prerequisites (Docker, Node.js, etc.)
+- Auto-discover and configure environment variables for API and Web
+- Set up Docker containers for all required services
+- Configure and start your GAIA instance
+
+For manual setup, see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview).
+
+### Cloud-Hosted (Zero Setup)
+
+No installation needed — just visit [heygaia.io](https://heygaia.io) to get started instantly.
+
 ## Quick Start
 
 Choose how you'd like to use GAIA:
 
 - **Use GAIA instantly**: No setup required — just visit [heygaia.io](https://heygaia.io).
-- **Self-host GAIA**: See the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview).
-- **Develop or contribute**: Contribute to its development - [Developer Docs](https://docs.heygaia.io/developers/development-setup).
+- **Self-host GAIA**: Use our CLI tool with `bunx @heygaia/cli init` or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual setup.
+- **Develop or contribute**: Get started quickly with `bunx @heygaia/cli init` or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
 
 ## Documentation
 

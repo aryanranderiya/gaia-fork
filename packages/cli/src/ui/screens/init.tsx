@@ -10,6 +10,7 @@ import TextInput from "ink-text-input";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { EnvCategory, EnvVar, SetupMode } from "../../lib/env-parser.js";
+import type { PortCheckResult } from "../../lib/prerequisites.js";
 import { Shell } from "../components/Shell.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
@@ -84,6 +85,78 @@ const WelcomeStep: React.FC<WelcomeStepProps> = ({ onConfirm }) => {
   );
 };
 
+const PortConflictStep: React.FC<{
+  portResults: PortCheckResult[];
+  onAccept: () => void;
+  onAbort: () => void;
+}> = ({ portResults, onAccept, onAbort }) => {
+  useInput((_input, key) => {
+    if (key.return) {
+      onAccept();
+    } else if (key.escape) {
+      onAbort();
+    }
+  });
+
+  const conflicts = portResults.filter((r) => !r.available);
+
+  return (
+    <Box
+      flexDirection="column"
+      marginTop={1}
+      paddingX={1}
+      borderStyle="round"
+      borderColor="yellow"
+    >
+      <Box marginBottom={1}>
+        <Text bold color="yellow">
+          Port Conflicts Detected
+        </Text>
+      </Box>
+
+      {portResults.map((result) => (
+        <Box key={result.port}>
+          <Text color={result.available ? "green" : "red"}>
+            {result.available ? "\u2714" : "\u2716"}{" "}
+          </Text>
+          <Text>
+            {result.service} (:{result.port})
+          </Text>
+          {!result.available && (
+            <Text color="gray">
+              {" "}
+              - in use{result.usedBy ? ` by ${result.usedBy}` : ""}
+              {result.alternative
+                ? ` (alt: :${result.alternative})`
+                : ""}
+            </Text>
+          )}
+        </Box>
+      ))}
+
+      <Box marginTop={1} flexDirection="column">
+        {conflicts.some((c) => c.alternative) && (
+          <Text color="gray">
+            Alternative ports will be used for conflicting services.
+          </Text>
+        )}
+        <Box marginTop={1}>
+          <Text>
+            <Text color="green" bold>
+              Enter
+            </Text>
+            {" to continue with alternatives  "}
+            <Text color="yellow" bold>
+              Escape
+            </Text>
+            {" to abort"}
+          </Text>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
 const PathInputStep: React.FC<{
   defaultValue: string;
   onSubmit: (val: string) => void;
@@ -108,7 +181,10 @@ const PathInputStep: React.FC<{
   );
 };
 
-const FinishedStep: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
+const FinishedStep: React.FC<{
+  servicesAlreadyRunning?: boolean;
+  onConfirm: () => void;
+}> = ({ servicesAlreadyRunning, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -124,21 +200,58 @@ const FinishedStep: React.FC<{ onConfirm: () => void }> = ({ onConfirm }) => {
       padding={1}
     >
       <Text color={THEME_COLOR} bold>
-        You are all set! 🚀
+        You are all set!
       </Text>
-      <Text>
-        Run{" "}
-        <Text color={THEME_COLOR} bold>
-          mise dev
-        </Text>{" "}
-        to run the application.
-      </Text>
+      {servicesAlreadyRunning && (
+        <Box marginTop={1} flexDirection="column">
+          <Text color="green">Services are already running:</Text>
+          <Box marginLeft={2} flexDirection="column">
+            <Text>
+              Web:{" "}
+              <Text color="cyan" bold>
+                http://localhost:3000
+              </Text>
+            </Text>
+            <Text>
+              API:{" "}
+              <Text color="cyan" bold>
+                http://localhost:8000
+              </Text>
+            </Text>
+          </Box>
+        </Box>
+      )}
+      <CommandsSummary />
       <Box marginTop={1}>
         <Text dimColor>Press Enter to exit</Text>
       </Box>
     </Box>
   );
 };
+
+export const CommandsSummary: React.FC = () => (
+  <Box marginTop={1} flexDirection="column">
+    <Text bold>Available commands:</Text>
+    <Box marginLeft={2} flexDirection="column">
+      <Text>
+        <Text color={THEME_COLOR} bold>gaia start </Text>
+        <Text color="gray"> Start all services</Text>
+      </Text>
+      <Text>
+        <Text color={THEME_COLOR} bold>gaia stop  </Text>
+        <Text color="gray"> Stop all services</Text>
+      </Text>
+      <Text>
+        <Text color={THEME_COLOR} bold>gaia status</Text>
+        <Text color="gray"> Check service health</Text>
+      </Text>
+      <Text>
+        <Text color={THEME_COLOR} bold>gaia setup </Text>
+        <Text color="gray"> Reconfigure environment</Text>
+      </Text>
+    </Box>
+  </Box>
+);
 
 // Dependency installation progress step
 const DependencyInstallStep: React.FC<{
@@ -198,7 +311,7 @@ const DependencyInstallStep: React.FC<{
 };
 
 // Start services prompt step
-const StartServicesStep: React.FC<{
+export const StartServicesStep: React.FC<{
   setupMode: SetupMode;
   repoPath: string;
   onStart: () => void;
@@ -290,7 +403,7 @@ const StartServicesStep: React.FC<{
 };
 
 // Services running success step
-const ServicesRunningStep: React.FC<{
+export const ServicesRunningStep: React.FC<{
   setupMode: SetupMode;
   onConfirm: () => void;
 }> = ({ setupMode, onConfirm }) => {
@@ -310,7 +423,7 @@ const ServicesRunningStep: React.FC<{
     >
       <Box marginBottom={1}>
         <Text bold color={THEME_COLOR}>
-          GAIA is Running! 🚀
+          GAIA is Running!
         </Text>
       </Box>
 
@@ -341,6 +454,8 @@ const ServicesRunningStep: React.FC<{
         </Box>
       </Box>
 
+      <CommandsSummary />
+
       <Box marginTop={1}>
         <Text dimColor>Press Enter to exit</Text>
       </Box>
@@ -349,7 +464,7 @@ const ServicesRunningStep: React.FC<{
 };
 
 // Manual commands display (shown when user skips auto-start)
-const ManualCommandsStep: React.FC<{
+export const ManualCommandsStep: React.FC<{
   setupMode: SetupMode;
   repoPath: string;
   onConfirm: () => void;
@@ -370,12 +485,12 @@ const ManualCommandsStep: React.FC<{
     >
       <Box marginBottom={1}>
         <Text bold color={THEME_COLOR}>
-          Setup Complete! 🎉
+          Setup Complete!
         </Text>
       </Box>
 
       <Box flexDirection="column" marginBottom={1}>
-        <Text>To start GAIA, run these commands:</Text>
+        <Text>To start GAIA, run:</Text>
       </Box>
 
       <Box
@@ -398,17 +513,7 @@ const ManualCommandsStep: React.FC<{
         )}
       </Box>
 
-      <Box marginTop={1} flexDirection="column">
-        <Text dimColor>Other useful commands:</Text>
-        {setupMode === "selfhost" ? (
-          <Text color="gray"> docker compose logs -f - View backend logs</Text>
-        ) : (
-          <>
-            <Text color="gray"> mise dev:full - Run everything locally</Text>
-            <Text color="gray"> mise dev - API + web only</Text>
-          </>
-        )}
-      </Box>
+      <CommandsSummary />
 
       <Box marginTop={1}>
         <Text dimColor>Press Enter to exit</Text>
@@ -417,7 +522,7 @@ const ManualCommandsStep: React.FC<{
   );
 };
 
-const SetupModeSelectionStep: React.FC<{
+export const SetupModeSelectionStep: React.FC<{
   onSelect: (mode: SetupMode) => void;
 }> = ({ onSelect }) => {
   const options = [
@@ -463,7 +568,7 @@ const SetupModeSelectionStep: React.FC<{
   );
 };
 
-const EnvMethodSelectionStep: React.FC<{
+export const EnvMethodSelectionStep: React.FC<{
   onSelect: (method: string) => void;
 }> = ({ onSelect }) => {
   const options = [
@@ -508,7 +613,7 @@ const EnvMethodSelectionStep: React.FC<{
 };
 
 // Infisical setup component
-const InfisicalSetupStep: React.FC<{
+export const InfisicalSetupStep: React.FC<{
   onSubmit: (values: {
     INFISICAL_TOKEN: string;
     INFISICAL_PROJECT_ID: string;
@@ -654,7 +759,7 @@ const InfisicalSetupStep: React.FC<{
 };
 
 // Component for configuring multiple env vars in a group at once
-const EnvGroupConfigStep: React.FC<{
+export const EnvGroupConfigStep: React.FC<{
   category: EnvCategory;
   currentIndex: number;
   totalGroups: number;
@@ -868,7 +973,7 @@ type NavItem =
  * Shows all alternatives with checkboxes - user enables which ones to configure
  * and fills in values inline. At least one must be configured to proceed.
  */
-const AlternativeGroupSelectionStep: React.FC<
+export const AlternativeGroupSelectionStep: React.FC<
   AlternativeGroupSelectionProps
 > = ({ alternatives, onSubmit }) => {
   // Track which providers are enabled (checkbox state)
@@ -1180,7 +1285,7 @@ const AlternativeGroupSelectionStep: React.FC<
   );
 };
 
-const EnvConfigStep: React.FC<{
+export const EnvConfigStep: React.FC<{
   categories: EnvCategory[];
   currentVar: EnvVar;
   currentIndex: number;
@@ -1381,6 +1486,15 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         </Box>
       )}
 
+      {state.inputRequest?.id === "port_conflicts" &&
+        state.data.portConflicts && (
+          <PortConflictStep
+            portResults={state.data.portConflicts}
+            onAccept={() => store.submitInput("accept")}
+            onAbort={() => store.submitInput("abort")}
+          />
+        )}
+
       {state.inputRequest?.id === "repo_path" && (
         <PathInputStep
           defaultValue={state.inputRequest.meta.default}
@@ -1457,8 +1571,11 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           />
         )}
 
-      {state.step === "Finished" && state.inputRequest?.id === "finish" && (
-        <FinishedStep onConfirm={() => store.submitInput(true)} />
+      {state.step === "Finished" && (
+        <FinishedStep
+          servicesAlreadyRunning={state.data.servicesAlreadyRunning}
+          onConfirm={() => store.submitInput(true)}
+        />
       )}
 
       {(state.step === "Install Tools" || state.step === "Project Setup") && (

@@ -1,33 +1,29 @@
-/**
- * Main application component for the CLI.
- * Routes to different screens based on the command.
- * @module app
- */
-
 import type React from "react";
 import { InitScreen } from "./screens/init.js";
+import { SetupScreen } from "./screens/setup.js";
+import { StatusScreen } from "./screens/status.js";
+import { ServiceScreen } from "./screens/service.js";
 import type { CLIStore } from "./store.js";
 
-/**
- * Props for the App component.
- */
+export type CLICommand = "init" | "setup" | "status" | "start" | "stop";
+
 interface AppProps {
-  /** CLI store instance for state management */
   store: CLIStore;
-  /** Command being executed (e.g., 'init') */
-  command: string;
+  command: CLICommand;
 }
 
-/**
- * Root application component that routes to command-specific screens.
- * Currently supports the 'init' command.
- * @param props - Application properties
- * @param props.store - CLI store instance
- * @param props.command - Command to execute
- */
 export const App: React.FC<AppProps> = ({ store, command }) => {
-  if (command === "init") {
-    return <InitScreen store={store} />;
+  switch (command) {
+    case "init":
+      return <InitScreen store={store} />;
+    case "setup":
+      return <SetupScreen store={store} />;
+    case "status":
+      return <StatusScreen store={store} />;
+    case "start":
+    case "stop":
+      return <ServiceScreen store={store} command={command} />;
+    default:
+      return null;
   }
-  return null;
 };
