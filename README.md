@@ -18,7 +18,6 @@
 
 It's designed to help users manage their digital lives by automating tasks, handling communication, and increasing productivity - going beyond traditional assistants like Siri, Google Assistant and ChatGPT.
 
-
 # The Problem
 
 We all drown in tools. Gmail, Calendar, Todos, Docs, Slack, Linear, WhatsApp, and the list keeps growing. Every person has a different stack, but the problem is the same. Our days are filled with small repetitive actions. Every calendar event we create is a few minutes gone. Every mail you draft, every todo you try to complete, every email you read that is not useful and just bullshit adds up. Every little task and chore you do in the tools you use every day, just to maintain your digital life and keep everything structured and clean, is a burden. Most of this is not real work. It is maintenance. Each task feels small in isolation, but together they are mentally tolling. They pile up day after day, quietly draining focus and motivation.
@@ -39,8 +38,6 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 - **Integration Marketplace**: Choose from hundreds of integrations, built by us and the community, to connect GAIA with your favorite tools like Gmail, Slack, Notion, Linear, GitHub, and more!
 - **Multi-Platform**: Web | Desktop - macOS, Windows, Linux  | Mobile
 - **Open Source & Self-Hostable**: Full transparency with the ability to self-host on your own infrastructure
-
-
 
 <div align="center">
   <table>
@@ -68,7 +65,6 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
     </tr>
   </table>
 </div>
-
 
 ## Quick Start
 
@@ -101,6 +97,8 @@ Join our growing community of users and contributors:
 </a>
 
 We welcome contributions of all kinds, from bug fixes and new features to documentation and testing.
+
+AI and vibe-coded PRs are welcome! Just say so in the PR description. 🤖
 
 Please read our [Contributing Guidelines](https://docs.heygaia.io/developers/contributing) to get started.
 

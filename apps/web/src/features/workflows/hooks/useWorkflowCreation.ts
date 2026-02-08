@@ -26,6 +26,9 @@ export const useWorkflowCreation = (): UseWorkflowCreationReturn => {
       console.log("useWorkflowCreation: API response:", response);
 
       setCreatedWorkflow(response.workflow);
+      // Note: Store updates are handled by the caller (WorkflowModal)
+      // to avoid duplicate additions
+
       return { success: true, workflow: response.workflow };
     } catch (err) {
       console.error("useWorkflowCreation: API call failed:", err);
@@ -50,6 +53,8 @@ export const useWorkflowCreation = (): UseWorkflowCreationReturn => {
           "Workflow was created despite error status, treating as success",
         );
         setCreatedWorkflow(responseData.workflow);
+        // Note: Store updates are handled by the caller (WorkflowModal)
+
         return { success: true, workflow: responseData.workflow };
       }
 

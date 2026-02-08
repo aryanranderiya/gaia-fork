@@ -32,6 +32,7 @@ class BaseAppSettings(BaseSettings):
     """Base configuration settings for the application."""
 
     ENV: Literal["production", "development"] = "production"
+
     SHOW_MISSING_KEY_WARNINGS: bool = True
 
     model_config = SettingsConfigDict(
@@ -88,6 +89,11 @@ class CommonSettings(BaseAppSettings):
     # ----------------------------------------------
     ENABLE_PROFILING: bool = False  # Must be explicitly enabled via .env
     PROFILING_SAMPLE_RATE: float = 1.0  # 100% of requests by default
+
+    # ----------------------------------------------
+    # Skill Learning (Agent Memory)
+    # ----------------------------------------------
+    SKILL_LEARNING_ENABLED: bool = False  # Disabled until ready for production
 
     # ----------------------------------------------
     # Computed Properties
@@ -160,6 +166,7 @@ class ProductionSettings(CommonSettings):
     # AI & Machine Learning
     OPENAI_API_KEY: str
     GOOGLE_API_KEY: str
+    OPENROUTER_API_KEY: str
 
     # Media & Content Processing
     ASSEMBLYAI_API_KEY: str
@@ -228,6 +235,16 @@ class ProductionSettings(CommonSettings):
     OPIK_WORKSPACE: str
 
     # ----------------------------------------------
+    # MCP OAuth Credentials
+    # ----------------------------------------------
+    MCP_ENCRYPTION_KEY: str
+    VERCEL_MCP_CLIENT_ID: str
+    NOTION_MCP_CLIENT_ID: str
+    NOTION_MCP_CLIENT_SECRET: str
+    FIGMA_MCP_CLIENT_ID: str
+    FIGMA_MCP_CLIENT_SECRET: str
+
+    # ----------------------------------------------
     # Opik Evaluation Config
     # ----------------------------------------------
     EVAL_USER_ID: Optional[str] = None
@@ -242,13 +259,13 @@ class ProductionSettings(CommonSettings):
     # ----------------------------------------------
     # Bot Configuration
     # ----------------------------------------------
-    GAIA_BOT_API_KEY: str
-    DISCORD_BOT_TOKEN: str
-    DISCORD_CLIENT_ID: str
-    SLACK_BOT_TOKEN: str
-    SLACK_SIGNING_SECRET: str
-    SLACK_APP_TOKEN: str
-    TELEGRAM_BOT_TOKEN: str
+    GAIA_BOT_API_KEY: Optional[str] = None
+    DISCORD_BOT_TOKEN: Optional[str] = None
+    DISCORD_CLIENT_ID: Optional[str] = None
+    SLACK_BOT_TOKEN: Optional[str] = None
+    SLACK_SIGNING_SECRET: Optional[str] = None
+    SLACK_APP_TOKEN: Optional[str] = None
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -286,6 +303,7 @@ class DevelopmentSettings(CommonSettings):
     # AI & Machine Learning
     OPENAI_API_KEY: Optional[str] = None
     GOOGLE_API_KEY: Optional[str] = None
+    OPENROUTER_API_KEY: Optional[str] = None
 
     # Media & Content Processing
     ASSEMBLYAI_API_KEY: Optional[str] = None
@@ -354,6 +372,16 @@ class DevelopmentSettings(CommonSettings):
     POSTHOG_API_KEY: Optional[str] = None
     OPIK_API_KEY: Optional[str] = None
     OPIK_WORKSPACE: Optional[str] = None
+
+    # ----------------------------------------------
+    # MCP OAuth Credentials
+    # ----------------------------------------------
+    MCP_ENCRYPTION_KEY: Optional[str] = None
+    VERCEL_MCP_CLIENT_ID: Optional[str] = None
+    NOTION_MCP_CLIENT_ID: Optional[str] = None
+    NOTION_MCP_CLIENT_SECRET: Optional[str] = None
+    FIGMA_MCP_CLIENT_ID: Optional[str] = None
+    FIGMA_MCP_CLIENT_SECRET: Optional[str] = None
 
     # ----------------------------------------------
     # Opik Evaluation Config

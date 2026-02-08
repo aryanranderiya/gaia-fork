@@ -106,3 +106,8 @@ out
 **/logs
 
 /tmp
+
+.postman
+postman/
+
+.agents/plans/

@@ -35,7 +35,7 @@ import {
   PlayIcon,
   RedoIcon,
 } from "@/icons";
-import { posthog } from "@/lib";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 import { type Workflow, workflowApi } from "../api/workflowApi";
 import { useWorkflowCreation } from "../hooks";
@@ -328,8 +328,7 @@ export default function WorkflowModal({
       const result = await createWorkflow(createRequest);
 
       if (result.success && result.workflow) {
-        // Track workflow creation
-        posthog.capture("workflows:created", {
+        trackEvent(ANALYTICS_EVENTS.WORKFLOWS_CREATED, {
           workflow_id: result.workflow.id,
           workflow_title: result.workflow.title,
           step_count: result.workflow.steps?.length || 0,
@@ -352,8 +351,7 @@ export default function WorkflowModal({
 
         // Notify parent callbacks if provided (for backwards compatibility)
         if (onWorkflowSaved) onWorkflowSaved(result.workflow.id);
-        // Refresh full list in background to ensure consistency
-        fetchWorkflows();
+        await fetchWorkflows();
 
         handleClose();
       } else {
@@ -389,11 +387,9 @@ export default function WorkflowModal({
       // Optimistic update: update in store immediately
       updateInStore(currentWorkflow.id, updateRequest);
 
-      if (onWorkflowSaved) {
-        onWorkflowSaved(currentWorkflow.id);
-      }
-      // Refresh full list in background to ensure consistency
-      fetchWorkflows();
+      if (onWorkflowSaved) onWorkflowSaved(currentWorkflow.id);
+
+      await fetchWorkflows();
       handleClose();
     } catch (error) {
       console.error("Failed to update workflow:", error);
@@ -401,15 +397,14 @@ export default function WorkflowModal({
   };
 
   const handleClose = () => {
-    resetFormValues(getDefaultFormValues());
+    handleFormReset();
     onOpenChange(false);
   };
 
   const handleDelete = async () => {
     if (mode === "edit" && existingWorkflow) {
       try {
-        // Track workflow deletion
-        posthog.capture("workflows:deleted", {
+        trackEvent(ANALYTICS_EVENTS.WORKFLOWS_DELETED, {
           workflow_id: existingWorkflow.id,
           workflow_title: existingWorkflow.title,
           step_count: existingWorkflow.steps?.length || 0,
@@ -422,11 +417,9 @@ export default function WorkflowModal({
         // Optimistic update: remove from store immediately
         removeFromStore(existingWorkflow.id);
 
-        if (onWorkflowDeleted) {
-          onWorkflowDeleted(existingWorkflow.id);
-        }
-        // Refresh full list in background to ensure consistency
-        fetchWorkflows();
+        if (onWorkflowDeleted) onWorkflowDeleted(existingWorkflow.id);
+
+        await fetchWorkflows();
         handleClose();
       } catch (error) {
         console.error("Failed to delete workflow:", error);
@@ -452,11 +445,8 @@ export default function WorkflowModal({
         activated: newActivated,
       });
       setIsActivated(newActivated);
-
-      // Optimistic update: update activation state in store
       updateInStore(currentWorkflow.id, { activated: newActivated });
-      // Refresh full list in background to ensure consistency
-      fetchWorkflows();
+      await fetchWorkflows();
     } catch (error) {
       console.error("Failed to toggle workflow activation:", error);
     } finally {
@@ -471,8 +461,7 @@ export default function WorkflowModal({
   ) => {
     if (mode !== "edit" || !currentWorkflow) return;
 
-    // Track workflow regeneration
-    posthog.capture("workflows:steps_regenerated", {
+    trackEvent(ANALYTICS_EVENTS.WORKFLOWS_STEPS_REGENERATED, {
       workflow_id: currentWorkflow.id,
       workflow_title: currentWorkflow.title,
       instruction,
@@ -503,8 +492,7 @@ export default function WorkflowModal({
       }
 
       if (onWorkflowSaved) onWorkflowSaved(currentWorkflow.id);
-      // Refresh workflow list to sync with server
-      fetchWorkflows();
+      await fetchWorkflows();
 
       setIsRegeneratingSteps(false);
     } catch (error) {
@@ -541,22 +529,24 @@ export default function WorkflowModal({
     }
 
     try {
-      // Track workflow run
-      posthog.capture("workflows:executed", {
+      trackEvent(ANALYTICS_EVENTS.WORKFLOWS_EXECUTED, {
         workflow_id: existingWorkflow.id,
         workflow_title: existingWorkflow.title,
         step_count: currentWorkflow.steps.length,
         trigger_type: existingWorkflow.trigger_config.type,
       });
 
-      selectWorkflow(existingWorkflow, { autoSend: true });
-
-      // Close the modal after navigation starts
+      // Close modal first to ensure clean state
       onOpenChange(false);
 
-      console.log(
-        "Workflow selected for manual execution in chat with auto-send",
-      );
+      // Then navigate after modal starts closing
+      // Small delay ensures modal close animation begins and component cleanup doesn't interfere
+      setTimeout(() => {
+        selectWorkflow(existingWorkflow, { autoSend: true });
+        console.log(
+          "Workflow selected for manual execution in chat with auto-send",
+        );
+      }, 50);
     } catch (error) {
       console.error("Failed to select workflow for execution:", error);
     }
@@ -665,10 +655,13 @@ export default function WorkflowModal({
 
                               try {
                                 if (currentWorkflow.is_public) {
-                                  posthog.capture("workflows:unpublished", {
-                                    workflow_id: currentWorkflow.id,
-                                    workflow_title: currentWorkflow.title,
-                                  });
+                                  trackEvent(
+                                    ANALYTICS_EVENTS.WORKFLOWS_UNPUBLISHED,
+                                    {
+                                      workflow_id: currentWorkflow.id,
+                                      workflow_title: currentWorkflow.title,
+                                    },
+                                  );
                                   await workflowApi.unpublishWorkflow(
                                     currentWorkflow.id,
                                   );
@@ -676,20 +669,27 @@ export default function WorkflowModal({
                                     prev ? { ...prev, is_public: false } : null,
                                   );
                                 } else {
-                                  posthog.capture("workflows:published", {
-                                    workflow_id: currentWorkflow.id,
-                                    workflow_title: currentWorkflow.title,
-                                    step_count:
-                                      currentWorkflow.steps?.length || 0,
-                                  });
+                                  trackEvent(
+                                    ANALYTICS_EVENTS.WORKFLOWS_PUBLISHED,
+                                    {
+                                      workflow_id: currentWorkflow.id,
+                                      workflow_title: currentWorkflow.title,
+                                      step_count:
+                                        currentWorkflow.steps?.length || 0,
+                                    },
+                                  );
                                   await workflowApi.publishWorkflow(
                                     currentWorkflow.id,
                                   );
                                   setCurrentWorkflow((prev) =>
                                     prev ? { ...prev, is_public: true } : null,
                                   );
-                                  // Navigate to marketplace after publishing
-                                  router.push("/use-cases#community-section");
+                                  if (currentWorkflow.id) {
+                                    // Navigate to the published workflow page
+                                    router.push(
+                                      `/use-cases/${currentWorkflow.id}`,
+                                    );
+                                  }
                                 }
                               } catch (error) {
                                 console.error(
@@ -697,10 +697,11 @@ export default function WorkflowModal({
                                   error,
                                 );
                               }
-                              // Refresh workflow list to sync with server
-                              fetchWorkflows();
+                              await fetchWorkflows();
                             } else if (key === "marketplace") {
-                              router.push("/use-cases#community-section");
+                              if (currentWorkflow?.id) {
+                                router.push(`/use-cases/${currentWorkflow.id}`);
+                              }
                             } else if (key === "delete") {
                               await handleDelete();
                             }

@@ -24,8 +24,7 @@ import {
   Target02Icon,
   ZapIcon,
 } from "@/icons";
-import { posthog } from "@/lib";
-import { useRefreshTrigger } from "@/stores/notificationStore";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { NotificationStatus } from "@/types/features/notificationTypes";
 import { SidebarPromo } from "./SidebarPromo";
 
@@ -33,9 +32,8 @@ export default function SidebarTopButtons() {
   const pathname = usePathname();
   const { data: subscriptionStatus } = useUserSubscriptionStatus();
   const { plans } = usePricing();
-  const refreshTrigger = useRefreshTrigger();
   const [unreadCount, setUnreadCount] = useState(0);
-  const { notifications, refetch } = useNotifications({
+  const { notifications } = useNotifications({
     status: NotificationStatus.DELIVERED,
     limit: 50,
   });
@@ -44,10 +42,6 @@ export default function SidebarTopButtons() {
     (p) => p.name === "Pro" && p.duration === "monthly",
   );
   const price = monthlyPlan ? monthlyPlan.amount / 100 : 15;
-
-  useEffect(() => {
-    refetch();
-  }, [refreshTrigger, refetch]);
 
   useEffect(() => {
     setUnreadCount(
@@ -148,12 +142,12 @@ export default function SidebarTopButtons() {
                   className={`group-topbtns focus-visible:outline-none w-full justify-start text-sm ${
                     isRouteActive(route)
                       ? "text-zinc-300"
-                      : "text-zinc-500 hover:text-zinc-300"
+                      : "text-zinc-400 hover:text-zinc-300"
                   }`}
                   as={Link}
                   href={route}
                   onPress={() => {
-                    posthog.capture("navigation:sidebar_clicked", {
+                    trackEvent(ANALYTICS_EVENTS.NAVIGATION_SIDEBAR_CLICKED, {
                       destination: route,
                       label,
                     });

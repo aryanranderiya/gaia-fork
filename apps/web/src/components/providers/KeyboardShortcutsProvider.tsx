@@ -12,6 +12,8 @@ import {
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
+import { prepareNewChat } from "@/features/chat/utils/newChatNavigation";
+
 import KeyboardShortcutsModal from "../shared/KeyboardShortcutsModal";
 
 interface KeyboardShortcutsContextValue {
@@ -61,6 +63,7 @@ export default function KeyboardShortcutsProvider({
     { prefix: "/calendar", navigate: "/calendar?create=true" },
     { prefix: "/workflows", selector: "create-workflow" },
     { prefix: "/goals", selector: "create-goal" },
+    { prefix: "/integrations", selector: "create-integration" },
   ] as const;
 
   const triggerCreateAction = useCallback(() => {
@@ -72,7 +75,10 @@ export default function KeyboardShortcutsProvider({
         `[data-keyboard-shortcut="${action.selector}"]`,
       ) as HTMLButtonElement;
       btn?.click();
-    } else router.push("/c");
+    } else {
+      prepareNewChat();
+      router.push("/c");
+    }
   }, [pathname, router]);
 
   useEffect(() => {
@@ -94,6 +100,11 @@ export default function KeyboardShortcutsProvider({
   useHotkeys(
     "c",
     (e) => {
+      // Ignore if any modifier key is pressed (e.g., Ctrl+C for copy)
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        console.log("Modifier key pressed, ignoring 'c' shortcut");
+        return;
+      }
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -104,7 +115,7 @@ export default function KeyboardShortcutsProvider({
       }
       createActionRef.current?.();
     },
-    { enableOnFormTags: false, keyup: true, keydown: false },
+    // { enableOnFormTags: false, keyup: true, keydown: false },
   );
 
   // ===========================================
@@ -115,7 +126,14 @@ export default function KeyboardShortcutsProvider({
   useHotkeys("g>t", () => routerRef.current.push("/todos"), hotkeyOptions);
   useHotkeys("g>o", () => routerRef.current.push("/goals"), hotkeyOptions);
   useHotkeys("g>w", () => routerRef.current.push("/workflows"), hotkeyOptions);
-  useHotkeys("g>h", () => routerRef.current.push("/c"), hotkeyOptions);
+  useHotkeys(
+    "g>h",
+    () => {
+      prepareNewChat();
+      routerRef.current.push("/c");
+    },
+    hotkeyOptions,
+  );
   useHotkeys(
     "g>i",
     () => routerRef.current.push("/integrations"),

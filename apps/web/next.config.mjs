@@ -12,6 +12,14 @@ const withBundleAnalyzer = bundleAnalyzer({
 });
 
 const nextConfig = {
+  compiler: {
+    removeConsole:
+      process.env.NODE_ENV === "production"
+        ? {
+            exclude: ["error"],
+          }
+        : false,
+  },
   reactStrictMode: true,
   // Enable standalone output for Electron desktop app bundling
   // This creates a minimal production server with all dependencies
@@ -25,6 +33,8 @@ const nextConfig = {
       "mermaid",
       "react-syntax-highlighter",
       "cytoscape",
+      "@theexperiencecompany/gaia-icons",
+      "@heroui/*",
     ],
   },
   webpack: (config, { isServer }) => {
@@ -58,6 +68,10 @@ const nextConfig = {
   pageExtensions: ["js", "jsx", "mdx", "ts", "tsx"],
   async rewrites() {
     return [
+      {
+        source: "/sitemap.xml",
+        destination: "/sitemap-index",
+      },
       {
         source: "/ingest/static/:path*",
         destination: "https://us-assets.i.posthog.com/static/:path*",

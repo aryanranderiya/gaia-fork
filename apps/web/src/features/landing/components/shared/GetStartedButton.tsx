@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight } from "@/components";
 import { RaisedButton } from "@/components/ui/raised-button";
-import { posthog } from "@/lib";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 export default function GetStartedButton({
   small_text = false,
@@ -13,25 +13,25 @@ export default function GetStartedButton({
   text?: string;
 }) {
   return (
-    <div className="relative z-[2] flex flex-col items-center gap-4 group">
+    <div className="relative z-2 flex flex-col items-center gap-4 group">
       <Link href={"/signup"}>
         <RaisedButton
-          className="rounded-xl px-4 text-black! before:rounded-xl hover:scale-110 group shadow-black"
+          className="rounded-xl px-1 text-black! before:rounded-xl hover:pl-2 duration-400 ease-out group shadow-black"
           color="#00bbff"
           onClick={() => {
-            posthog.capture("cta:get_started_clicked", {
+            trackEvent(ANALYTICS_EVENTS.CTA_GET_STARTED_CLICKED, {
               button_text: text,
               has_small_text: small_text,
             });
           }}
         >
-          <span className="group-hover:-translate-x-0 translate-x-3 transition ease-out duration-300">
+          <span className="group-hover:translate-x-1 translate-x-3 transition ease-out duration-300">
             {text}
           </span>
           <ChevronRight
             width={19}
             height={19}
-            className="group-hover:-translate-x-0 transition translate-x-9 ease-out duration-300"
+            className="group-hover:translate-x-0 transition translate-x-9 ease-out duration-300"
           />
         </RaisedButton>
       </Link>

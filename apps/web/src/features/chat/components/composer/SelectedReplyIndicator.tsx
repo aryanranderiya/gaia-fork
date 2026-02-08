@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import type React from "react";
 import { useEffect } from "react";
 import { Cancel01Icon, LinkBackwardIcon } from "@/icons";
+import { useComposerUI } from "@/stores/composerStore";
 import type { ReplyToMessageData } from "@/stores/replyToMessageStore";
 
 interface SelectedReplyIndicatorProps {
@@ -55,12 +56,15 @@ const SelectedReplyIndicator: React.FC<SelectedReplyIndicatorProps> = ({
   onNavigate,
   isDisplayOnly = false,
 }) => {
+  const { isSlashCommandDropdownOpen } = useComposerUI();
+
   // Handle Escape key to close the indicator
   useEffect(() => {
     if (!replyToMessage || !onRemove) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      // Only handle escape if slash command dropdown is NOT open
+      if (e.key === "Escape" && !isSlashCommandDropdownOpen) {
         e.preventDefault();
         onRemove();
       }
@@ -68,7 +72,7 @@ const SelectedReplyIndicator: React.FC<SelectedReplyIndicatorProps> = ({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [replyToMessage, onRemove]);
+  }, [replyToMessage, onRemove, isSlashCommandDropdownOpen]);
 
   const handleClick = () => {
     if (replyToMessage && onNavigate) {
@@ -116,7 +120,7 @@ const SelectedReplyIndicator: React.FC<SelectedReplyIndicatorProps> = ({
               stiffness: 300,
               duration: 0.2,
             }}
-            className="flex mt-2 w-full items-center cursor-pointer justify-between rounded-2xl px-3 py-2 transition-all hover:bg-zinc-700 border-dashed border-zinc-500 border-1.5 group"
+            className="relative flex mt-2 w-full items-center cursor-pointer justify-between rounded-2xl px-3 py-2 hover:bg-zinc-700/70 border-dashed border-zinc-500 bg-zinc-700/40 border-1.5 group overflow-hidden"
             onClick={handleClick}
           >
             <div className="flex items-center gap-2">
@@ -134,7 +138,7 @@ const SelectedReplyIndicator: React.FC<SelectedReplyIndicatorProps> = ({
               </div>
             </div>
 
-            <div>
+            <div className="absolute right-2">
               {onRemove && (
                 <Button
                   type="button"

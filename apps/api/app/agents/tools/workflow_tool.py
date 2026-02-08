@@ -4,11 +4,7 @@ Includes both workflow generation and chat interface tools.
 """
 
 from functools import wraps
-from typing import Annotated, Any, Optional, Literal
-
-from langchain_core.runnables.config import RunnableConfig
-from langchain_core.tools import tool
-from langgraph.config import get_stream_writer
+from typing import Annotated, Any, Literal, Optional
 
 from app.config.loggers import general_logger as logger
 from app.decorators import with_rate_limiting
@@ -16,8 +12,12 @@ from app.models.workflow_models import (
     CreateWorkflowRequest,
     TriggerConfig,
     TriggerType,
+    WorkflowExecutionRequest,
 )
 from app.services.workflow import WorkflowService
+from langchain_core.runnables.config import RunnableConfig
+from langchain_core.tools import tool
+from langgraph.config import get_stream_writer
 
 
 # Helper functions
@@ -153,8 +153,6 @@ async def execute_workflow_tool(
 ) -> dict:
     """Execute a workflow immediately (run now)."""
     try:
-        from app.models.workflow_models import WorkflowExecutionRequest
-
         result = await WorkflowService.execute_workflow(
             workflow_id, WorkflowExecutionRequest(), user_id
         )

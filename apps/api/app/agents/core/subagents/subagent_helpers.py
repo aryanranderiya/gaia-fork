@@ -2,16 +2,18 @@
 Subagent Helper Functions
 
 Reusable utilities for working with subagents, including system prompt creation
-with provider metadata injection.
+with provider metadata injection and skill retrieval.
 """
 
 import re
 from datetime import datetime, timezone
 from typing import Optional
 
+from app.agents.memory.skill_learning.service import get_skill_learning_service
+from app.agents.prompts.custom_mcp_prompts import CUSTOM_MCP_SUBAGENT_PROMPT
 from app.config.loggers import common_logger as logger
 from app.config.oauth_config import get_integration_by_id
-from app.models.oauth_models import OAuthIntegration
+from app.config.settings import settings
 from app.services.memory_service import memory_service
 from app.services.provider_metadata_service import get_provider_metadata
 from langchain_core.messages import SystemMessage
@@ -45,6 +47,11 @@ async def build_subagent_system_prompt(
     integration = get_integration_by_id(integration_id)
 
     if not integration:
+        # Handle custom/public MCPs - use universal prompt
+        # If not in OAUTH_INTEGRATIONS, it's a custom or public MCP integration
+        if integration_id:
+            return base_system_prompt or CUSTOM_MCP_SUBAGENT_PROMPT
+
         logger.warning(f"Integration {integration_id} not found")
         return base_system_prompt or ""
 
@@ -111,44 +118,30 @@ async def create_subagent_system_message(
     return SystemMessage(content=system_prompt)
 
 
-def get_integration_info(integration_id: str) -> Optional[OAuthIntegration]:
-    """
-    Get integration configuration by ID.
-
-    This is a simple wrapper around get_integration_by_id for convenience.
-
-    Args:
-        integration_id: The integration ID
-
-    Returns:
-        The OAuthIntegration object or None if not found
-    """
-    return get_integration_by_id(integration_id)
-
-
 async def create_agent_context_message(
-    agent_name: str,
     configurable: dict,
     user_id: Optional[str] = None,
     query: Optional[str] = None,
+    subagent_id: Optional[str] = None,
 ) -> SystemMessage:
     """
-    Create a context message with time, timezone, memories for executor/subagents.
+    Create a context message with time, timezone, memories, and skills for executor/subagents.
 
     This ensures executor and subagents have the same temporal awareness as the main agent,
     including:
     - Current UTC time
     - User's timezone and local time (extracted from user_time)
     - Conversation memories
+    - Relevant learned skills (for subagents)
 
     Args:
-        agent_name: The agent name for visibility metadata
         configurable: The config["configurable"] dict from RunnableConfig
         user_id: Optional user ID (extracted from configurable if not provided)
         query: Optional search query for memory retrieval
+        subagent_id: Optional subagent ID for skill retrieval (e.g., "twitter", "github")
 
     Returns:
-        SystemMessage with time/timezone/memories context
+        SystemMessage with time/timezone/memories/skills context
     """
     context_parts = []
 
@@ -203,6 +196,26 @@ async def create_agent_context_message(
         except Exception as e:
             logger.warning(f"Error retrieving memories for subagent: {e}")
 
-    content = "\n".join(context_parts) + memories_section
+    # Search for relevant skills (only for subagents, and only if skill learning is enabled)
+    skills_section = ""
+    if subagent_id and query and settings.SKILL_LEARNING_ENABLED:
+        try:
+            skill_service = get_skill_learning_service()
+            result = await skill_service.search_skills(
+                query=query,
+                agent_id=subagent_id,
+                limit=3,
+            )
+            if result.skills:
+                skills_section = skill_service.format_skills_for_prompt(
+                    result.skills, subagent_id
+                )
+                logger.info(
+                    f"Added {len(result.skills)} skills to {subagent_id} context"
+                )
+        except Exception as e:
+            logger.warning(f"Error retrieving skills for {subagent_id}: {e}")
+
+    content = "\n".join(context_parts) + memories_section + skills_section
 
     return SystemMessage(content=content, memory_message=True)

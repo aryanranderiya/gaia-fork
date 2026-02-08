@@ -44,6 +44,22 @@ const mergeMessageLists = (
     }
   });
 
+  // CRITICAL: Clean up orphaned optimistic messages
+  // These are optimistic messages whose backend counterparts have different IDs
+  // This happens when the stream was interrupted before replaceOptimisticMessage was called
+  if (remoteMessages.length > 0) {
+    for (const [id, msg] of messageMap) {
+      if (
+        msg.optimistic &&
+        !streamState.isStreamingConversation(msg.conversationId)
+      ) {
+        // This optimistic message wasn't replaced and we're not streaming
+        // It's orphaned - the backend has the real version with a different ID
+        messageMap.delete(id);
+      }
+    }
+  }
+
   // Convert back to array and sort by creation time
   return Array.from(messageMap.values()).sort(
     (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
@@ -238,8 +254,8 @@ export const batchSyncConversations = async (): Promise<void> => {
         const conversationId = conversation.conversation_id;
         const messages = conversation.messages ?? [];
 
-        // Double-check: Skip syncing this conversation if it's currently being streamed
-        if (streamState.isStreamingConversation(conversationId)) return;
+        // Skip syncing if streaming or pending save (e.g., after abort)
+        if (streamState.shouldBlockSync(conversationId)) return;
 
         const mappedConversation: IConversation = {
           id: conversationId,

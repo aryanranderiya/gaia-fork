@@ -3,6 +3,7 @@ import type { ReactElement } from "react";
 import {
   BlushBrush02Icon,
   BookOpen02Icon,
+  ConnectIcon,
   CreditCardPosIcon,
   DiscordIcon,
   Github,
@@ -76,6 +77,12 @@ export const appConfig = {
         label: "Use Cases",
         icon: <Idea01Icon width={20} height={20} color={"currentColor"} />,
         description: "Discover workflows and AI prompts",
+      },
+      {
+        href: "/marketplace",
+        label: "Integration Marketplace",
+        icon: <ConnectIcon width={20} height={20} color={"currentColor"} />,
+        description: "Explore community integrations",
       },
       {
         href: "/pricing",
@@ -240,6 +247,7 @@ export const appConfig = {
     Product: ["product"],
     Resources: ["resources"],
     Company: ["company"],
+    Socials: ["connect"],
   } as Record<string, string[]>,
 };
 

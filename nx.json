@@ -50,6 +50,9 @@
     },
     "clean": {
       "cache": false
+    },
+    "next:start": {
+      "dependsOn": []
     }
   },
   "parallel": 3,
@@ -95,6 +98,5 @@
         "develop": "develop-{shortCommitSha}"
       }
     }
-  },
-  "nxCloudId": "693d6d47c244495eb66b1b66"
+  }
 }
