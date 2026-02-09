@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     oauth,
     onboarding,
     payments,
+    platform_auth,
     reminders,
     search,
     support,
@@ -76,3 +77,6 @@ router.include_router(tools.router, tags=["Tools"])
 router.include_router(models.router, tags=["Models"])
 router.include_router(bot.router, prefix="/bot", tags=["Bot"])
 router.include_router(bot_auth.router, prefix="/bot-auth", tags=["Bot Auth"])
+router.include_router(
+    platform_auth.router, prefix="/platform-auth", tags=["Platform Auth"]
+)
