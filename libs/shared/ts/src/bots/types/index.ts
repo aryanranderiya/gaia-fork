@@ -63,8 +63,8 @@ export interface Workflow {
   name: string;
   description: string;
   status: "active" | "inactive" | "draft";
-  triggers?: any[];
-  steps?: any[];
+  triggers?: Record<string, unknown>[];
+  steps?: Record<string, unknown>[];
   created_at?: string;
   updated_at?: string;
 }
@@ -75,13 +75,13 @@ export interface WorkflowListResponse {
 
 export interface WorkflowExecutionRequest {
   workflow_id: string;
-  inputs?: Record<string, any>;
+  inputs?: Record<string, unknown>;
 }
 
 export interface WorkflowExecutionResponse {
   execution_id: string;
   status: string;
-  result?: any;
+  result?: unknown;
 }
 
 export interface Todo {
@@ -133,7 +133,7 @@ export interface WeatherResponse {
   condition: string;
   humidity?: number;
   wind_speed?: number;
-  forecast?: any[];
+  forecast?: Record<string, unknown>[];
 }
 
 export interface SearchRequest {
@@ -141,7 +141,7 @@ export interface SearchRequest {
 }
 
 export interface SearchResponse {
-  messages: any[];
-  conversations: any[];
-  notes: any[];
+  messages: Record<string, unknown>[];
+  conversations: Record<string, unknown>[];
+  notes: Record<string, unknown>[];
 }

@@ -50,20 +50,26 @@ export class GaiaClient {
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     try {
-      const { data } = await this.client.post<any>("/api/v1/bot/chat", {
-        message: request.message,
-        platform: request.platform,
-        platform_user_id: request.platformUserId,
-        channel_id: request.channelId,
-      });
+      const { data } = await this.client.post<ChatResponse>(
+        "/api/v1/bot/chat",
+        {
+          message: request.message,
+          platform: request.platform,
+          platform_user_id: request.platformUserId,
+          channel_id: request.channelId,
+        },
+      );
 
       return {
         response: data.response,
         conversationId: data.conversation_id,
         authenticated: data.authenticated,
       };
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -77,19 +83,25 @@ export class GaiaClient {
    */
   async chatPublic(request: ChatRequest): Promise<ChatResponse> {
     try {
-      const { data } = await this.client.post<any>("/api/v1/bot/chat/public", {
-        message: request.message,
-        platform: request.platform,
-        platform_user_id: request.platformUserId,
-      });
+      const { data } = await this.client.post<ChatResponse>(
+        "/api/v1/bot/chat/public",
+        {
+          message: request.message,
+          platform: request.platform,
+          platform_user_id: request.platformUserId,
+        },
+      );
 
       return {
         response: data.response,
         conversationId: data.conversation_id,
         authenticated: false,
       };
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -117,8 +129,11 @@ export class GaiaClient {
         `/api/v1/bot/session/${platform}/${platformUserId}?${params.toString()}`,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -139,8 +154,11 @@ export class GaiaClient {
         `/api/v1/bot-auth/status/${platform}/${platformUserId}`,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -149,12 +167,14 @@ export class GaiaClient {
    */
   async listWorkflows(): Promise<WorkflowListResponse> {
     try {
-      const { data } = await this.client.get<WorkflowListResponse>(
-        "/api/v1/workflows"
-      );
+      const { data } =
+        await this.client.get<WorkflowListResponse>("/api/v1/workflows");
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -164,16 +184,19 @@ export class GaiaClient {
   async createWorkflow(request: {
     name: string;
     description: string;
-    steps?: any[];
+    steps?: Record<string, unknown>[];
   }): Promise<Workflow> {
     try {
       const { data } = await this.client.post<{ workflow: Workflow }>(
         "/api/v1/workflows",
-        request
+        request,
       );
       return data.workflow;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -183,11 +206,14 @@ export class GaiaClient {
   async getWorkflow(workflowId: string): Promise<Workflow> {
     try {
       const { data } = await this.client.get<{ workflow: Workflow }>(
-        `/api/v1/workflows/${workflowId}`
+        `/api/v1/workflows/${workflowId}`,
       );
       return data.workflow;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -195,16 +221,19 @@ export class GaiaClient {
    * Executes a workflow.
    */
   async executeWorkflow(
-    request: WorkflowExecutionRequest
+    request: WorkflowExecutionRequest,
   ): Promise<WorkflowExecutionResponse> {
     try {
       const { data } = await this.client.post<WorkflowExecutionResponse>(
         `/api/v1/workflows/${request.workflow_id}/execute`,
-        { inputs: request.inputs }
+        { inputs: request.inputs },
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -214,8 +243,11 @@ export class GaiaClient {
   async deleteWorkflow(workflowId: string): Promise<void> {
     try {
       await this.client.delete(`/api/v1/workflows/${workflowId}`);
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -235,12 +267,15 @@ export class GaiaClient {
         queryParams.set("project_id", params.project_id);
       }
 
-      const { data} = await this.client.get<TodoListResponse>(
-        `/api/v1/todos?${queryParams.toString()}`
+      const { data } = await this.client.get<TodoListResponse>(
+        `/api/v1/todos?${queryParams.toString()}`,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -251,8 +286,11 @@ export class GaiaClient {
     try {
       const { data } = await this.client.post<Todo>("/api/v1/todos", request);
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -263,8 +301,11 @@ export class GaiaClient {
     try {
       const { data } = await this.client.get<Todo>(`/api/v1/todos/${todoId}`);
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -273,16 +314,19 @@ export class GaiaClient {
    */
   async updateTodo(
     todoId: string,
-    updates: Partial<CreateTodoRequest>
+    updates: Partial<CreateTodoRequest>,
   ): Promise<Todo> {
     try {
       const { data } = await this.client.patch<Todo>(
         `/api/v1/todos/${todoId}`,
-        updates
+        updates,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -299,8 +343,11 @@ export class GaiaClient {
   async deleteTodo(todoId: string): Promise<void> {
     try {
       await this.client.delete(`/api/v1/todos/${todoId}`);
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -317,11 +364,14 @@ export class GaiaClient {
       queryParams.set("limit", String(params?.limit || 10));
 
       const { data } = await this.client.get<ConversationListResponse>(
-        `/api/v1/conversations?${queryParams.toString()}`
+        `/api/v1/conversations?${queryParams.toString()}`,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -331,11 +381,14 @@ export class GaiaClient {
   async getConversation(conversationId: string): Promise<Conversation> {
     try {
       const { data } = await this.client.get<Conversation>(
-        `/api/v1/conversations/${conversationId}`
+        `/api/v1/conversations/${conversationId}`,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -353,7 +406,7 @@ export class GaiaClient {
   async getWeather(
     location: string,
     platform: string,
-    platformUserId: string
+    platformUserId: string,
   ): Promise<string> {
     try {
       const response = await this.chat({
@@ -362,8 +415,11 @@ export class GaiaClient {
         platformUserId,
       });
       return response.response;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
@@ -373,11 +429,14 @@ export class GaiaClient {
   async search(query: string): Promise<SearchResponse> {
     try {
       const { data } = await this.client.get<SearchResponse>(
-        `/api/v1/search?query=${encodeURIComponent(query)}`
+        `/api/v1/search?query=${encodeURIComponent(query)}`,
       );
       return data;
-    } catch (error: any) {
-      throw new Error(`API error: ${error.response?.status || error.message}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      throw new Error(`API error: ${status || message}`);
     }
   }
 
