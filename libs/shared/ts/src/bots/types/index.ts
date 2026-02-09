@@ -57,3 +57,91 @@ export interface AuthStatus {
   /** The user ID on the platform. */
   platformUserId: string;
 }
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  status: "active" | "inactive" | "draft";
+  triggers?: any[];
+  steps?: any[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WorkflowListResponse {
+  workflows: Workflow[];
+}
+
+export interface WorkflowExecutionRequest {
+  workflow_id: string;
+  inputs?: Record<string, any>;
+}
+
+export interface WorkflowExecutionResponse {
+  execution_id: string;
+  status: string;
+  result?: any;
+}
+
+export interface Todo {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  priority?: "low" | "medium" | "high";
+  due_date?: string;
+  project_id?: string;
+}
+
+export interface TodoListResponse {
+  todos: Todo[];
+  total: number;
+}
+
+export interface CreateTodoRequest {
+  title: string;
+  description?: string;
+  completed?: boolean;
+  priority?: "low" | "medium" | "high";
+  due_date?: string;
+  project_id?: string;
+}
+
+export interface Conversation {
+  conversation_id: string;
+  title?: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+  message_count?: number;
+}
+
+export interface ConversationListResponse {
+  conversations: Conversation[];
+  total: number;
+  page: number;
+}
+
+export interface WeatherRequest {
+  location: string;
+}
+
+export interface WeatherResponse {
+  location: string;
+  temperature: number;
+  condition: string;
+  humidity?: number;
+  wind_speed?: number;
+  forecast?: any[];
+}
+
+export interface SearchRequest {
+  query: string;
+}
+
+export interface SearchResponse {
+  messages: any[];
+  conversations: any[];
+  notes: any[];
+}

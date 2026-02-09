@@ -3,7 +3,17 @@ import type {
   AuthStatus,
   ChatRequest,
   ChatResponse,
+  Conversation,
+  ConversationListResponse,
+  CreateTodoRequest,
+  SearchResponse,
   SessionInfo,
+  Todo,
+  TodoListResponse,
+  Workflow,
+  WorkflowExecutionRequest,
+  WorkflowExecutionResponse,
+  WorkflowListResponse,
 } from "../types";
 
 /**
@@ -127,6 +137,243 @@ export class GaiaClient {
     try {
       const { data } = await this.client.get<AuthStatus>(
         `/api/v1/bot-auth/status/${platform}/${platformUserId}`,
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Lists all workflows for the authenticated user.
+   */
+  async listWorkflows(): Promise<WorkflowListResponse> {
+    try {
+      const { data } = await this.client.get<WorkflowListResponse>(
+        "/api/v1/workflows"
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Creates a new workflow.
+   */
+  async createWorkflow(request: {
+    name: string;
+    description: string;
+    steps?: any[];
+  }): Promise<Workflow> {
+    try {
+      const { data } = await this.client.post<{ workflow: Workflow }>(
+        "/api/v1/workflows",
+        request
+      );
+      return data.workflow;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Gets a specific workflow by ID.
+   */
+  async getWorkflow(workflowId: string): Promise<Workflow> {
+    try {
+      const { data } = await this.client.get<{ workflow: Workflow }>(
+        `/api/v1/workflows/${workflowId}`
+      );
+      return data.workflow;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Executes a workflow.
+   */
+  async executeWorkflow(
+    request: WorkflowExecutionRequest
+  ): Promise<WorkflowExecutionResponse> {
+    try {
+      const { data } = await this.client.post<WorkflowExecutionResponse>(
+        `/api/v1/workflows/${request.workflow_id}/execute`,
+        { inputs: request.inputs }
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Deletes a workflow.
+   */
+  async deleteWorkflow(workflowId: string): Promise<void> {
+    try {
+      await this.client.delete(`/api/v1/workflows/${workflowId}`);
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Lists todos for the authenticated user.
+   */
+  async listTodos(params?: {
+    completed?: boolean;
+    project_id?: string;
+  }): Promise<TodoListResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.completed !== undefined) {
+        queryParams.set("completed", String(params.completed));
+      }
+      if (params?.project_id) {
+        queryParams.set("project_id", params.project_id);
+      }
+
+      const { data} = await this.client.get<TodoListResponse>(
+        `/api/v1/todos?${queryParams.toString()}`
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Creates a new todo.
+   */
+  async createTodo(request: CreateTodoRequest): Promise<Todo> {
+    try {
+      const { data } = await this.client.post<Todo>("/api/v1/todos", request);
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Gets a specific todo by ID.
+   */
+  async getTodo(todoId: string): Promise<Todo> {
+    try {
+      const { data } = await this.client.get<Todo>(`/api/v1/todos/${todoId}`);
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Updates a todo.
+   */
+  async updateTodo(
+    todoId: string,
+    updates: Partial<CreateTodoRequest>
+  ): Promise<Todo> {
+    try {
+      const { data } = await this.client.patch<Todo>(
+        `/api/v1/todos/${todoId}`,
+        updates
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Marks a todo as complete.
+   */
+  async completeTodo(todoId: string): Promise<Todo> {
+    return this.updateTodo(todoId, { completed: true });
+  }
+
+  /**
+   * Deletes a todo.
+   */
+  async deleteTodo(todoId: string): Promise<void> {
+    try {
+      await this.client.delete(`/api/v1/todos/${todoId}`);
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Lists conversations for the authenticated user.
+   */
+  async listConversations(params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<ConversationListResponse> {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.set("page", String(params?.page || 1));
+      queryParams.set("limit", String(params?.limit || 10));
+
+      const { data } = await this.client.get<ConversationListResponse>(
+        `/api/v1/conversations?${queryParams.toString()}`
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Gets a specific conversation by ID.
+   */
+  async getConversation(conversationId: string): Promise<Conversation> {
+    try {
+      const { data } = await this.client.get<Conversation>(
+        `/api/v1/conversations/${conversationId}`
+      );
+      return data;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Gets the web URL for a conversation.
+   */
+  getConversationUrl(conversationId: string): string {
+    return `${this.baseUrl}/chat/${conversationId}`;
+  }
+
+  /**
+   * Gets weather information for a location.
+   * This uses the agent's weather tool via a chat request.
+   */
+  async getWeather(
+    location: string,
+    platform: string,
+    platformUserId: string
+  ): Promise<string> {
+    try {
+      const response = await this.chat({
+        message: `What's the weather in ${location}?`,
+        platform,
+        platformUserId,
+      });
+      return response.response;
+    } catch (error: any) {
+      throw new Error(`API error: ${error.response?.status || error.message}`);
+    }
+  }
+
+  /**
+   * Searches messages, conversations, and notes.
+   */
+  async search(query: string): Promise<SearchResponse> {
+    try {
+      const { data } = await this.client.get<SearchResponse>(
+        `/api/v1/search?query=${encodeURIComponent(query)}`
       );
       return data;
     } catch (error: any) {
