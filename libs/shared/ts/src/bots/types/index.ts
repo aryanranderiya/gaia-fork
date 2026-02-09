@@ -5,7 +5,7 @@ export interface ChatRequest {
   /** The message content to send. */
   message: string;
   /** The platform the message originated from. */
-  platform: "discord" | "slack" | "telegram";
+  platform: "discord" | "slack" | "telegram" | "whatsapp";
   /** The user ID of the sender on the platform. */
   platformUserId: string;
   /** Optional channel ID where the conversation is happening. */

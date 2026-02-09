@@ -1,29 +1,23 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, MessageFlags } from "discord.js";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  MessageFlags,
+} from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
 
-/**
- * Slash command definition for /auth.
- */
 export const data = new SlashCommandBuilder()
   .setName("auth")
   .setDescription("Link your Discord account to GAIA");
 
-/**
- * Executes the /auth slash command.
- * Provides a link for the user to authenticate with GAIA.
- *
- * @param {ChatInputCommandInteraction} interaction - The Discord interaction object.
- * @param {GaiaClient} gaia - The GAIA API client.
- */
 export async function execute(
   interaction: ChatInputCommandInteraction,
-  gaia: GaiaClient
+  gaia: GaiaClient,
 ) {
   const userId = interaction.user.id;
   const authUrl = gaia.getAuthUrl("discord", userId);
 
   await interaction.reply({
-    content: `Click to link your Discord account to GAIA: ${authUrl}`,
-    flags: MessageFlags.Ephemeral
+    content: `🔗 **Link your Discord to GAIA**\n\nClick the link below to sign in with GAIA and link your Discord account:\n${authUrl}\n\n*After linking, you'll be able to use all GAIA commands directly from Discord!*`,
+    flags: MessageFlags.Ephemeral,
   });
 }

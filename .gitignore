@@ -111,3 +111,7 @@ out
 postman/
 
 .agents/plans/
+
+# whatsapp-web.js
+.wwebjs_auth/
+.wwebjs_cache/

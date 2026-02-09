@@ -1,19 +1,23 @@
+export * from "./formatters";
+export * from "./commands";
+
 const LIMITS: Record<string, number> = {
   discord: 2000,
   slack: 4000,
   telegram: 4096,
+  whatsapp: 4096,
 };
 
 /**
  * Truncates a response message to fit within the platform's character limit.
  *
  * @param text - The message text to truncate.
- * @param platform - The target platform (discord, slack, telegram).
+ * @param platform - The target platform (discord, slack, telegram, whatsapp).
  * @returns The truncated message, appended with "..." if truncated.
  */
 export function truncateResponse(
   text: string,
-  platform: "discord" | "slack" | "telegram",
+  platform: "discord" | "slack" | "telegram" | "whatsapp",
 ): string {
   const limit = LIMITS[platform];
   if (text.length <= limit) {

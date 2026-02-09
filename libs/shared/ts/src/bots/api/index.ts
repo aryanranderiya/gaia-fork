@@ -405,7 +405,7 @@ export class GaiaClient {
    */
   async getWeather(
     location: string,
-    platform: string,
+    platform: ChatRequest["platform"],
     platformUserId: string,
   ): Promise<string> {
     try {
@@ -447,11 +447,14 @@ export class GaiaClient {
    * @param platformUserId - The platform user ID.
    * @returns The full URL for authentication.
    */
+  getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   getAuthUrl(platform: string, platformUserId: string): string {
     const params = new URLSearchParams({
-      platform,
       platform_user_id: platformUserId,
     });
-    return `${this.baseUrl}/bot-auth/link/${platform}?${params.toString()}`; // Adjusted URL path to match backend
+    return `${this.baseUrl}/api/v1/bot-auth/link/${platform}?${params.toString()}`;
   }
 }

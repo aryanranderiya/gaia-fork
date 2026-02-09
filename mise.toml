@@ -154,9 +154,29 @@ run = "mise worker"
 description = "Run ONLY voice agent worker"
 run = "nx dev voice-agent"
 
+[tasks."dev:bots"]
+description = "Run ALL bots (Discord, Telegram, Slack, WhatsApp) in parallel"
+run = "nx run-many -t dev --projects=discord,telegram,slack,whatsapp --parallel=4"
+
+[tasks."dev:discord"]
+description = "Run ONLY Discord bot"
+run = "nx dev discord"
+
+[tasks."dev:telegram"]
+description = "Run ONLY Telegram bot"
+run = "nx dev telegram"
+
+[tasks."dev:slack"]
+description = "Run ONLY Slack bot"
+run = "nx dev slack"
+
+[tasks."dev:whatsapp"]
+description = "Run ONLY WhatsApp bot"
+run = "nx dev whatsapp"
+
 [tasks."dev:full"]
-description = "Run API + web + arq worker + voice agent in parallel"
-run = "nx run docker:docker:up && nx run-many -t dev,worker --projects=api,web,voice-agent --parallel=4"
+description = "Run API + web + arq worker + voice agent + all bots in parallel"
+run = "nx run docker:docker:up && nx run-many -t dev,worker --projects=api,web,voice-agent,discord,telegram,slack,whatsapp --parallel=8"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🏗️ BUILD COMMANDS

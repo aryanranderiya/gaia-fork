@@ -1,0 +1,22 @@
+{
+  "name": "@gaia/bot-whatsapp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@gaia/shared": "workspace:*",
+    "whatsapp-web.js": "^1.25.0",
+    "qrcode-terminal": "^0.12.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/qrcode-terminal": "^0.12.2",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

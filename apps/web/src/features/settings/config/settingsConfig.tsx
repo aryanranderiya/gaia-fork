@@ -4,6 +4,7 @@ import {
   ChartLineData02Icon,
   CreditCardIcon,
   DiscordIcon,
+  Link03Icon,
   MessageMultiple02Icon,
   SparklesIcon,
   TwitterIcon,
@@ -34,6 +35,12 @@ export const settingsPageItems: SettingsMenuItem[] = [
     label: "Account",
     icon: UserCircleIcon,
     href: "/settings?section=account",
+  },
+  {
+    key: "linked-accounts",
+    label: "Linked Accounts",
+    icon: Link03Icon,
+    href: "/settings?section=linked-accounts",
   },
   {
     key: "subscription",

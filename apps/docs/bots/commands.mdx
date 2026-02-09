@@ -1,0 +1,206 @@
+---
+title: 'Bot Commands Reference'
+description: 'Complete reference for all GAIA bot commands'
+---
+
+# Bot Commands Reference
+
+This page documents all available commands across GAIA bot platforms.
+
+## General Commands
+
+### Chat with GAIA
+
+```
+/gaia <message>
+```
+
+Send a message to GAIA and get a response.
+
+**Example:**
+```
+/gaia What's on my schedule today?
+```
+
+### Link Account
+
+```
+/auth
+```
+
+Generate a link to connect your messaging account to GAIA.
+
+**Example:**
+```
+/auth
+```
+
+You'll receive a URL to complete authentication in your browser.
+
+---
+
+## Workflow Commands
+
+### List Workflows
+
+```
+/workflow list
+```
+
+Display all your workflows with their status.
+
+### Get Workflow Details
+
+```
+/workflow get <id>
+```
+
+Get detailed information about a specific workflow.
+
+### Execute Workflow
+
+```
+/workflow execute <id>
+```
+
+Manually trigger a workflow to run.
+
+### Create Workflow (Discord only)
+
+```
+/workflow create <name> <description>
+```
+
+Create a new workflow with a name and description.
+
+---
+
+## Todo Commands
+
+### List Todos
+
+```
+/todo list
+```
+
+Show all active (incomplete) todos.
+
+### Add Todo
+
+```
+/todo add <title> [priority] [description]
+```
+
+Create a new todo. Priority is optional (low, medium, high).
+
+**Examples:**
+```
+/todo add "Buy groceries"
+/todo add "Fix bug in login" high
+/todo add "Update documentation" medium "Add API examples"
+```
+
+### Complete Todo
+
+```
+/todo complete <id>
+```
+
+Mark a todo as completed.
+
+### Delete Todo
+
+```
+/todo delete <id>
+```
+
+Permanently delete a todo.
+
+---
+
+## Conversation Commands
+
+### List Conversations
+
+```
+/conversations [page]
+```
+
+View your recent GAIA conversations with links to the web interface.
+
+**Example:**
+```
+/conversations
+/conversations 2
+```
+
+---
+
+## Utility Commands
+
+### Weather
+
+```
+/weather <location>
+```
+
+Get current weather and forecast for a location.
+
+**Example:**
+```
+/weather San Francisco
+/weather Tokyo, Japan
+```
+
+### Search
+
+```
+/search <query>
+```
+
+Search across your messages, conversations, and notes in GAIA.
+
+**Example:**
+```
+/search python tutorial
+```
+
+---
+
+## Platform-Specific Notes
+
+### Discord
+- All commands are slash commands with autocomplete
+- Responses are ephemeral (only visible to you) by default
+- Can also mention the bot: `@GAIA what's the weather?`
+
+### Slack
+- Commands use Slack's slash command syntax
+- All responses are ephemeral
+- Works in DMs and channels
+
+### Telegram
+- Commands start with `/` as standard in Telegram
+- Use `/help` to see all commands
+- Supports Markdown formatting
+
+### WhatsApp
+- All commands start with `/`
+- Use `/help` to see available commands
+- Rich formatting is limited
+
+---
+
+## Getting Help
+
+Can't find what you need? Use the help command:
+
+```
+/help
+```
+
+Or visit the platform-specific guides:
+- [Discord Setup](/bots/discord)
+- [Slack Setup](/bots/slack)
+- [Telegram Setup](/bots/telegram)
+- [WhatsApp Setup](/bots/whatsapp)
