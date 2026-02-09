@@ -144,7 +144,7 @@ async def prepare_subagent_execution(
     This is the shared setup logic used by both handoff tool and call_subagent.
 
     Args:
-        subagent_id: The subagent ID (e.g., "google_calendar", "gmail")
+        subagent_id: The subagent ID (e.g., "googlecalendar", "gmail")
         task: The task/query to execute
         user: User dict with user_id, email, name
         user_time: User's local time
@@ -280,18 +280,23 @@ async def execute_subagent_stream(
 
             # Accumulate AI response content
             if chunk and isinstance(chunk, AIMessageChunk):
-                content = chunk.text() if hasattr(chunk, "text") else str(chunk.content)
+                content = chunk.text if hasattr(chunk, "text") else str(chunk.content)
                 if content:
                     complete_message += content
 
             # Emit tool_output when ToolMessage arrives
             elif chunk and isinstance(chunk, ToolMessage):
+                output = (
+                    chunk.content[:3000]
+                    if isinstance(chunk.content, str)
+                    else str(chunk.content)[:3000]
+                )
                 if stream_writer:
                     stream_writer(
                         {
                             "tool_output": {
                                 "tool_call_id": chunk.tool_call_id,
-                                "output": chunk.text()[:3000],
+                                "output": output,
                             }
                         }
                     )
@@ -423,7 +428,7 @@ async def call_subagent(
     Primarily used for testing subagents directly without going through the main agent.
 
     Args:
-        subagent_id: e.g., "google_calendar", "gmail", "github"
+        subagent_id: e.g., "googlecalendar", "gmail", "github"
         query: The user's message/query
         user: User dict with user_id, email, name
         conversation_id: Conversation thread ID
@@ -436,7 +441,7 @@ async def call_subagent(
 
     Usage:
         async for chunk in call_subagent(
-            subagent_id="google_calendar",
+            subagent_id="googlecalendar",
             query="What's on my calendar today?",
             user=user,
             conversation_id=conversation_id,
@@ -512,14 +517,19 @@ async def call_subagent(
 
             # Stream AI response content
             if chunk and isinstance(chunk, AIMessageChunk):
-                content = chunk.text() if hasattr(chunk, "text") else str(chunk.content)
+                content = chunk.text if hasattr(chunk, "text") else str(chunk.content)
                 if content:
                     complete_message += content
                     yield f"data: {json.dumps({'response': content})}\n\n"
 
             # Emit tool_output when ToolMessage arrives
             elif chunk and isinstance(chunk, ToolMessage):
-                yield f"data: {json.dumps({'tool_output': {'tool_call_id': chunk.tool_call_id, 'output': chunk.text()[:3000]}})}\n\n"
+                output = (
+                    chunk.content[:3000]
+                    if isinstance(chunk.content, str)
+                    else str(chunk.content)[:3000]
+                )
+                yield f"data: {json.dumps({'tool_output': {'tool_call_id': chunk.tool_call_id, 'output': output}})}\n\n"
             continue
 
         if stream_mode == "custom":

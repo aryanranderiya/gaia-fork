@@ -21,7 +21,6 @@ import { holoCardApi } from "@/features/onboarding/api/holoCardApi";
 import {
   Copy01Icon,
   Dices,
-  Download01Icon,
   LinkSquare02Icon,
   PaintBoardIcon,
   ReloadIcon,
@@ -302,7 +301,7 @@ export const HoloCardEditor = ({
       </div>
 
       <ButtonGroup className="mt-2">
-        <Tooltip content="Download your card" placement="top">
+        {/* <Tooltip content="Download your card" placement="top">
           <Button
             isIconOnly
             variant="flat"
@@ -311,7 +310,7 @@ export const HoloCardEditor = ({
           >
             <Download01Icon size={20} />
           </Button>
-        </Tooltip>
+        </Tooltip> */}
 
         <Tooltip content="Share your card" placement="top">
           <Dropdown placement="top">

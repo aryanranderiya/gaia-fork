@@ -11,9 +11,7 @@ import Personalised from "@/features/landing/components/sections/Personalised";
 import Productivity from "@/features/landing/components/sections/Productivity";
 import ProductivityOS from "@/features/landing/components/sections/ProductivityOS";
 import TestimonialsSection from "@/features/landing/components/sections/TestimonialsSection";
-import TiredBoringAssistants from "@/features/landing/components/sections/TiredBoringAssistants";
 import ToolsShowcaseSection from "@/features/landing/components/sections/ToolsShowcaseSection";
-import WorkflowSection from "@/features/landing/components/sections/WorkflowSection";
 import { FAQAccordion } from "@/features/pricing/components/FAQAccordion";
 
 export default function LandingPageClient() {
@@ -63,7 +61,7 @@ export default function LandingPageClient() {
       </div> */}
 
       <div>
-        <div className="relative">
+        {/* <div className="relative">
           <TiredBoringAssistants />
 
           <div
@@ -75,11 +73,11 @@ export default function LandingPageClient() {
               opacity: 0.6,
             }}
           />
-        </div>
+        </div> */}
 
         <ProductivityOS />
         <ToolsShowcaseSection />
-        <WorkflowSection />
+        {/* <WorkflowSection /> */}
         <Productivity />
         <Personalised />
         <TestimonialsSection />
