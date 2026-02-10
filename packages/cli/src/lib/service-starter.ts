@@ -14,27 +14,24 @@ export async function startServices(
   onStatus?: (status: string) => void,
 ): Promise<void> {
   if (setupMode === "selfhost") {
-    onStatus?.("Starting backend stack (Docker)...");
+    onStatus?.("Starting all services in Docker (selfhost mode)...");
+    const prodComposePath = path.join(repoPath, "infra/docker");
     await runCommand(
       "docker",
-      ["compose", "--profile", "all", "up", "-d", "--remove-orphans"],
-      path.join(repoPath, "infra/docker"),
+      [
+        "compose",
+        "-f",
+        "docker-compose.prod.yml",
+        "--profile",
+        "web",
+        "up",
+        "-d",
+        "--build",
+        "--remove-orphans",
+      ],
+      prodComposePath,
     );
-
-    onStatus?.("Building web frontend...");
-    await runCommand("nx", ["build", "web"], repoPath);
-
-    onStatus?.("Starting web frontend...");
-    const { spawn } = await import("child_process");
-    const webLog = fs.openSync(path.join(repoPath, WEB_LOG_FILE), "a");
-    spawn("nx", ["next:start", "web"], {
-      cwd: repoPath,
-      stdio: ["ignore", webLog, webLog],
-      detached: true,
-      shell: true,
-    }).unref();
-
-    onStatus?.("All services started!");
+    onStatus?.("All services started in Docker!");
   } else {
     onStatus?.("Starting development servers...");
     const { spawn } = await import("child_process");
@@ -65,15 +62,14 @@ export async function stopServices(
 
   onStatus?.("Stopping local processes...");
   try {
-    // Kill processes on all GAIA service ports
-    // API (8000), Web (3000), Redis (6379), PostgreSQL (5432),
-    // MongoDB (27017), RabbitMQ (5672), ChromaDB (8080)
-    for (const port of [8000, 3000, 6379, 5432, 27017, 5672, 8080]) {
+    // Only kill host-side GAIA processes (API and Web).
+    // Infrastructure services (Redis, Postgres, Mongo, RabbitMQ, ChromaDB) are
+    // managed by Docker and already stopped by `docker compose down` above.
+    for (const port of [8000, 3000]) {
       try {
-        await runCommand("lsof", ["-ti", `:${port}`], repoPath);
         await runCommand(
           "sh",
-          ["-c", `lsof -ti :${port} | xargs kill -9 2>/dev/null || true`],
+          ["-c", `lsof -ti :${port} | xargs kill 2>/dev/null || true`],
           repoPath,
         );
       } catch {
@@ -94,9 +90,21 @@ export async function detectSetupMode(
   if (!fs.existsSync(apiEnvPath)) return null;
 
   const content = fs.readFileSync(apiEnvPath, "utf-8");
-  // Selfhost uses Docker container hostnames, developer uses localhost
-  if (content.includes("mongodb://mongo:")) return "selfhost";
+  
+  // First, check for explicit SETUP_MODE marker (most robust)
+  const setupModeMatch = content.match(/^SETUP_MODE=(.+)$/m);
+  if (setupModeMatch) {
+    const mode = setupModeMatch[1].trim();
+    if (mode === "selfhost" || mode === "developer") {
+      return mode;
+    }
+  }
+
+  if (content.includes("mongodb://mongo:"))
+    // Fallback: string matching for backward compatibility
+    return "selfhost";
   if (content.includes("mongodb://localhost:")) return "developer";
+  
   return "developer";
 }
 

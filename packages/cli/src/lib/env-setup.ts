@@ -29,18 +29,22 @@ export async function runEnvSetup(
   for (const varName of infraVars) {
     const defaultVal = envParser.getDefaultValue(varName, setupMode);
     if (defaultVal) {
-      envValues[varName] = defaultVal;
+    envValues[varName] = defaultVal;
     }
+  }
+
+  // Add deployment defaults (HOST, FRONTEND_URL, GAIA_BACKEND_URL, SETUP_MODE)
+  const deploymentDefaults = envParser.getDeploymentDefaults(setupMode);
+  for (const [key, value] of Object.entries(deploymentDefaults)) {
+    envValues[key] = value;
   }
 
   if (envMethod === "infisical") {
     await collectInfisicalEnv(store, envValues);
-    // Infisical stores credentials for runtime secret fetching, but we still
-    // need the remaining vars (API keys, auth, etc.) configured manually.
     store.setStatus(
-      "Infisical credentials saved. Configure remaining variables...",
+      "Infisical credentials saved. Other secrets will be loaded from Infisical at runtime.",
     );
-    await collectManualEnv(store, repoPath, envValues, setupMode);
+    // Skip manual env collection - all secrets managed in Infisical
   } else {
     await collectManualEnv(store, repoPath, envValues, setupMode);
   }

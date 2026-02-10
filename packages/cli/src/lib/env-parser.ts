@@ -49,37 +49,41 @@ const INFRASTRUCTURE_DEFAULTS: Record<SetupMode, Record<string, string>> = {
     CHROMADB_HOST: "chromadb", // Docker container hostname (internal network)
     CHROMADB_PORT: "8000", // Container-internal port; host maps 8080→8000
     RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/", // pragma: allowlist secret
-    HOST: "http://localhost:8000",
-    FRONTEND_URL: "http://localhost:3000",
-    GAIA_BACKEND_URL: "http://gaia-backend:80",
   },
   developer: {
     MONGO_DB: "mongodb://localhost:27017/gaia",
     REDIS_URL: "redis://localhost:6379",
-    POSTGRES_URL: "postgresql://postgres:postgres@localhost:5432/langgraph", // pragma: allowlist secret
+    POSTGRES_URL: "postgresql://postgres:postgres@localhost:5432/postgres", // pragma: allowlist secret
     CHROMADB_HOST: "localhost",
     CHROMADB_PORT: "8080", // Host-mapped port from docker-compose (8080:8000)
     RABBITMQ_URL: "amqp://guest:guest@localhost:5672/", // pragma: allowlist secret
+  },
+};
+
+// Deployment / routing URLs — not infrastructure, users may want to customize.
+// GAIA_BACKEND_URL is voice-agent-only (how the voice container reaches the API).
+// SETUP_MODE is a marker for robust mode detection (replaces fragile string matching).
+const DEPLOYMENT_DEFAULTS: Record<SetupMode, Record<string, string>> = {
+  selfhost: {
+    HOST: "http://localhost:8000",
+    FRONTEND_URL: "http://localhost:3000",
+    GAIA_BACKEND_URL: "http://gaia-backend:80",
+    SETUP_MODE: "selfhost",
+  },
+  developer: {
     HOST: "http://localhost:8000",
     FRONTEND_URL: "http://localhost:3000",
     GAIA_BACKEND_URL: "http://host.docker.internal:8000",
+    SETUP_MODE: "developer",
   },
 };
 
 const WEB_INFRASTRUCTURE_DEFAULTS: Record<SetupMode, Record<string, string>> = {
   selfhost: {
     NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000",
-    NEXT_PUBLIC_API_URL: "http://localhost:8000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    NEXT_PUBLIC_BACKEND_URL: "http://localhost:8000",
-    NEXT_PUBLIC_WS_URL: "ws://localhost:8000",
   },
   developer: {
     NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000",
-    NEXT_PUBLIC_API_URL: "http://localhost:8000",
-    NEXT_PUBLIC_APP_URL: "http://localhost:3000",
-    NEXT_PUBLIC_BACKEND_URL: "http://localhost:8000",
-    NEXT_PUBLIC_WS_URL: "ws://localhost:8000",
   },
 };
 
@@ -87,7 +91,9 @@ export function getDefaultValue(
   varName: string,
   mode: SetupMode,
 ): string | undefined {
-  return INFRASTRUCTURE_DEFAULTS[mode][varName];
+  return (
+    INFRASTRUCTURE_DEFAULTS[mode][varName] ?? DEPLOYMENT_DEFAULTS[mode][varName]
+  );
 }
 
 export async function parseSettings(repoPath: string): Promise<EnvCategory[]> {
@@ -232,6 +238,14 @@ export function applyModeDefaults(
 
 export function getInfrastructureVariables(): string[] {
   return Object.keys(INFRASTRUCTURE_DEFAULTS.selfhost);
+}
+
+export function getDeploymentVariables(): string[] {
+  return Object.keys(DEPLOYMENT_DEFAULTS.selfhost);
+}
+
+export function getDeploymentDefaults(mode: SetupMode): Record<string, string> {
+  return { ...DEPLOYMENT_DEFAULTS[mode] };
 }
 
 export function getAlternativeGroups(

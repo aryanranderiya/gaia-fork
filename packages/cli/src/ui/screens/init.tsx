@@ -645,7 +645,8 @@ export const EnvMethodSelectionStep: React.FC<{
           users)
         </Text>
         <Text color="gray" dimColor>
-          Infisical: Use Infisical for secret management (requires setup)
+          Infisical: All secrets managed in Infisical dashboard (requires
+          pre-configuration)
         </Text>
       </Box>
     </Box>
@@ -732,12 +733,13 @@ export const InfisicalSetupStep: React.FC<{
       <Box
         marginBottom={1}
         borderStyle="single"
-        borderColor="yellow"
+        borderColor="cyan"
         paddingX={1}
       >
-        <Text color="yellow">
-          Note: After this, you will still be asked to configure remaining
-          environment variables (API keys, auth, etc.) manually.
+        <Text color="cyan">
+          All environment variables (API keys, auth secrets, etc.) must be
+          configured in your Infisical project. Only Infisical credentials will
+          be stored locally.
         </Text>
       </Box>
 

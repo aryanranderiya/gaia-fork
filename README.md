@@ -12,6 +12,23 @@
 
 </div>
 
+## Table of Contents
+
+- [Introduction](#introduction)
+- [The Problem](#the-problem)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Self-Hosted Setup (Recommended)](#self-hosted-setup-recommended)
+    - [Cloud-Hosted (Zero Setup)](#cloud-hosted-zero-setup)
+  - [Quick Start](#quick-start)
+  - [Documentation](#documentation)
+  - [Community \& Support](#community--support)
+  - [Contributing](#contributing)
+  - [Tools We Love](#tools-we-love)
+  - [License](#license)
+  - [Contact](#contact)
+  - [Star History](#star-history)
+
 # Introduction
 
 <b>[GAIA](https://heygaia.io)</b> is your proactive, personal AI assistant designed to increase your productivity.
