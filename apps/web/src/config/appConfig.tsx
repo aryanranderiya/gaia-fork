@@ -103,6 +103,12 @@ export const appConfig = {
 
     resources: [
       {
+        href: "/install",
+        label: "Install CLI",
+        icon: <BookOpen02Icon width={20} height={20} color={"currentColor"} />,
+        description: "Install the GAIA CLI for self-hosting",
+      },
+      {
         href: "/blog",
         label: "Blog",
         icon: (

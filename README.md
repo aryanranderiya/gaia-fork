@@ -1,24 +1,34 @@
+
 <div align="center">
 
-<img alt="logo" src="apps/web/public/images/logos/macos.png" width=150 height=150 /> <br/>
+# GAIA - Your Personal AI Assistant
 
-[![GAIA](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/theexperiencecompany/gaia/refs/heads/master/apps/web/public/badge.json)](https://heygaia.io) [![Documentation](https://img.shields.io/badge/Documentation-00bbff?style=flat&logo=gitbook&logoColor=white)](https://docs.heygaia.io) [![Latest Release](https://img.shields.io/github/v/release/theexperiencecompany/gaia?color=00bbff)](https://github.com/theexperiencecompany/gaia/releases)
+<!-- <img src="apps/web/public/images/screenshots/website_tab.png" alt="GAIA Web App" style="width:100%; border-radius:12px;"> -->
 
-[![Better Stack Badge](https://uptime.betterstack.com/status-badges/v3/monitor/1zjmp.svg)](https://uptime.betterstack.com/?utm_source=status_badge) [![Quality Checks](https://github.com/theexperiencecompany/gaia/actions/workflows/main.yml/badge.svg)](https://github.com/theexperiencecompany/gaia/actions/workflows/main.yml) ![GitHub deployments](https://img.shields.io/github/deployments/theexperiencecompany/gaia/production?logo=github&label=Production%20Deployment)
 
-[![contributors](https://img.shields.io/github/contributors/theexperiencecompany/gaia)](https://github.com/theexperiencecompany/gaia/graphs/contributors) [![open issues](https://img.shields.io/github/issues/theexperiencecompany/gaia)](https://github.com/theexperiencecompany/gaia/issues/) ![last update](https://img.shields.io/github/commit-activity/m/theexperiencecompany/gaia) [![License: PolyForm Noncommercial](https://img.shields.io/badge/License-PolyForm%20Strict-red.svg)](https://polyformproject.org/licenses/noncommercial-1.0.0/)
+<img alt="logo" src="apps/web/public/images/logos/macos.png" width=150 height=150 />
 
-[![Discord](https://discord-live-members-count-badge.vercel.app/api/discord-members?guildId=585464664650022914&color=5c6af3&label=Discord)](https://discord.heygaia.io) [![Twitter Follow](https://img.shields.io/twitter/follow/trygaia?style=social)](https://x.com/intent/user?screen_name=trygaia) [![Whatsapp](https://img.shields.io/badge/WhatsApp-25D366?logo=whatsapp&logoColor=fff&style=flat)](https://whatsapp.heygaia.io) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/theexperiencecompany/gaia)
+<br />
+<br />
 
+[![GAIA](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/theexperiencecompany/gaia/refs/heads/master/apps/web/public/badge.json)](https://heygaia.io) [![Documentation](https://img.shields.io/badge/Documentation-00bbff?style=flat&logo=gitbook&logoColor=white)](https://docs.heygaia.io) [![Latest Release](https://img.shields.io/github/v/release/theexperiencecompany/gaia?color=00bbff)](https://github.com/theexperiencecompany/gaia/releases) [![Better Stack Badge](https://uptime.betterstack.com/status-badges/v3/monitor/1zjmp.svg)](https://uptime.betterstack.com/?utm_source=status_badge) 
+![last update](https://img.shields.io/github/commit-activity/m/theexperiencecompany/gaia) [![Discord](https://discord-live-members-count-badge.vercel.app/api/discord-members?guildId=585464664650022914&color=5c6af3&label=Discord)](https://discord.heygaia.io) [![Twitter Follow](https://img.shields.io/twitter/follow/trygaia?style=social)](https://x.com/intent/user?screen_name=trygaia) [![Whatsapp](https://img.shields.io/badge/WhatsApp-25D366?logo=whatsapp&logoColor=fff&style=flat)](https://whatsapp.heygaia.io) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/theexperiencecompany/gaia)
 </div>
+
+<b>[GAIA](https://heygaia.io)</b> is your proactive, personal AI assistant designed to increase your productivity.
+
+It's designed to help users manage their digital lives by automating tasks, handling communication, and increasing productivity - going beyond traditional assistants like Siri, Google Assistant and ChatGPT.
+
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [The Problem](#the-problem)
+
+- [GAIA - Your Personal AI Assistant](#gaia---your-personal-ai-assistant)
+  - [Table of Contents](#table-of-contents)
+  - [The Problem](#the-problem)
   - [Features](#features)
   - [Installation](#installation)
-    - [Self-Hosted Setup (Recommended)](#self-hosted-setup-recommended)
+    - [Self-Hosted Setup](#self-hosted-setup)
     - [Cloud-Hosted (Zero Setup)](#cloud-hosted-zero-setup)
   - [Quick Start](#quick-start)
   - [Documentation](#documentation)
@@ -29,13 +39,7 @@
   - [Contact](#contact)
   - [Star History](#star-history)
 
-# Introduction
-
-<b>[GAIA](https://heygaia.io)</b> is your proactive, personal AI assistant designed to increase your productivity.
-
-It's designed to help users manage their digital lives by automating tasks, handling communication, and increasing productivity - going beyond traditional assistants like Siri, Google Assistant and ChatGPT.
-
-# The Problem
+## The Problem
 
 We all drown in tools. Gmail, Calendar, Todos, Docs, Slack, Linear, WhatsApp, and the list keeps growing. Every person has a different stack, but the problem is the same. Our days are filled with small repetitive actions. Every calendar event we create is a few minutes gone. Every mail you draft, every todo you try to complete, every email you read that is not useful and just bullshit adds up. Every little task and chore you do in the tools you use every day, just to maintain your digital life and keep everything structured and clean, is a burden. Most of this is not real work. It is maintenance. Each task feels small in isolation, but together they are mentally tolling. They pile up day after day, quietly draining focus and motivation.
 
@@ -85,12 +89,12 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 
 ## Installation
 
-### Self-Hosted Setup (Recommended)
+### Self-Hosted Setup
 
 Get started with GAIA's interactive CLI setup wizard:
 
 ```bash
-bunx @heygaia/cli init
+npx @heygaia/cli init
 ```
 
 The CLI wizard will:
@@ -99,7 +103,6 @@ The CLI wizard will:
 - Set up Docker containers for all required services
 - Configure and start your GAIA instance
 
-For manual setup, see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview).
 
 ### Cloud-Hosted (Zero Setup)
 
@@ -110,8 +113,8 @@ No installation needed — just visit [heygaia.io](https://heygaia.io) to get st
 Choose how you'd like to use GAIA:
 
 - **Use GAIA instantly**: No setup required — just visit [heygaia.io](https://heygaia.io).
-- **Self-host GAIA**: Use our CLI tool with `bunx @heygaia/cli init` or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual setup.
-- **Develop or contribute**: Get started quickly with `bunx @heygaia/cli init` or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
+- **Self-host GAIA**: Use our CLI tool with `npx @heygaia/cli init` or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual setup.
+- **Develop or contribute**: Get started quickly with `npx @heygaia/cli init` or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
 
 ## Documentation
 

@@ -8,8 +8,7 @@ CLI tool for setting up and managing GAIA - your proactive personal AI assistant
 # Quick install (recommended)
 curl -fsSL https://heygaia.io/install.sh | sh
 
-# Or via package managers
-bun install -g @heygaia/cli
+# Or via npm
 npm install -g @heygaia/cli
 
 # Or run without installing

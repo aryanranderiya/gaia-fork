@@ -1,7 +1,11 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { Command } from "commander";
 import { runInit } from "./commands/init/handler.js";
+import { runSetup } from "./commands/setup/handler.js";
+import { runStatus } from "./commands/status/handler.js";
+import { runStart } from "./commands/start/handler.js";
+import { runStop } from "./commands/stop/handler.js";
 
 const program = new Command();
 
@@ -21,7 +25,6 @@ program
   .command("setup")
   .description("Configure an existing GAIA repository")
   .action(async () => {
-    const { runSetup } = await import("./commands/setup/handler.js");
     await runSetup();
   });
 
@@ -29,7 +32,6 @@ program
   .command("status")
   .description("Check health of all GAIA services")
   .action(async () => {
-    const { runStatus } = await import("./commands/status/handler.js");
     await runStatus();
   });
 
@@ -37,7 +39,6 @@ program
   .command("start")
   .description("Start GAIA services")
   .action(async () => {
-    const { runStart } = await import("./commands/start/handler.js");
     await runStart();
   });
 
@@ -45,7 +46,6 @@ program
   .command("stop")
   .description("Stop all GAIA services")
   .action(async () => {
-    const { runStop } = await import("./commands/stop/handler.js");
     await runStop();
   });
 
