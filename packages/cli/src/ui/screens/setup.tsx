@@ -3,20 +3,17 @@ import { Box, Text, useInput } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { PortCheckResult } from "../../lib/prerequisites.js";
-import { Shell, SETUP_STEPS } from "../components/Shell.js";
+import { SETUP_STEPS, Shell } from "../components/Shell.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
 import {
-  SetupModeSelectionStep,
-  EnvMethodSelectionStep,
-  InfisicalSetupStep,
+  AlternativeGroupSelectionStep,
+  CommandsSummary,
   EnvConfigStep,
   EnvGroupConfigStep,
-  AlternativeGroupSelectionStep,
-  StartServicesStep,
-  ManualCommandsStep,
-  ServicesRunningStep,
-  CommandsSummary,
+  EnvMethodSelectionStep,
+  InfisicalSetupStep,
+  SetupModeSelectionStep,
 } from "./init.js";
 
 export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
@@ -77,9 +74,7 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         )}
 
       {state.inputRequest?.id === "setup_mode" && (
-        <SetupModeSelectionStep
-          onSelect={(mode) => store.submitInput(mode)}
-        />
+        <SetupModeSelectionStep onSelect={(mode) => store.submitInput(mode)} />
       )}
 
       {state.inputRequest?.id === "env_method" && (
@@ -89,9 +84,7 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
       )}
 
       {state.inputRequest?.id === "env_infisical" && (
-        <InfisicalSetupStep
-          onSubmit={(values) => store.submitInput(values)}
-        />
+        <InfisicalSetupStep onSubmit={(values) => store.submitInput(values)} />
       )}
 
       {state.step === "Environment Setup" &&
@@ -145,9 +138,7 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           <Box flexDirection="column" gap={1}>
             <Box>
               {!state.data.dependencyComplete ? (
-                <Spinner
-                  label={state.data.dependencyPhase || "Preparing..."}
-                />
+                <Spinner label={state.data.dependencyPhase || "Preparing..."} />
               ) : (
                 <Text color="green">
                   {"\u2713"} {state.data.dependencyPhase}
@@ -170,46 +161,21 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
                   paddingX={1}
                   minHeight={6}
                 >
-                  {state.data.dependencyLogs.map(
-                    (log: string, i: number) => (
-                      <Text key={i} color="gray" wrap="truncate">
-                        {log}
-                      </Text>
-                    ),
-                  )}
+                  {state.data.dependencyLogs.map((log: string, i: number) => (
+                    <Text key={i} color="gray" wrap="truncate">
+                      {log}
+                    </Text>
+                  ))}
                 </Box>
               )}
           </Box>
         </Box>
       )}
 
-      {state.inputRequest?.id === "start_services" && (
-        <StartServicesStep
-          setupMode={state.data.setupMode || "developer"}
-          repoPath={state.data.repoPath || "."}
-          onStart={() => store.submitInput("start")}
-          onSkip={() => store.submitInput("skip")}
-        />
-      )}
-
-      {state.inputRequest?.id === "manual_commands" && (
-        <ManualCommandsStep
-          setupMode={state.data.setupMode || "developer"}
-          repoPath={state.data.repoPath || "."}
-          onConfirm={() => store.submitInput(true)}
-        />
-      )}
-
-      {state.inputRequest?.id === "services_running" && (
-        <ServicesRunningStep
-          setupMode={state.data.setupMode || "developer"}
-          onConfirm={() => store.submitInput(true)}
-        />
-      )}
-
       {state.step === "Finished" && (
         <FinishedStep
-          servicesAlreadyRunning={state.data.servicesAlreadyRunning}
+          setupMode={state.data.setupMode}
+          repoPath={state.data.repoPath}
           onConfirm={() => process.exit(0)}
         />
       )}
@@ -299,12 +265,16 @@ const PortConflictStep: React.FC<{
 };
 
 const FinishedStep: React.FC<{
-  servicesAlreadyRunning?: boolean;
+  setupMode?: string;
+  repoPath?: string;
   onConfirm: () => void;
-}> = ({ servicesAlreadyRunning, onConfirm }) => {
+}> = ({ setupMode, repoPath, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) onConfirm();
   });
+
+  const mode = setupMode || "developer";
+  const dir = repoPath || ".";
 
   return (
     <Box
@@ -317,26 +287,28 @@ const FinishedStep: React.FC<{
       <Text color={THEME_COLOR} bold>
         Setup Complete!
       </Text>
-      <Text>Your GAIA repository is configured and ready.</Text>
-      {servicesAlreadyRunning && (
-        <Box marginTop={1} flexDirection="column">
-          <Text color="green">Services are already running:</Text>
-          <Box marginLeft={2} flexDirection="column">
-            <Text>
-              Web:{" "}
-              <Text color="cyan" bold>
-                http://localhost:3000
-              </Text>
-            </Text>
-            <Text>
-              API:{" "}
-              <Text color="cyan" bold>
-                http://localhost:8000
-              </Text>
-            </Text>
-          </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>To start GAIA, run:</Text>
+        <Box
+          marginTop={1}
+          padding={1}
+          borderStyle="single"
+          borderColor="gray"
+          flexDirection="column"
+        >
+          <Text color="cyan">$ cd {dir}</Text>
+          <Text color="cyan">$ gaia start</Text>
         </Box>
-      )}
+        <Box marginTop={1}>
+          <Text color="gray" dimColor>
+            {mode === "selfhost"
+              ? "Runs: docker compose --profile all up -d (background)"
+              : "Runs: mise dev (interactive — keep terminal open)"}
+          </Text>
+        </Box>
+      </Box>
+
       <CommandsSummary />
       <Box marginTop={1}>
         <Text dimColor>Press Enter to exit</Text>

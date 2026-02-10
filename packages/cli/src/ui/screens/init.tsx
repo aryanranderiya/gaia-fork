@@ -182,14 +182,18 @@ const PathInputStep: React.FC<{
 };
 
 const FinishedStep: React.FC<{
-  servicesAlreadyRunning?: boolean;
+  setupMode?: SetupMode;
+  repoPath?: string;
   onConfirm: () => void;
-}> = ({ servicesAlreadyRunning, onConfirm }) => {
+}> = ({ setupMode, repoPath, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
     }
   });
+
+  const mode = setupMode || "developer";
+  const dir = repoPath || "./gaia";
 
   return (
     <Box
@@ -202,25 +206,28 @@ const FinishedStep: React.FC<{
       <Text color={THEME_COLOR} bold>
         You are all set!
       </Text>
-      {servicesAlreadyRunning && (
-        <Box marginTop={1} flexDirection="column">
-          <Text color="green">Services are already running:</Text>
-          <Box marginLeft={2} flexDirection="column">
-            <Text>
-              Web:{" "}
-              <Text color="cyan" bold>
-                http://localhost:3000
-              </Text>
-            </Text>
-            <Text>
-              API:{" "}
-              <Text color="cyan" bold>
-                http://localhost:8000
-              </Text>
-            </Text>
-          </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>To start GAIA, run:</Text>
+        <Box
+          marginTop={1}
+          padding={1}
+          borderStyle="single"
+          borderColor="gray"
+          flexDirection="column"
+        >
+          <Text color="cyan">$ cd {dir}</Text>
+          <Text color="cyan">$ gaia start</Text>
         </Box>
-      )}
+        <Box marginTop={1}>
+          <Text color="gray" dimColor>
+            {mode === "selfhost"
+              ? "Runs: docker compose --profile all up -d (background)"
+              : "Runs: mise dev (interactive — keep terminal open)"}
+          </Text>
+        </Box>
+      </Box>
+
       <CommandsSummary />
       <Box marginTop={1}>
         <Text dimColor>Press Enter to exit</Text>
@@ -1573,7 +1580,8 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
 
       {state.step === "Finished" && (
         <FinishedStep
-          servicesAlreadyRunning={state.data.servicesAlreadyRunning}
+          setupMode={state.data.setupMode}
+          repoPath={state.data.repoPath}
           onConfirm={() => store.submitInput(true)}
         />
       )}
@@ -1585,30 +1593,6 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           progress={state.data.dependencyProgress || 0}
           isComplete={state.data.dependencyComplete || false}
           logs={state.data.dependencyLogs || []}
-        />
-      )}
-
-      {state.inputRequest?.id === "start_services" && (
-        <StartServicesStep
-          setupMode={state.data.setupMode || "developer"}
-          repoPath={state.data.repoPath || "./gaia"}
-          onStart={() => store.submitInput("start")}
-          onSkip={() => store.submitInput("skip")}
-        />
-      )}
-
-      {state.inputRequest?.id === "manual_commands" && (
-        <ManualCommandsStep
-          setupMode={state.data.setupMode || "developer"}
-          repoPath={state.data.repoPath || "./gaia"}
-          onConfirm={() => store.submitInput(true)}
-        />
-      )}
-
-      {state.inputRequest?.id === "services_running" && (
-        <ServicesRunningStep
-          setupMode={state.data.setupMode || "developer"}
-          onConfirm={() => store.submitInput(true)}
         />
       )}
 

@@ -3,9 +3,6 @@ import * as prereqs from "../../lib/prerequisites.js";
 import * as git from "../../lib/git.js";
 import { runEnvSetup } from "../../lib/env-setup.js";
 import {
-  startServices,
-  areServicesRunning,
-  checkUrl,
   runCommand,
   findRepoRoot,
 } from "../../lib/service-starter.js";
@@ -265,58 +262,6 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
 
   await delay(1000);
 
-  // 5. Check if services are already running, otherwise offer to start
-  store.setStatus("Checking if services are already running...");
-  const alreadyRunning = await areServicesRunning(repoPath);
-  const setupMode = store.currentState.data.setupMode || "developer";
-
-  if (alreadyRunning) {
-    store.updateData("servicesAlreadyRunning", true);
-    store.setStep("Finished");
-    store.setStatus("Setup complete!");
-  } else {
-    store.setStep("Start Services");
-    store.setStatus("Ready to start GAIA");
-
-    const startChoice = (await store.waitForInput("start_services")) as string;
-
-    if (startChoice === "start") {
-      store.setStatus("Starting GAIA...");
-
-      try {
-        await startServices(repoPath, setupMode, (status) => {
-          store.setStatus(status);
-        });
-
-        await delay(1000);
-        store.setStatus("GAIA is running!");
-        await store.waitForInput("services_running");
-      } catch (e) {
-        store.setError(
-          new Error(`Failed to start services: ${(e as Error).message}`),
-        );
-        return;
-      }
-
-      // Health Checks
-      store.setStatus("Verifying deployment...");
-      const apiHealth = await checkUrl("http://localhost:8000/health");
-      const webHealth = await checkUrl("http://localhost:3000");
-
-      if (!apiHealth || !webHealth) {
-        store.setStatus(
-          `Warning: Services might not be ready. API: ${apiHealth ? "UP" : "DOWN"}, Web: ${webHealth ? "UP" : "DOWN"}`,
-        );
-        await delay(3000);
-      } else {
-        store.setStatus("All systems operational!");
-        await delay(1500);
-      }
-    } else {
-      await store.waitForInput("manual_commands");
-    }
-
-    store.setStep("Finished");
-    store.setStatus("Setup complete!");
-  }
+  store.setStep("Finished");
+  store.setStatus("Setup complete!");
 }

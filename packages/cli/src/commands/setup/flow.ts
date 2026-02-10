@@ -2,8 +2,6 @@ import type { CLIStore } from "../../ui/store.js";
 import * as prereqs from "../../lib/prerequisites.js";
 import { runEnvSetup } from "../../lib/env-setup.js";
 import {
-  startServices,
-  areServicesRunning,
   runCommand,
   findRepoRoot,
 } from "../../lib/service-starter.js";
@@ -165,40 +163,6 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
 
   await delay(1000);
 
-  // 5. Check if services are already running, otherwise offer to start
-  store.setStatus("Checking if services are already running...");
-  const alreadyRunning = await areServicesRunning(repoPath);
-
-  if (alreadyRunning) {
-    store.updateData("servicesAlreadyRunning", true);
-    store.setStep("Finished");
-    store.setStatus("Setup complete!");
-  } else {
-    store.setStep("Start Services");
-    store.setStatus("Ready to start GAIA");
-
-    const startChoice = (await store.waitForInput("start_services")) as string;
-    const setupMode = store.currentState.data.setupMode || "developer";
-
-    if (startChoice === "start") {
-      store.setStatus("Starting GAIA...");
-      try {
-        await startServices(repoPath, setupMode, (status) => {
-          store.setStatus(status);
-        });
-        store.setStatus("GAIA is running!");
-        await store.waitForInput("services_running");
-      } catch (e) {
-        store.setError(
-          new Error(`Failed to start services: ${(e as Error).message}`),
-        );
-        return;
-      }
-    } else {
-      await store.waitForInput("manual_commands");
-    }
-
-    store.setStep("Finished");
-    store.setStatus("Setup complete!");
-  }
+  store.setStep("Finished");
+  store.setStatus("Setup complete!");
 }
