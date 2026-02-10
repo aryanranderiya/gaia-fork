@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Header } from "../components/Header.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
-import { CommandsSummary } from "./init.js";
 
 interface ServiceScreenProps {
   store: CLIStore;
@@ -35,7 +34,7 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
     }
   });
 
-  const isStart = command === "start";
+  const _isStart = command === "start";
 
   return (
     <Box flexDirection="column" width="100%">
@@ -75,20 +74,34 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
           <Text color="green" bold>
             {"\u2713"} GAIA is running!
           </Text>
-          <Box marginTop={1} flexDirection="column">
-            <Text>
-              Web:{" "}
-              <Text color="cyan" bold>
-                http://localhost:3000
+          {state.data.setupMode !== "developer" && (
+            <Box marginTop={1} flexDirection="column">
+              <Text>
+                Web:{" "}
+                <Text color="cyan" bold>
+                  http://localhost:3000
+                </Text>
               </Text>
-            </Text>
-            <Text>
-              API:{" "}
-              <Text color="cyan" bold>
-                http://localhost:8000
+              <Text>
+                API:{" "}
+                <Text color="cyan" bold>
+                  http://localhost:8000
+                </Text>
               </Text>
-            </Text>
-          </Box>
+            </Box>
+          )}
+          {state.data.setupMode === "developer" && (
+            <Box marginTop={1} flexDirection="column">
+              <Text color="gray">Dev servers started in background.</Text>
+              <Text color="gray">
+                Logs: <Text color={THEME_COLOR}>dev-start.log</Text> in your
+                repo root.
+              </Text>
+              <Text color="gray">
+                Run <Text color={THEME_COLOR}>gaia stop</Text> to shut down.
+              </Text>
+            </Box>
+          )}
           <Box marginTop={1}>
             <Text dimColor>Press Enter to exit</Text>
           </Box>

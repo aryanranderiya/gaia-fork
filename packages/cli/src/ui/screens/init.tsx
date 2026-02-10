@@ -77,8 +77,10 @@ const WelcomeStep: React.FC<WelcomeStepProps> = ({ onConfirm }) => {
       <Box flexDirection="column" marginTop={1} marginBottom={1}>
         <Text>This wizard will guide you through the setup process:</Text>
         <Text> 1. Check Prerequisites (Git, Docker, Mise)</Text>
-        <Text> 2. Clone the Repository</Text>
-        <Text> 3. Configure Environment Variables</Text>
+        <Text> 2. Clone Repository (from GitHub)</Text>
+        <Text> 3. Install Tools (node, python, uv via mise)</Text>
+        <Text> 4. Configure Env Vars (databases, API keys, etc.)</Text>
+        <Text> 5. Setup Project (install all dependencies)</Text>
       </Box>
       <Text color={THEME_COLOR}>Press Enter to start...</Text>
     </Box>
@@ -116,30 +118,51 @@ const PortConflictStep: React.FC<{
 
       {portResults.map((result) => (
         <Box key={result.port}>
-          <Text color={result.available ? "green" : "red"}>
-            {result.available ? "\u2714" : "\u2716"}{" "}
+          <Text
+            color={
+              result.available ? "green" : result.alternative ? "yellow" : "red"
+            }
+          >
+            {result.available
+              ? "\u2714"
+              : result.alternative
+                ? "\u26a0"
+                : "\u2716"}{" "}
           </Text>
           <Text>
             {result.service} (:{result.port})
           </Text>
           {!result.available && (
-            <Text color="gray">
+            <Text color={result.alternative ? "gray" : "red"}>
               {" "}
               - in use{result.usedBy ? ` by ${result.usedBy}` : ""}
               {result.alternative
-                ? ` (alt: :${result.alternative})`
-                : ""}
+                ? ` → will use :${result.alternative}`
+                : " — NO ALTERNATIVE FOUND"}
             </Text>
           )}
         </Box>
       ))}
 
       <Box marginTop={1} flexDirection="column">
-        {conflicts.some((c) => c.alternative) && (
-          <Text color="gray">
-            Alternative ports will be used for conflicting services.
-          </Text>
+        {conflicts.some((c) => !c.alternative) && (
+          <Box
+            borderStyle="single"
+            borderColor="red"
+            paddingX={1}
+            marginBottom={1}
+          >
+            <Text color="red">
+              Some ports have no available alternative. Free them and retry.
+            </Text>
+          </Box>
         )}
+        {!conflicts.some((c) => !c.alternative) &&
+          conflicts.some((c) => c.alternative) && (
+            <Text color="gray">
+              Alternative ports will be used for conflicting services.
+            </Text>
+          )}
         <Box marginTop={1}>
           <Text>
             <Text color="green" bold>
@@ -241,19 +264,27 @@ export const CommandsSummary: React.FC = () => (
     <Text bold>Available commands:</Text>
     <Box marginLeft={2} flexDirection="column">
       <Text>
-        <Text color={THEME_COLOR} bold>gaia start </Text>
+        <Text color={THEME_COLOR} bold>
+          gaia start{" "}
+        </Text>
         <Text color="gray"> Start all services</Text>
       </Text>
       <Text>
-        <Text color={THEME_COLOR} bold>gaia stop  </Text>
+        <Text color={THEME_COLOR} bold>
+          gaia stop{" "}
+        </Text>
         <Text color="gray"> Stop all services</Text>
       </Text>
       <Text>
-        <Text color={THEME_COLOR} bold>gaia status</Text>
+        <Text color={THEME_COLOR} bold>
+          gaia status
+        </Text>
         <Text color="gray"> Check service health</Text>
       </Text>
       <Text>
-        <Text color={THEME_COLOR} bold>gaia setup </Text>
+        <Text color={THEME_COLOR} bold>
+          gaia setup{" "}
+        </Text>
         <Text color="gray"> Reconfigure environment</Text>
       </Text>
     </Box>
@@ -308,7 +339,9 @@ const DependencyInstallStep: React.FC<{
             minHeight={6}
           >
             {logs.map((log, i) => (
-              <Text key={i} color="gray" wrap="truncate">{log}</Text>
+              <Text key={i} color="gray" wrap="truncate">
+                {log}
+              </Text>
             ))}
           </Box>
         )}
@@ -386,10 +419,10 @@ export const StartServicesStep: React.FC<{
             <Text color="cyan">$ nx start web</Text>
           </Box>
         ) : (
-            <Box flexDirection="column">
-              <Text color="cyan">$ cd {repoPath}</Text>
-              <Text color="cyan">$ mise dev</Text>
-            </Box>
+          <Box flexDirection="column">
+            <Text color="cyan">$ cd {repoPath}</Text>
+            <Text color="cyan">$ mise dev</Text>
+          </Box>
         )}
       </Box>
 
@@ -513,10 +546,10 @@ export const ManualCommandsStep: React.FC<{
             <Text color="cyan">$ nx start web</Text>
           </Box>
         ) : (
-            <Box flexDirection="column">
-              <Text color="cyan">$ cd {repoPath}</Text>
-              <Text color="cyan">$ mise dev</Text>
-            </Box>
+          <Box flexDirection="column">
+            <Text color="cyan">$ cd {repoPath}</Text>
+            <Text color="cyan">$ mise dev</Text>
+          </Box>
         )}
       </Box>
 
@@ -680,7 +713,7 @@ export const InfisicalSetupStep: React.FC<{
     }
   });
 
-  const currentField = fields[activeIndex];
+  const _currentField = fields[activeIndex];
 
   return (
     <Box
@@ -693,6 +726,18 @@ export const InfisicalSetupStep: React.FC<{
       <Box marginBottom={1}>
         <Text bold color={THEME_COLOR}>
           Infisical Configuration
+        </Text>
+      </Box>
+
+      <Box
+        marginBottom={1}
+        borderStyle="single"
+        borderColor="yellow"
+        paddingX={1}
+      >
+        <Text color="yellow">
+          Note: After this, you will still be asked to configure remaining
+          environment variables (API keys, auth, etc.) manually.
         </Text>
       </Box>
 
@@ -740,8 +785,8 @@ export const InfisicalSetupStep: React.FC<{
                 <Text color={values[field.key] ? "green" : "gray"}>
                   {values[field.key]
                     ? isSensitive
-                      ? "✓ " + "*".repeat(8)
-                      : "✓ " + values[field.key]
+                      ? `✓ ${"*".repeat(8)}`
+                      : `✓ ${values[field.key]}`
                     : "(not set)"}
                 </Text>
               </Box>
@@ -797,7 +842,7 @@ export const EnvGroupConfigStep: React.FC<{
     if (key.tab || key.downArrow) {
       // Move to next field
       setActiveIndex((prev) =>
-        prev < category.variables.length - 1 ? prev + 1 : prev
+        prev < category.variables.length - 1 ? prev + 1 : prev,
       );
     } else if (key.upArrow) {
       // Move to previous field
@@ -805,11 +850,11 @@ export const EnvGroupConfigStep: React.FC<{
     } else if (key.escape) {
       // Skip entire group if no required fields are empty
       const missingRequired = category.variables.filter(
-        (v) => v.required && !values[v.name]?.trim()
+        (v) => v.required && !values[v.name]?.trim(),
       );
       if (missingRequired.length > 0) {
         setError(
-          `Required fields cannot be skipped: ${missingRequired.map((v) => v.name).join(", ")}`
+          `Required fields cannot be skipped: ${missingRequired.map((v) => v.name).join(", ")}`,
         );
         return;
       }
@@ -824,11 +869,11 @@ export const EnvGroupConfigStep: React.FC<{
     } else {
       // Validate all required fields
       const missingRequired = category.variables.filter(
-        (v) => v.required && !values[v.name]?.trim()
+        (v) => v.required && !values[v.name]?.trim(),
       );
       if (missingRequired.length > 0) {
         setError(
-          `Required fields are missing: ${missingRequired.map((v) => v.name).join(", ")}`
+          `Required fields are missing: ${missingRequired.map((v) => v.name).join(", ")}`,
         );
         return;
       }
@@ -985,7 +1030,7 @@ export const AlternativeGroupSelectionStep: React.FC<
 > = ({ alternatives, onSubmit }) => {
   // Track which providers are enabled (checkbox state)
   const [enabledProviders, setEnabledProviders] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
   // Track values for all providers
   const [allValues, setAllValues] = useState<Record<string, string>>({});
@@ -1101,7 +1146,7 @@ export const AlternativeGroupSelectionStep: React.FC<
       if (!category) continue;
 
       const hasValue = category.variables.some((v) =>
-        allValues[v.name]?.trim()
+        allValues[v.name]?.trim(),
       );
       if (hasValue) {
         hasConfiguredProvider = true;
@@ -1151,7 +1196,7 @@ export const AlternativeGroupSelectionStep: React.FC<
         {alternatives.map((category, catIdx) => {
           const isEnabled = enabledProviders.has(catIdx);
           const providerNavIdx = navItems.findIndex(
-            (item) => item.type === "provider" && item.categoryIndex === catIdx
+            (item) => item.type === "provider" && item.categoryIndex === catIdx,
           );
           const isProviderFocused = navIndex === providerNavIdx;
 
@@ -1198,7 +1243,7 @@ export const AlternativeGroupSelectionStep: React.FC<
                       (item) =>
                         item.type === "field" &&
                         item.categoryIndex === catIdx &&
-                        item.fieldIndex === fieldIdx
+                        item.fieldIndex === fieldIdx,
                     );
                     const isFieldFocused = navIndex === fieldNavIdx;
                     const hasDefault = !!envVar.defaultValue;
@@ -1588,7 +1633,11 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
 
       {(state.step === "Install Tools" || state.step === "Project Setup") && (
         <DependencyInstallStep
-          title={state.step === "Install Tools" ? "Installing Tools" : "Project Setup"}
+          title={
+            state.step === "Install Tools"
+              ? "Installing Tools"
+              : "Project Setup"
+          }
           phase={state.data.dependencyPhase || ""}
           progress={state.data.dependencyProgress || 0}
           isComplete={state.data.dependencyComplete || false}

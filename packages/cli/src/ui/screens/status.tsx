@@ -2,8 +2,9 @@ import { Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { ServiceStatus } from "../../lib/healthcheck.js";
+import { runStatusChecks } from "../../commands/status/flow.js";
 import type { ContainerStatus } from "../../lib/docker.js";
+import type { ServiceStatus } from "../../lib/healthcheck.js";
 import { Header } from "../components/Header.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
@@ -20,8 +21,11 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
   }, [store]);
 
   useInput((_input, key) => {
-    if (key.return || key.escape) {
+    if ((key.return || key.escape) && state.step === "Results") {
       store.updateData("exitRequested", true);
+    }
+    if (_input === "r" && state.step === "Results" && state.data.refreshable) {
+      runStatusChecks(store);
     }
   });
 
@@ -31,7 +35,13 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
 
       {state.step === "Checking" && (
         <Box marginTop={1}>
-          <Spinner label="Checking service health..." />
+          <Spinner
+            label={
+              state.data.services
+                ? "Refreshing service health..."
+                : "Checking service health..."
+            }
+          />
         </Box>
       )}
 
@@ -59,9 +69,7 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
                   <Text bold>Latency</Text>
                 </Box>
               </Box>
-              <Text color="gray">
-                {"─".repeat(42)}
-              </Text>
+              <Text color="gray">{"─".repeat(42)}</Text>
               {state.data.services.map((service: ServiceStatus) => (
                 <Box key={service.name}>
                   <Box width={22}>
@@ -74,9 +82,7 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
                       color={service.status === "up" ? "green" : "red"}
                       bold
                     >
-                      {service.status === "up"
-                        ? "\u2713 UP"
-                        : "\u2717 DOWN"}
+                      {service.status === "up" ? "\u2713 UP" : "\u2717 DOWN"}
                     </Text>
                   </Box>
                   <Box width={10}>
@@ -114,9 +120,7 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
                       <Box key={container.name}>
                         <Text
                           color={
-                            container.status === "running"
-                              ? "green"
-                              : "red"
+                            container.status === "running" ? "green" : "red"
                           }
                         >
                           {container.status === "running"
@@ -136,7 +140,10 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           )}
 
           <Box marginTop={1}>
-            <Text dimColor>Press Enter or Escape to exit</Text>
+            <Text dimColor>
+              Press Enter or Escape to exit · Press{" "}
+              <Text color={THEME_COLOR}>r</Text> to refresh
+            </Text>
           </Box>
         </Box>
       )}

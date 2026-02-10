@@ -1,8 +1,8 @@
 import * as fs from "fs";
 import * as path from "path";
 import {
-  parseWebEnv,
   getWebInfrastructureDefaults,
+  parseWebEnv,
   type SetupMode,
 } from "./env-parser.js";
 
@@ -10,8 +10,30 @@ export interface EnvValues {
   [key: string]: string;
 }
 
+/**
+ * Returns the canonical path to the API .env file.
+ * Note: writeEnvFile() expects path.join(repoRoot, "apps", "api") as its repoPath
+ * argument, so it writes to apps/api/.env correctly. These helpers exist so that
+ * envFileExists() and readEnvFile() — which take the monorepo root — resolve
+ * the same location.
+ */
+export function getApiEnvPath(repoRoot: string): string {
+  return path.join(repoRoot, "apps", "api", ".env");
+}
+
+export function getWebEnvPath(repoRoot: string): string {
+  return path.join(repoRoot, "apps", "web", ".env");
+}
+
+function backupIfExists(filePath: string): void {
+  if (fs.existsSync(filePath)) {
+    fs.copyFileSync(filePath, `${filePath}.bak`);
+  }
+}
+
 export function writeEnvFile(repoPath: string, values: EnvValues): void {
   const envPath = path.join(repoPath, ".env");
+  backupIfExists(envPath);
 
   const lines: string[] = [
     "# GAIA Environment Configuration",
@@ -45,6 +67,7 @@ export function writeWebEnvFile(
   portOverrides?: Record<number, number>,
 ): void {
   const webEnvPath = path.join(repoPath, "apps", "web", ".env");
+  backupIfExists(webEnvPath);
 
   // Parse existing .env to discover all vars
   const discoveredVars = parseWebEnv(repoPath);
@@ -89,13 +112,18 @@ export function writeWebEnvFile(
   fs.writeFileSync(webEnvPath, lines.join("\n"), "utf-8");
 }
 
-export function envFileExists(repoPath: string): boolean {
-  const envPath = path.join(repoPath, ".env");
-  return fs.existsSync(envPath);
+/**
+ * Check if the API .env file exists. Pass the monorepo root as repoRoot.
+ */
+export function envFileExists(repoRoot: string): boolean {
+  return fs.existsSync(getApiEnvPath(repoRoot));
 }
 
-export function readEnvFile(repoPath: string): EnvValues {
-  const envPath = path.join(repoPath, ".env");
+/**
+ * Read and parse the API .env file. Pass the monorepo root as repoRoot.
+ */
+export function readEnvFile(repoRoot: string): EnvValues {
+  const envPath = getApiEnvPath(repoRoot);
 
   if (!fs.existsSync(envPath)) {
     return {};

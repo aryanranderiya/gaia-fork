@@ -1,15 +1,17 @@
-import type { ReactNode } from "react";
-import type React from "react";
 import { Box, Text } from "ink";
-import { Header } from "./Header.js";
-import { Footer } from "./Footer.js";
+import type React from "react";
+import type { ReactNode } from "react";
 import { THEME_COLOR } from "../constants.js";
+import { Footer } from "./Footer.js";
+import { Header } from "./Header.js";
 
 export const INIT_STEPS = [
   "Welcome",
   "Prerequisites",
   "Repository Setup",
+  "Install Tools",
   "Environment Setup",
+  "Project Setup",
   "Finished",
 ] as const;
 

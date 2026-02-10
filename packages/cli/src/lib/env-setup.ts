@@ -35,6 +35,12 @@ export async function runEnvSetup(
 
   if (envMethod === "infisical") {
     await collectInfisicalEnv(store, envValues);
+    // Infisical stores credentials for runtime secret fetching, but we still
+    // need the remaining vars (API keys, auth, etc.) configured manually.
+    store.setStatus(
+      "Infisical credentials saved. Configure remaining variables...",
+    );
+    await collectManualEnv(store, repoPath, envValues, setupMode);
   } else {
     await collectManualEnv(store, repoPath, envValues, setupMode);
   }
@@ -90,7 +96,10 @@ async function collectManualEnv(
   const processedAlternatives = new Set<string>();
 
   for (const category of categories) {
-    if (category.alternativeGroup && !processedAlternatives.has(category.name)) {
+    if (
+      category.alternativeGroup &&
+      !processedAlternatives.has(category.name)
+    ) {
       const alternative = categories.find(
         (c) => c.name === category.alternativeGroup,
       );
@@ -128,14 +137,8 @@ async function collectManualEnv(
     }
   }
 
-  // Auto-apply infrastructure defaults
+  // Infrastructure vars are already applied in runEnvSetup — skip them in user prompts.
   const infraVars = envParser.getInfrastructureVariables();
-  for (const varName of infraVars) {
-    const defaultVal = envParser.getDefaultValue(varName, setupMode);
-    if (defaultVal) {
-      envValues[varName] = defaultVal;
-    }
-  }
 
   // Handle single-variable groups
   const singleVars = singleVarGroups

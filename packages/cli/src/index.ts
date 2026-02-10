@@ -49,9 +49,10 @@ program
     await runStop();
   });
 
-// Default to init when no command given
-program.action(async () => {
-  await runInit();
-});
+// Show help when no command is given instead of silently running init
+if (!process.argv.slice(2).length) {
+  program.outputHelp();
+  process.exit(0);
+}
 
 program.parse();

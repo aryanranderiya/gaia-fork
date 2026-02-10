@@ -5,6 +5,9 @@ import type { SetupMode } from "./env-parser.js";
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
+export const DEV_LOG_FILE = "dev-start.log";
+export const WEB_LOG_FILE = "web-start.log";
+
 export async function startServices(
   repoPath: string,
   setupMode: SetupMode,
@@ -23,7 +26,7 @@ export async function startServices(
 
     onStatus?.("Starting web frontend...");
     const { spawn } = await import("child_process");
-    const webLog = fs.openSync(path.join(repoPath, "web-start.log"), "a");
+    const webLog = fs.openSync(path.join(repoPath, WEB_LOG_FILE), "a");
     spawn("nx", ["next:start", "web"], {
       cwd: repoPath,
       stdio: ["ignore", webLog, webLog],
@@ -33,8 +36,17 @@ export async function startServices(
 
     onStatus?.("All services started!");
   } else {
-    onStatus?.("Starting development servers (mise dev)...");
-    await runCommand("mise", ["dev"], repoPath);
+    onStatus?.("Starting development servers...");
+    const { spawn } = await import("child_process");
+    const devLog = fs.openSync(path.join(repoPath, DEV_LOG_FILE), "a");
+    spawn("mise", ["dev"], {
+      cwd: repoPath,
+      stdio: ["ignore", devLog, devLog],
+      detached: true,
+      shell: true,
+    }).unref();
+    await delay(1500);
+    onStatus?.("Development servers started!");
   }
 }
 
@@ -53,8 +65,10 @@ export async function stopServices(
 
   onStatus?.("Stopping local processes...");
   try {
-    // Kill processes on common GAIA ports
-    for (const port of [8000, 3000]) {
+    // Kill processes on all GAIA service ports
+    // API (8000), Web (3000), Redis (6379), PostgreSQL (5432),
+    // MongoDB (27017), RabbitMQ (5672), ChromaDB (8080)
+    for (const port of [8000, 3000, 6379, 5432, 27017, 5672, 8080]) {
       try {
         await runCommand("lsof", ["-ti", `:${port}`], repoPath);
         await runCommand(
@@ -86,10 +100,7 @@ export async function detectSetupMode(
   return "developer";
 }
 
-export async function checkUrl(
-  url: string,
-  retries = 30,
-): Promise<boolean> {
+export async function checkUrl(url: string, retries = 30): Promise<boolean> {
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url);
@@ -102,9 +113,7 @@ export async function checkUrl(
   return false;
 }
 
-export async function areServicesRunning(
-  repoPath: string,
-): Promise<boolean> {
+export async function areServicesRunning(repoPath: string): Promise<boolean> {
   const dockerComposePath = path.join(repoPath, "infra/docker");
   try {
     const { execSync } = await import("child_process");
@@ -158,9 +167,7 @@ export async function runCommand(
         resolve();
       } else {
         reject(
-          new Error(
-            `Command failed with code ${code}: ${output.slice(-500)}`,
-          ),
+          new Error(`Command failed with code ${code}: ${output.slice(-500)}`),
         );
       }
     });

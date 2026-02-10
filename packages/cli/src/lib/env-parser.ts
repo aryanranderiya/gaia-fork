@@ -1,6 +1,6 @@
-import { execa } from "execa";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { execa } from "execa";
 
 export type SetupMode = "selfhost" | "developer";
 
@@ -31,14 +31,24 @@ export interface WebEnvVar {
   category: string;
 }
 
+// Infrastructure connection strings set by setup mode.
+//
+// selfhost: API runs inside Docker; database URLs use container hostnames
+//   (e.g. "mongo", "redis") which resolve within Docker's internal network.
+//   CHROMADB_PORT=8000 is the container-internal port. The host maps it to
+//   8080 via docker-compose (8080:8000). healthcheck.ts always probes 8080
+//   on the host — that is correct and does NOT use this env var.
+//
+// developer: Everything runs on localhost. CHROMADB_PORT=8080 is the
+//   host-mapped port exposed by docker-compose for local use.
 const INFRASTRUCTURE_DEFAULTS: Record<SetupMode, Record<string, string>> = {
   selfhost: {
     MONGO_DB: "mongodb://mongo:27017/gaia",
     REDIS_URL: "redis://redis:6379",
     POSTGRES_URL: "postgresql://postgres:postgres@postgres:5432/langgraph", // pragma: allowlist secret
-    CHROMADB_HOST: "chromadb",
-    CHROMADB_PORT: "8000",
-    RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/",  // pragma: allowlist secret
+    CHROMADB_HOST: "chromadb", // Docker container hostname (internal network)
+    CHROMADB_PORT: "8000", // Container-internal port; host maps 8080→8000
+    RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/", // pragma: allowlist secret
     HOST: "http://localhost:8000",
     FRONTEND_URL: "http://localhost:3000",
     GAIA_BACKEND_URL: "http://gaia-backend:80",
@@ -46,10 +56,10 @@ const INFRASTRUCTURE_DEFAULTS: Record<SetupMode, Record<string, string>> = {
   developer: {
     MONGO_DB: "mongodb://localhost:27017/gaia",
     REDIS_URL: "redis://localhost:6379",
-    POSTGRES_URL: "postgresql://postgres:postgres@localhost:5432/langgraph",  // pragma: allowlist secret
+    POSTGRES_URL: "postgresql://postgres:postgres@localhost:5432/langgraph", // pragma: allowlist secret
     CHROMADB_HOST: "localhost",
-    CHROMADB_PORT: "8080",
-    RABBITMQ_URL: "amqp://guest:guest@localhost:5672/",  // pragma: allowlist secret
+    CHROMADB_PORT: "8080", // Host-mapped port from docker-compose (8080:8000)
+    RABBITMQ_URL: "amqp://guest:guest@localhost:5672/", // pragma: allowlist secret
     HOST: "http://localhost:8000",
     FRONTEND_URL: "http://localhost:3000",
     GAIA_BACKEND_URL: "http://host.docker.internal:8000",
@@ -80,9 +90,7 @@ export function getDefaultValue(
   return INFRASTRUCTURE_DEFAULTS[mode][varName];
 }
 
-export async function parseSettings(
-  repoPath: string,
-): Promise<EnvCategory[]> {
+export async function parseSettings(repoPath: string): Promise<EnvCategory[]> {
   const scriptPath = path.join(
     repoPath,
     "apps/api/scripts/dump_config_schema.py",
@@ -91,10 +99,7 @@ export async function parseSettings(
     repoPath,
     "apps/api/app/config/settings_validator.py",
   );
-  const settingsPath = path.join(
-    repoPath,
-    "apps/api/app/config/settings.py",
-  );
+  const settingsPath = path.join(repoPath, "apps/api/app/config/settings.py");
 
   if (!fs.existsSync(scriptPath)) {
     throw new Error("dump_config_schema.py not found in apps/api/scripts");
@@ -189,10 +194,7 @@ export function applyPortOverrides(
     const origPort = Number(original);
     for (const [key, value] of Object.entries(envValues)) {
       if (value.includes(`:${origPort}`)) {
-        envValues[key] = value.replace(
-          `:${origPort}`,
-          `:${replacement}`,
-        );
+        envValues[key] = value.replace(`:${origPort}`, `:${replacement}`);
       }
     }
   }

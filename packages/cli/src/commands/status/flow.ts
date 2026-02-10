@@ -1,9 +1,10 @@
-import type { CLIStore } from "../../ui/store.js";
 import { checkAllServices, getDockerStatus } from "../../lib/healthcheck.js";
+import type { CLIStore } from "../../ui/store.js";
 
-export async function runStatusFlow(store: CLIStore): Promise<void> {
+export async function runStatusChecks(store: CLIStore): Promise<void> {
   store.setStep("Checking");
   store.setStatus("Checking service health...");
+  store.updateData("refreshable", false);
 
   const [services, docker] = await Promise.all([
     checkAllServices(),
@@ -18,4 +19,9 @@ export async function runStatusFlow(store: CLIStore): Promise<void> {
 
   store.setStep("Results");
   store.setStatus(`${upCount}/${totalCount} services running`);
+  store.updateData("refreshable", true);
+}
+
+export async function runStatusFlow(store: CLIStore): Promise<void> {
+  await runStatusChecks(store);
 }

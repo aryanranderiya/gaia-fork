@@ -1,10 +1,7 @@
-import type { CLIStore } from "../../ui/store.js";
-import * as prereqs from "../../lib/prerequisites.js";
 import { runEnvSetup } from "../../lib/env-setup.js";
-import {
-  runCommand,
-  findRepoRoot,
-} from "../../lib/service-starter.js";
+import * as prereqs from "../../lib/prerequisites.js";
+import { findRepoRoot, runCommand } from "../../lib/service-starter.js";
+import type { CLIStore } from "../../ui/store.js";
 
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
@@ -70,12 +67,23 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
 
   // Port check
   store.setStatus("Checking Ports...");
-  const requiredPorts = [8000, 5432, 6379, 27017, 5672, 3000];
+  const requiredPorts = [8000, 5432, 6379, 27017, 5672, 3000, 8080, 8083];
   const portResults = await prereqs.checkPortsWithFallback(requiredPorts);
   const portOverrides: Record<number, number> = {};
   const conflicts = portResults.filter((r) => !r.available);
 
   if (conflicts.length > 0) {
+    // Check for ports with no available alternative before presenting dialog
+    const unresolvable = conflicts.filter((r) => !r.alternative);
+    if (unresolvable.length > 0) {
+      store.setError(
+        new Error(
+          `Cannot find free alternative ports for: ${unresolvable.map((r) => `${r.port} (${r.service})`).join(", ")}. Free these ports and try again.`,
+        ),
+      );
+      return;
+    }
+
     store.updateData("portConflicts", portResults);
     const resolution = (await store.waitForInput("port_conflicts")) as
       | "accept"
@@ -83,7 +91,9 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
 
     if (resolution === "abort") {
       store.setError(
-        new Error("Port conflicts not resolved."),
+        new Error(
+          "Port conflicts not resolved. Please free the ports and try again.",
+        ),
       );
       return;
     }
@@ -95,12 +105,17 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     }
   }
 
-  if (
-    gitStatus === "error" ||
-    dockerStatus === "error" ||
-    miseStatus === "error"
-  ) {
-    store.setError(new Error("Prerequisites failed"));
+  const failedChecks: string[] = [];
+  if (gitStatus === "error") failedChecks.push("Git");
+  if (dockerStatus === "error") failedChecks.push("Docker");
+  if (miseStatus === "error") failedChecks.push("Mise");
+
+  if (failedChecks.length > 0) {
+    store.setError(
+      new Error(
+        `Prerequisites failed: ${failedChecks.join(", ")} ${failedChecks.length === 1 ? "is" : "are"} not installed or not working. Please install and try again.`,
+      ),
+    );
     return;
   }
 
@@ -119,8 +134,10 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
 
   const logHandler = (chunk: string) => {
     const currentLogs = store.currentState.data.dependencyLogs || [];
-    const lines = chunk.split("\n").filter((line: string) => line.trim() !== "");
-    const newLogs = [...currentLogs, ...lines].slice(-10);
+    const lines = chunk
+      .split("\n")
+      .filter((line: string) => line.trim() !== "");
+    const newLogs = [...currentLogs, ...lines].slice(-20);
     store.updateData("dependencyLogs", newLogs);
   };
 
