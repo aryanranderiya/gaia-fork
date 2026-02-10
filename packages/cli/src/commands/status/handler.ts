@@ -11,6 +11,10 @@ export async function runStatus(): Promise<void> {
     React.createElement(App, { store, command: "status" }),
   );
 
+  // Wait a tick for ink to fully initialize and measure terminal dimensions
+  // before running the flow, otherwise ink-big-text may fall back to plain text
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
   try {
     await runStatusFlow(store);
   } catch (error) {

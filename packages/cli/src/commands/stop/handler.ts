@@ -11,6 +11,8 @@ export async function runStop(): Promise<void> {
     React.createElement(App, { store, command: "stop" }),
   );
 
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
   try {
     await runStopFlow(store);
   } catch (error) {

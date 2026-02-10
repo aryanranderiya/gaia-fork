@@ -11,6 +11,8 @@ export async function runStart(): Promise<void> {
     React.createElement(App, { store, command: "start" }),
   );
 
+  await new Promise((resolve) => setTimeout(resolve, 50));
+
   try {
     await runStartFlow(store);
   } catch (error) {
