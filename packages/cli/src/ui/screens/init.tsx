@@ -1580,7 +1580,7 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         />
       )}
 
-      {state.step === "Repository Setup" && (
+      {state.step === "Repository Setup" && !state.inputRequest && (
         <Box
           flexDirection="column"
           borderStyle="round"
@@ -1649,12 +1649,27 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           />
         )}
 
+      {state.step === "Environment Setup" && !state.inputRequest && (
+        <Box
+          flexDirection="column"
+          marginTop={1}
+          paddingX={1}
+          borderStyle="round"
+          borderColor={THEME_COLOR}
+        >
+          <Text bold>Environment Setup</Text>
+          <Box marginTop={1}>
+            <Spinner label={state.status || "Configuring environment..."} />
+          </Box>
+        </Box>
+      )}
+
       {state.step === "Finished" && (
         <FinishedStep
           setupMode={state.data.setupMode}
           repoPath={state.data.repoPath}
           portOverrides={state.data.portOverrides}
-          onConfirm={() => store.submitInput(true)}
+          onConfirm={() => store.submitInput("exit")}
         />
       )}
 

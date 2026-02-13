@@ -122,6 +122,21 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           />
         )}
 
+      {state.step === "Environment Setup" && !state.inputRequest && (
+        <Box
+          flexDirection="column"
+          marginTop={1}
+          paddingX={1}
+          borderStyle="round"
+          borderColor={THEME_COLOR}
+        >
+          <Text bold>Environment Setup</Text>
+          <Box marginTop={1}>
+            <Spinner label={state.status || "Configuring environment..."} />
+          </Box>
+        </Box>
+      )}
+
       {state.step === "Project Setup" && (
         <Box
           flexDirection="column"
@@ -177,7 +192,8 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         <FinishedStep
           setupMode={state.data.setupMode}
           repoPath={state.data.repoPath}
-          onConfirm={() => store.submitInput(true)}
+          portOverrides={state.data.portOverrides}
+          onConfirm={() => store.submitInput("exit")}
         />
       )}
 
@@ -268,14 +284,17 @@ const PortConflictStep: React.FC<{
 const FinishedStep: React.FC<{
   setupMode?: string;
   repoPath?: string;
+  portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, repoPath, onConfirm }) => {
+}> = ({ setupMode, repoPath, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) onConfirm();
   });
 
   const mode = setupMode || "developer";
   const dir = repoPath || ".";
+  const webPort = portOverrides?.[3000] ?? 3000;
+  const apiPort = portOverrides?.[8000] ?? 8000;
 
   return (
     <Box
@@ -306,6 +325,24 @@ const FinishedStep: React.FC<{
             {mode === "selfhost"
               ? "Runs: docker compose --profile all up -d (background)"
               : "Runs: mise dev (interactive — keep terminal open)"}
+          </Text>
+        </Box>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>Access GAIA at:</Text>
+        <Box marginLeft={2} flexDirection="column">
+          <Text>
+            Web:{" "}
+            <Text color="cyan" bold>
+              http://localhost:{webPort}
+            </Text>
+          </Text>
+          <Text>
+            API:{" "}
+            <Text color="cyan" bold>
+              http://localhost:{apiPort}
+            </Text>
           </Text>
         </Box>
       </Box>

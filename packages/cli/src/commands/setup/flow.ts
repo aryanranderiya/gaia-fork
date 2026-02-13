@@ -162,6 +162,7 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     store.setStatus(
       "Setup complete! Run 'gaia start' to build and start all services in Docker.",
     );
+    await store.waitForInput("exit");
     return;
   }
 
@@ -238,4 +239,5 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
 
   store.setStep("Finished");
   store.setStatus("Setup complete!");
+  await store.waitForInput("exit");
 }

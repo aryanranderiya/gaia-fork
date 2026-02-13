@@ -103,6 +103,14 @@ async function collectManualEnv(
     categories = await envParser.parseSettings(repoPath);
     categories = envParser.applyModeDefaults(categories, setupMode);
   } catch (e) {
+    if (setupMode === "selfhost") {
+      throw new Error(
+        "Manual environment setup requires Python to parse config schema.\n" +
+          "For self-host mode, we recommend using Infisical for secret management.\n" +
+          "Alternatively, install Python 3.11+ and try again.\n\n" +
+          `Original error: ${(e as Error).message}`,
+      );
+    }
     throw new Error(`Failed to parse settings: ${(e as Error).message}`);
   }
 
