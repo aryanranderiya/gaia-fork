@@ -123,22 +123,24 @@ mise doctor
     The GAIA CLI handles everything automatically - cloning, installing tools, configuring environment variables, and starting services.
 
     <Steps>
-      <Step title="Install and run the CLI">
+      <Step title="Install the CLI globally">
         ```bash
-        # Option 1: Quick install
+        # Recommended: Quick install script
         curl -fsSL https://heygaia.io/install.sh | sh
-        gaia init
 
-        # Option 2: Using npx (no install)
-        npx @heygaia/cli init
-
-        # Option 3: Using bun
-        bunx @heygaia/cli init
+        # Or using your package manager
+        npm install -g @heygaia/cli
+        # pnpm add -g @heygaia/cli
+        # bun add -g @heygaia/cli
         ```
       </Step>
 
-      <Step title="Follow the interactive wizard">
-        The CLI will guide you through:
+      <Step title="Run the setup wizard">
+        ```bash
+        gaia init
+        ```
+
+        The wizard will guide you through:
         1. Checking prerequisites (Git, Docker, Mise)
         2. Cloning the repository
         3. Installing tools (Node.js, Python, uv, Nx)
@@ -147,6 +149,10 @@ mise doctor
         6. Starting services
       </Step>
     </Steps>
+
+    <Tip>
+    After installation, you can use commands like `gaia start`, `gaia stop`, and `gaia status` from anywhere in your terminal.
+    </Tip>
 
   </Tab>
 

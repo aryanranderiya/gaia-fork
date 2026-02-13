@@ -67,8 +67,7 @@ function InstallTab({
           hint
         ) : (
           <>
-            After installation, run{" "}
-            <InlineCode>gaia init</InlineCode> {hint}
+            After installation, run <InlineCode>gaia init</InlineCode> {hint}
           </>
         )}
       </p>
@@ -79,16 +78,9 @@ function InstallTab({
 const installMethods = [
   {
     key: "curl",
-    title: "curl",
+    title: "curl (Recommended)",
     code: "curl -fsSL https://heygaia.io/install.sh | sh",
     hint: "to set up GAIA.",
-  },
-  {
-    key: "npx",
-    title: "npx",
-    code: "npx @heygaia/cli init",
-    hint: "Run directly — no global install needed.",
-    skipInitHint: true,
   },
   {
     key: "npm",
@@ -114,6 +106,13 @@ const installMethods = [
     code: "bun add -g @heygaia/cli",
     hint: "from any directory.",
   },
+  {
+    key: "npx",
+    title: "npx",
+    code: "npx @heygaia/cli init",
+    hint: "Run without installing. Note: You'll need to use 'npx @heygaia/cli' before every command.",
+    skipInitHint: true,
+  },
 ];
 
 const commands = [
@@ -126,16 +125,24 @@ const commands = [
     description: "Configure an existing GAIA repository",
   },
   {
-    command: "gaia status",
-    description: "Check health of all GAIA services",
-  },
-  {
     command: "gaia start",
-    description: "Start GAIA services",
+    description: "Start all GAIA services",
   },
   {
     command: "gaia stop",
     description: "Stop all GAIA services",
+  },
+  {
+    command: "gaia status",
+    description: "Check health and latency of all services",
+  },
+  {
+    command: "gaia --version",
+    description: "Show the current CLI version",
+  },
+  {
+    command: "gaia --help",
+    description: "Display help and all available commands",
   },
 ];
 

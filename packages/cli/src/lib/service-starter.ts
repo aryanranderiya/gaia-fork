@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import type { SetupMode } from "./env-parser.js";
+import { portOverridesToDockerEnv } from "./env-writer.js";
 
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
@@ -20,26 +21,33 @@ export async function startServices(
   repoPath: string,
   setupMode: SetupMode,
   onStatus?: (status: string) => void,
+  portOverrides?: Record<number, number>,
 ): Promise<void> {
   if (setupMode === "selfhost") {
     onStatus?.("Starting all services in Docker (selfhost mode)...");
     const dockerComposePath = path.join(repoPath, "infra/docker");
     const envArgs = getEnvFileArgs(dockerComposePath);
+    const dockerEnv =
+      portOverrides && Object.keys(portOverrides).length > 0
+        ? portOverridesToDockerEnv(portOverrides)
+        : undefined;
+
     await runCommand(
       "docker",
       [
         "compose",
+        "-f",
+        "docker-compose.selfhost.yml",
         ...envArgs,
-        "--profile",
-        "backend",
-        "--profile",
-        "worker",
         "up",
         "-d",
         "--build",
         "--remove-orphans",
       ],
       dockerComposePath,
+      undefined,
+      undefined,
+      dockerEnv,
     );
     onStatus?.("All services started in Docker!");
   } else {
@@ -83,57 +91,67 @@ export async function stopServices(
   portOverrides?: Record<number, number>,
 ): Promise<void> {
   const dockerComposePath = path.join(repoPath, "infra/docker");
+  const mode = await detectSetupMode(repoPath);
 
   onStatus?.("Stopping Docker services...");
   try {
     const envArgs = getEnvFileArgs(dockerComposePath);
-    const composeArgs = ["compose", ...envArgs, "down"];
+    const composeArgs =
+      mode === "selfhost"
+        ? [
+            "compose",
+            "-f",
+            "docker-compose.selfhost.yml",
+            ...envArgs,
+            "down",
+          ]
+        : ["compose", ...envArgs, "down"];
     await runCommand("docker", composeArgs, dockerComposePath);
   } catch {
     // Docker compose may not be running
   }
 
-  onStatus?.("Stopping local processes...");
-  try {
-    // Only kill host-side GAIA processes (API and Web).
-    // Infrastructure services (Redis, Postgres, Mongo, RabbitMQ, ChromaDB) are
-    // managed by Docker and already stopped by `docker compose down` above.
-    const apiPort = portOverrides?.[8000] ?? 8000;
-    const webPort = portOverrides?.[3000] ?? 3000;
+  // In selfhost mode everything runs in Docker, no local processes to kill
+  if (mode !== "selfhost") {
+    onStatus?.("Stopping local processes...");
+    try {
+      const apiPort = portOverrides?.[8000] ?? 8000;
+      const webPort = portOverrides?.[3000] ?? 3000;
 
-    if (process.platform === "win32") {
-      for (const port of [apiPort, webPort]) {
-        try {
-          await runCommand(
-            "powershell",
-            [
-              "-Command",
-              `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`,
-            ],
-            repoPath,
-          );
-        } catch {
-          // Port not in use
+      if (process.platform === "win32") {
+        for (const port of [apiPort, webPort]) {
+          try {
+            await runCommand(
+              "powershell",
+              [
+                "-Command",
+                `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`,
+              ],
+              repoPath,
+            );
+          } catch {
+            // Port not in use
+          }
+        }
+      } else {
+        for (const port of [apiPort, webPort]) {
+          try {
+            await runCommand(
+              "sh",
+              [
+                "-c",
+                `lsof -ti :${port} -sTCP:LISTEN | xargs kill 2>/dev/null || true`,
+              ],
+              repoPath,
+            );
+          } catch {
+            // Port not in use
+          }
         }
       }
-    } else {
-      for (const port of [apiPort, webPort]) {
-        try {
-          await runCommand(
-            "sh",
-            [
-              "-c",
-              `lsof -ti :${port} -sTCP:LISTEN | xargs kill 2>/dev/null || true`,
-            ],
-            repoPath,
-          );
-        } catch {
-          // Port not in use
-        }
-      }
+    } catch {
+      // Ignore cleanup errors
     }
-  } catch {
-    // Ignore cleanup errors
   }
 
   onStatus?.("All services stopped.");
@@ -183,10 +201,13 @@ export async function areServicesRunning(repoPath: string): Promise<boolean> {
   const dockerComposePath = path.join(repoPath, "infra/docker");
   try {
     const { execSync } = await import("child_process");
+    const mode = await detectSetupMode(repoPath);
+    const fileFlag =
+      mode === "selfhost" ? "-f docker-compose.selfhost.yml " : "";
     const envFlag = fs.existsSync(path.join(dockerComposePath, ".env"))
       ? "--env-file .env "
       : "";
-    const composeCmd = `docker compose ${envFlag}ps --format json --status running`;
+    const composeCmd = `docker compose ${fileFlag}${envFlag}ps --format json --status running`;
     const output = execSync(composeCmd, {
       cwd: dockerComposePath,
       stdio: ["pipe", "pipe", "pipe"],
@@ -204,6 +225,7 @@ export async function runCommand(
   cwd: string,
   onProgress?: (progress: number) => void,
   onLog?: (chunk: string) => void,
+  env?: Record<string, string>,
 ): Promise<void> {
   const { spawn } = await import("child_process");
 
@@ -212,6 +234,7 @@ export async function runCommand(
       cwd,
       stdio: ["ignore", "pipe", "pipe"],
       shell: true,
+      env: env ? { ...process.env, ...env } : undefined,
     });
 
     let output = "";

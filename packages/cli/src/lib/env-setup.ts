@@ -23,7 +23,7 @@ export async function runEnvSetup(
   const envMethod = await store.waitForInput("env_method");
 
   const envValues: Record<string, string> = {};
-  envValues["ENV"] = setupMode === "selfhost" ? "production" : "development";
+  envValues["ENV"] = "development";
 
   const infraVars = envParser.getInfrastructureVariables();
   for (const varName of infraVars) {
@@ -55,7 +55,7 @@ export async function runEnvSetup(
   }
 
   if (portOverrides) {
-    envParser.applyPortOverrides(envValues, portOverrides);
+    envParser.applyPortOverrides(envValues, portOverrides, setupMode);
   }
 
   try {
@@ -244,12 +244,24 @@ async function writeAllEnvFiles(
     throw new Error(`Failed to write web .env file: ${(e as Error).message}`);
   }
 
-  // Write Docker Compose .env for port overrides
-  if (portOverrides && Object.keys(portOverrides).length > 0) {
-    store.setStatus("Writing Docker Compose port overrides...");
+  // Write Docker Compose .env for port overrides and selfhost build args
+  const hasPortOverrides =
+    portOverrides && Object.keys(portOverrides).length > 0;
+  if (hasPortOverrides || setupMode === "selfhost") {
+    store.setStatus("Writing Docker Compose environment...");
     try {
-      envWriter.writeDockerComposeEnv(repoPath, portOverrides);
-      store.setStatus("Docker Compose ports configured!");
+      if (hasPortOverrides) {
+        // Patch docker-compose.yml to use variable substitution for ports.
+        // Older versions of the compose file have hardcoded ports, so the
+        // .env override only works after patching.
+        envWriter.patchDockerComposePorts(repoPath);
+      }
+      envWriter.writeDockerComposeEnv(
+        repoPath,
+        portOverrides ?? {},
+        setupMode,
+      );
+      store.setStatus("Docker Compose environment configured!");
     } catch (e) {
       throw new Error(
         `Failed to write Docker Compose .env: ${(e as Error).message}`,

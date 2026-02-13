@@ -15,44 +15,56 @@ The CLI checks prerequisites at startup and tells you what's missing.
 
 ## Installation
 
-### curl (recommended)
+**Global installation is required** to use the `gaia` command. Choose your preferred method:
 
-Downloads and installs the CLI globally. Uses npm if available, falls back to bun.
+### Quick Install (Recommended)
+
+Downloads and installs the CLI globally using the install script:
 
 ```bash
 curl -fsSL https://heygaia.io/install.sh | sh
 ```
 
-### npm
+This automatically detects your system and installs using npm or bun.
+
+### Manual Installation
+
+#### npm
 
 ```bash
 npm install -g @heygaia/cli
 ```
 
-### npx (no install)
-
-Run directly without a global install:
+#### pnpm
 
 ```bash
-npx @heygaia/cli init
+pnpm add -g @heygaia/cli
 ```
 
-### Other package managers
+#### bun
 
 ```bash
-# pnpm
-pnpm add -g @heygaia/cli
-
-# bun
 bun add -g @heygaia/cli
 ```
 
-### Verify
+### Verify Installation
+
+After installation, verify the `gaia` command is available:
 
 ```bash
 gaia --version
 gaia --help
 ```
+
+### Alternative: Run Without Installing (Not Recommended)
+
+You can run commands directly with `npx`, but this won't add the `gaia` command to your PATH:
+
+```bash
+npx @heygaia/cli init
+```
+
+**Note:** Using `npx` means you'll need to prefix every command with `npx @heygaia/cli` instead of just using `gaia`. We recommend installing globally for the best experience.
 
 ## What Happens When You Install
 
@@ -64,6 +76,22 @@ The CLI itself is a single bundled JavaScript file (~300KB) with no native depen
 
 ## Commands
 
+Once installed, you can use these commands from anywhere in your terminal:
+
+### Quick Reference
+
+```bash
+gaia init          # Full setup from scratch
+gaia setup         # Configure existing repo
+gaia start         # Start all services
+gaia stop          # Stop all services
+gaia status        # Check service health
+gaia --version     # Show CLI version
+gaia --help        # Show all commands
+```
+
+### Command Details
+
 | Command | Description |
 |---------|-------------|
 | `gaia init` | Full setup from scratch — clone repo, install tools, configure env, start services |
@@ -71,10 +99,18 @@ The CLI itself is a single bundled JavaScript file (~300KB) with no native depen
 | `gaia start` | Start all GAIA services (auto-detects selfhost vs developer mode) |
 | `gaia stop` | Stop all running GAIA services |
 | `gaia status` | Check health of all services with latency |
+| `gaia --version` | Display the current CLI version |
+| `gaia --help` | Show help and list all available commands |
 
 ### `gaia init`
 
 Interactive wizard for first-time setup. This is the main entry point for new users.
+
+**Usage:**
+
+```bash
+gaia init
+```
 
 **What it does:**
 
@@ -86,31 +122,73 @@ Interactive wizard for first-time setup. This is the main entry point for new us
 6. **Project setup** — Runs `mise setup` to install all dependencies, start Docker services, and seed the database.
 7. **Service startup** — Optionally starts all services immediately.
 
+**First-time users:** This is the command you want! It handles everything from zero to a running GAIA instance.
+
 ### `gaia setup`
 
 For existing repos that need configuration or reconfiguration. Skips cloning and tool installation, goes straight to environment setup.
+
+**Usage:**
 
 ```bash
 cd /path/to/gaia
 gaia setup
 ```
 
+**When to use:**
+- You already have the GAIA repo cloned
+- You want to reconfigure environment variables
+- You need to switch between self-host and developer modes
+- Dependencies need to be reinstalled
+
 ### `gaia start`
 
-Starts all services. Auto-detects the setup mode from your `.env` configuration:
+Starts all GAIA services. Auto-detects the setup mode from your `.env` configuration.
 
-- **Self-host mode**: Runs `docker compose --profile all up -d`
-- **Developer mode**: Runs `mise dev` for local API + web, Docker for databases
+**Usage:**
+
+```bash
+gaia start
+```
+
+**What it does:**
+
+- **Self-host mode**: Runs `docker compose --profile all up -d` (everything in Docker, runs in background)
+- **Developer mode**: Runs `mise dev` (databases in Docker, API + web locally with hot reload)
+
+**Access your instance:**
+- Web: http://localhost:3000
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
 ### `gaia stop`
 
-Stops all running services:
-- Docker containers in the GAIA compose stack
+Stops all running GAIA services gracefully.
+
+**Usage:**
+
+```bash
+gaia stop
+```
+
+**What it stops:**
+- All Docker containers in the GAIA compose stack
 - Local processes on ports 8000 (API) and 3000 (Web)
+- Background workers and services
+
+**Note:** Your data is preserved — stopping services doesn't delete any databases or configurations.
 
 ### `gaia status`
 
-Shows a live health dashboard with latency for all services:
+Shows a live health dashboard with latency for all services.
+
+**Usage:**
+
+```bash
+gaia status
+```
+
+**Service checks:**
 
 | Service | Port | Health Check |
 |---------|------|--------------|
@@ -122,7 +200,10 @@ Shows a live health dashboard with latency for all services:
 | RabbitMQ | 5672 | TCP connection |
 | ChromaDB | 8080 | TCP connection |
 
-Press `r` to refresh.
+**Interactive controls:**
+- Press `r` to refresh status
+- Status indicators: ✓ (healthy), ✗ (down), - (checking)
+- Shows response time for each service
 
 ## Setup Modes
 

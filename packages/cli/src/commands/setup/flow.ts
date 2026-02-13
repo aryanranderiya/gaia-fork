@@ -1,4 +1,5 @@
 import { runEnvSetup } from "../../lib/env-setup.js";
+import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as prereqs from "../../lib/prerequisites.js";
 import { findRepoRoot, runCommand } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
@@ -53,6 +54,7 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     store.updateData("dockerError", dockerInfo.errorMessage);
   }
 
+  // Check mise but don't block on it yet (selfhost mode doesn't need it)
   let miseStatus = await prereqs.checkMise();
   store.updateData("checks", {
     ...store.currentState.data.checks,
@@ -70,11 +72,11 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
   }
 
   // Check for failed prerequisites before proceeding to port checks
+  // Note: mise failure is deferred - only enforced for developer mode later
   const failedChecks: Array<{ name: string; message?: string }> = [];
   if (gitStatus === "error") failedChecks.push({ name: "Git" });
   if (dockerStatus === "error")
     failedChecks.push({ name: "Docker", message: dockerInfo.errorMessage });
-  if (miseStatus === "error") failedChecks.push({ name: "Mise" });
 
   if (failedChecks.length > 0) {
     const errorLines: string[] = [];
@@ -96,8 +98,6 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
         errorLines.push(`  • Docker: ${prereqs.PREREQUISITE_URLS.docker}`);
       }
     }
-    if (miseStatus === "error")
-      errorLines.push(`  • Mise: ${prereqs.PREREQUISITE_URLS.mise}`);
 
     store.setError(new Error(errorLines.join("\n")));
     return;
@@ -154,7 +154,28 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     return; // Abort if env setup failed
   }
 
-  // 4. Project Setup (mise setup)
+  const setupMode = store.currentState.data.setupMode as string;
+
+  if (setupMode === "selfhost") {
+    // Selfhost mode: everything runs in Docker, no local tools needed
+    store.setStep("Finished");
+    store.setStatus(
+      "Setup complete! Run 'gaia start' to build and start all services in Docker.",
+    );
+    return;
+  }
+
+  // Developer mode: mise is required
+  if (miseStatus === "error") {
+    store.setError(
+      new Error(
+        `Developer mode requires Mise but it failed to install.\n  • Mise: ${prereqs.PREREQUISITE_URLS.mise}`,
+      ),
+    );
+    return;
+  }
+
+  // 4. Project Setup (developer mode only - mise trust/install/setup)
   store.setStep("Project Setup");
   store.updateData("dependencyPhase", "Setting up project...");
   store.updateData("dependencyProgress", 0);
@@ -187,6 +208,11 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     );
 
     store.updateData("dependencyPhase", "Running mise setup...");
+    const dockerEnv =
+      Object.keys(portOverrides).length > 0
+        ? portOverridesToDockerEnv(portOverrides)
+        : undefined;
+
     await runCommand(
       "mise",
       ["setup"],
@@ -195,6 +221,7 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
         store.updateData("dependencyProgress", 50 + progress * 0.5);
       },
       logHandler,
+      dockerEnv,
     );
 
     store.updateData("dependencyProgress", 100);

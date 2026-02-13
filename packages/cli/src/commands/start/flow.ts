@@ -44,7 +44,7 @@ export async function runStartFlow(store: CLIStore): Promise<void> {
   try {
     await startServices(repoPath, mode, (status) => {
       store.setStatus(status);
-    });
+    }, portOverrides);
 
     store.setStep("Running");
     store.setStatus("GAIA is running!");

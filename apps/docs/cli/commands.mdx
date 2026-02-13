@@ -6,15 +6,35 @@ icon: "rectangle-terminal"
 
 ## Overview
 
-The GAIA CLI provides five commands for managing your GAIA instance. All commands are interactive and run in your terminal.
+The GAIA CLI provides commands for managing your GAIA instance. All commands are interactive and run in your terminal.
+
+<Note>
+Make sure you've [installed the CLI globally](/cli/installation) so you can use the `gaia` command.
+</Note>
+
+### Quick Reference
+
+```bash
+gaia init          # Full setup from scratch
+gaia setup         # Configure existing repo
+gaia start         # Start all services
+gaia stop          # Stop all services
+gaia status        # Check service health
+gaia --version     # Show CLI version
+gaia --help        # Show all commands
+```
+
+### All Commands
 
 | Command | Description |
 |---------|-------------|
-| `gaia init` | Full setup from scratch |
+| `gaia init` | Full setup from scratch — clone repo, install tools, configure env |
 | `gaia setup` | Configure an existing repository |
-| `gaia start` | Start all services |
-| `gaia stop` | Stop all services |
-| `gaia status` | Check service health |
+| `gaia start` | Start all services (auto-detects mode) |
+| `gaia stop` | Stop all services gracefully |
+| `gaia status` | Check health and latency of all services |
+| `gaia --version` | Display the current CLI version |
+| `gaia --help` | Show help and available commands |
 
 ---
 
@@ -111,35 +131,48 @@ gaia start
 **Self-Host mode:**
 - Runs `docker compose --profile all up -d` for the full backend stack
 - Builds and starts the web frontend
+- Everything runs in Docker containers (background)
 
 **Developer mode:**
 - Runs `mise dev` to start API and web in development mode
+- Databases run in Docker
+- API and web run locally with hot reload
+
+**After starting, access GAIA at:**
+- Web: http://localhost:3000
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
 ---
 
 ## `gaia stop`
 
-Stop all running GAIA services.
+Stop all running GAIA services gracefully.
 
 ```bash
 gaia stop
 ```
 
-Stops:
+**What it stops:**
 - All Docker containers in the GAIA compose stack
 - Local processes on ports 8000 (API) and 3000 (Web)
+- Background workers and services
+
+<Info>
+Your data is preserved — stopping services doesn't delete databases or configurations.
+</Info>
 
 ---
 
 ## `gaia status`
 
-Check the health and latency of all GAIA services.
+Check the health and latency of all GAIA services in real-time.
 
 ```bash
 gaia status
 ```
 
-Services checked:
+**Services checked:**
 
 | Service | Port | Check |
 |---------|------|-------|
@@ -150,6 +183,11 @@ Services checked:
 | MongoDB | 27017 | TCP connection |
 | RabbitMQ | 5672 | TCP connection |
 | ChromaDB | 8080 | TCP connection |
+
+**Interactive controls:**
+- Press `r` to refresh status manually
+- Status indicators: ✓ (healthy), ✗ (down), - (checking)
+- Shows response time in milliseconds for each service
 
 ---
 
@@ -177,17 +215,21 @@ When a developer adds a new variable to either location, the CLI picks it up aut
 
 <AccordionGroup>
   <Accordion title="command not found: gaia">
-    Ensure the global bin directory is in your PATH:
+    The `gaia` command requires global installation. Ensure the global bin directory is in your PATH:
 
     ```bash
-    # npm
+    # For npm installations
     export PATH="$(npm config get prefix)/bin:$PATH"
 
-    # bun
+    # For bun installations
     export PATH="$HOME/.bun/bin:$PATH"
     ```
 
-    Or run without installing: `npx @heygaia/cli init`
+    Add this to your shell config file (`~/.bashrc`, `~/.zshrc`, etc.) to make it permanent.
+
+    <Tip>
+    After adding to PATH, restart your terminal or run `source ~/.zshrc` (or `~/.bashrc`).
+    </Tip>
   </Accordion>
 
   <Accordion title="Raw mode is not supported">

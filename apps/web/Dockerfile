@@ -12,8 +12,7 @@ WORKDIR /app
 # Copy workspace files
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps/web/package.json ./apps/web/
-COPY packages/ui/package.json ./packages/ui/
-COPY packages/lib/package.json ./packages/lib/
+COPY packages/cli/package.json ./packages/cli/
 
 # Install dependencies
 RUN pnpm install --frozen-lockfile
@@ -31,18 +30,10 @@ COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 # Copy source files
 COPY . .
 
-# Build arguments for Next.js public env vars (baked into static build)
-ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000
-ARG NEXT_PUBLIC_APP_URL=http://localhost:3000
-ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
-ARG NEXT_PUBLIC_WS_URL=ws://localhost:8000
+# Build argument for Next.js public env var (baked into static build)
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1/
 
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
-ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
-ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
-ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 
 # Build the web app with standalone output
 WORKDIR /app/apps/web

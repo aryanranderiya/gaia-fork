@@ -91,20 +91,14 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 
 ### Self-Hosted Setup
 
-Install the GAIA CLI and run the interactive setup wizard:
+Install the GAIA CLI globally and run the interactive setup wizard:
 
 ```bash
-# Install the CLI
+# Install the CLI globally
 curl -fsSL https://heygaia.io/install.sh | sh
 
 # Run the setup wizard
 gaia init
-```
-
-Or run directly without installing:
-
-```bash
-npx @heygaia/cli init
 ```
 
 The `gaia init` wizard will:
@@ -113,7 +107,17 @@ The `gaia init` wizard will:
 - Auto-discover and configure environment variables
 - Set up Docker containers and start your GAIA instance
 
-See the [CLI documentation](https://docs.heygaia.io/cli/installation) for all installation methods and commands.
+**Once installed, you can use these commands:**
+
+```bash
+gaia init      # Complete setup from scratch
+gaia setup     # Configure existing repository
+gaia start     # Start all services
+gaia stop      # Stop all services
+gaia status    # Check service health
+```
+
+See the [CLI documentation](https://docs.heygaia.io/cli/installation) for all installation methods and detailed command documentation.
 
 ### Cloud-Hosted (Zero Setup)
 
@@ -125,7 +129,16 @@ Choose how you'd like to use GAIA:
 
 - **Use GAIA instantly**: No setup required — just visit [heygaia.io](https://heygaia.io).
 - **Self-host GAIA**: Install the CLI with `curl -fsSL https://heygaia.io/install.sh | sh` then run `gaia init`, or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual Docker setup.
-- **Develop or contribute**: Run `npx @heygaia/cli init` for quick setup, or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
+- **Develop or contribute**: Install the CLI with `curl -fsSL https://heygaia.io/install.sh | sh` then run `gaia init`, or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
+
+**After installation, your workflow looks like this:**
+
+```bash
+gaia init    # First time setup (clones repo, installs everything)
+gaia start   # Start GAIA services
+gaia status  # Check if everything is running
+gaia stop    # Stop services when done
+```
 
 ## Documentation
 

@@ -167,29 +167,44 @@ export function getWebInfrastructureDefaults(
   portOverrides?: Record<number, number>,
 ): Record<string, string> {
   const apiPort = portOverrides?.[8000] ?? 8000;
-  const webPort = portOverrides?.[3000] ?? 3000;
 
-  const defaults: Record<string, string> = {
+  // Single env var for the web app. WS URLs are derived from this at runtime
+  // by swapping http:// -> ws:// (see useWebSocketConnection.ts).
+  // Always uses localhost because this is a browser-side (client) URL —
+  // even in selfhost mode the browser connects via Docker-mapped host ports.
+  return {
     NEXT_PUBLIC_API_BASE_URL: `http://localhost:${apiPort}/api/v1/`,
-    NEXT_PUBLIC_WS_URL: `ws://localhost:${apiPort}/api/v1/`,
   };
-
-  if (webPort !== 3000) {
-    defaults["NEXT_PUBLIC_APP_URL"] = `http://localhost:${webPort}`;
-  }
-
-  return defaults;
 }
 
 export function applyPortOverrides(
   envValues: Record<string, string>,
   portOverrides: Record<number, number>,
+  setupMode?: SetupMode,
 ): void {
+  // In selfhost mode, infrastructure variables use Docker-internal addresses
+  // and container-internal ports (e.g., postgres:5432). These must NOT be
+  // rewritten — only the host port mapping changes, not the internal port.
+  const skipKeys =
+    setupMode === "selfhost"
+      ? new Set(Object.keys(INFRASTRUCTURE_DEFAULTS.selfhost))
+      : new Set<string>();
+
   for (const [original, replacement] of Object.entries(portOverrides)) {
     const origPort = Number(original);
+    const newPort = Number(replacement);
     for (const [key, value] of Object.entries(envValues)) {
+      if (skipKeys.has(key)) continue;
+
+      // Handle bare port values (e.g., CHROMADB_PORT=8080)
+      if (value === String(origPort)) {
+        envValues[key] = String(newPort);
+        continue;
+      }
+
+      // Handle port in URL context (e.g., :5432/ or :5432 at end)
       const portPattern = new RegExp(`:${origPort}(?=[/\\s]|$)`, "g");
-      envValues[key] = value.replaceAll(portPattern, `:${replacement}`);
+      envValues[key] = value.replaceAll(portPattern, `:${newPort}`);
     }
   }
 }
