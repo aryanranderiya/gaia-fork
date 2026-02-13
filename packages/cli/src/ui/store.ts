@@ -6,6 +6,8 @@
 
 import { EventEmitter } from "events";
 
+const THROTTLE_MS = 150;
+
 /**
  * Represents the complete state of the CLI application.
  */
@@ -27,6 +29,10 @@ export interface CLIState {
 /**
  * Central state store for the CLI application.
  * Extends EventEmitter to notify React components of state changes.
+ *
+ * Uses a throttled emit for high-frequency updates (updateData, setStatus)
+ * and immediate emit for user-facing changes (setStep, setError, waitForInput, submitInput).
+ *
  * @example
  * const store = new CLIStore();
  * store.on('change', (state) => console.log(state));
@@ -42,6 +48,8 @@ export class CLIStore extends EventEmitter {
   };
   // biome-ignore lint: Allow any for flexible input resolver
   private inputResolver: ((value: any) => void) | null = null;
+  private emitTimer: ReturnType<typeof setTimeout> | null = null;
+  private emitPending = false;
 
   /**
    * Gets the current state snapshot.
@@ -52,12 +60,43 @@ export class CLIStore extends EventEmitter {
   }
 
   /**
+   * Schedules a throttled emit — coalesces rapid state changes into
+   * a single emit per THROTTLE_MS interval to prevent TUI jitter.
+   */
+  private scheduleEmit(): void {
+    this.emitPending = true;
+    if (!this.emitTimer) {
+      this.emitTimer = setTimeout(() => {
+        this.emitTimer = null;
+        if (this.emitPending) {
+          this.emitPending = false;
+          this.emit("change", this.state);
+        }
+      }, THROTTLE_MS);
+    }
+  }
+
+  /**
+   * Emits immediately — flushes any pending throttled emit and
+   * fires the change event right away. Used for user-facing changes
+   * that need instant UI response.
+   */
+  private emitNow(): void {
+    if (this.emitTimer) {
+      clearTimeout(this.emitTimer);
+      this.emitTimer = null;
+    }
+    this.emitPending = false;
+    this.emit("change", this.state);
+  }
+
+  /**
    * Sets the current step in the setup flow.
    * @param step - Step identifier
    */
   setStep(step: string): void {
     this.state.step = step;
-    this.emit("change", this.state);
+    this.emitNow();
   }
 
   /**
@@ -66,7 +105,7 @@ export class CLIStore extends EventEmitter {
    */
   setStatus(status: string): void {
     this.state.status = status;
-    this.emit("change", this.state);
+    this.scheduleEmit();
   }
 
   /**
@@ -82,7 +121,7 @@ export class CLIStore extends EventEmitter {
       this.inputResolver = null;
       this.state.inputRequest = null;
     }
-    this.emit("change", this.state);
+    this.emitNow();
   }
 
   /**
@@ -93,7 +132,7 @@ export class CLIStore extends EventEmitter {
   // biome-ignore lint: Allow any for flexible state storage
   updateData(key: string, value: any): void {
     this.state.data = { ...this.state.data, [key]: value };
-    this.emit("change", this.state);
+    this.scheduleEmit();
   }
 
   /**
@@ -105,7 +144,7 @@ export class CLIStore extends EventEmitter {
   // biome-ignore lint: Allow any for flexible meta and return types
   waitForInput(id: string, meta?: any): Promise<any> {
     this.state.inputRequest = { id, meta };
-    this.emit("change", this.state);
+    this.emitNow();
     return new Promise((resolve) => {
       this.inputResolver = resolve;
     });
@@ -121,7 +160,7 @@ export class CLIStore extends EventEmitter {
       this.inputResolver(value);
       this.inputResolver = null;
       this.state.inputRequest = null;
-      this.emit("change", this.state);
+      this.emitNow();
     }
   }
 }

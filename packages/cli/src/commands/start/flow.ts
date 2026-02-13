@@ -1,3 +1,4 @@
+import { readDockerComposePortOverrides } from "../../lib/env-writer.js";
 import {
   detectSetupMode,
   findRepoRoot,
@@ -31,7 +32,13 @@ export async function runStartFlow(store: CLIStore): Promise<void> {
     return;
   }
 
+  const portOverrides = readDockerComposePortOverrides(repoPath);
+  const webPort = portOverrides[3000] ?? 3000;
+  const apiPort = portOverrides[8000] ?? 8000;
+
   store.updateData("setupMode", mode);
+  store.updateData("webPort", webPort);
+  store.updateData("apiPort", apiPort);
   store.setStatus(`Starting GAIA in ${mode} mode...`);
 
   try {

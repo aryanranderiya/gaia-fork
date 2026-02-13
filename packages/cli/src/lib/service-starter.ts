@@ -8,6 +8,14 @@ const delay = (ms: number): Promise<void> =>
 export const DEV_LOG_FILE = "dev-start.log";
 export const WEB_LOG_FILE = "web-start.log";
 
+function getEnvFileArgs(dockerDir: string): string[] {
+  const envPath = path.join(dockerDir, ".env");
+  if (fs.existsSync(envPath)) {
+    return ["--env-file", ".env"];
+  }
+  return [];
+}
+
 export async function startServices(
   repoPath: string,
   setupMode: SetupMode,
@@ -16,10 +24,12 @@ export async function startServices(
   if (setupMode === "selfhost") {
     onStatus?.("Starting all services in Docker (selfhost mode)...");
     const prodComposePath = path.join(repoPath, "infra/docker");
+    const envArgs = getEnvFileArgs(prodComposePath);
     await runCommand(
       "docker",
       [
         "compose",
+        ...envArgs,
         "-f",
         "docker-compose.prod.yml",
         "--profile",
@@ -79,10 +89,11 @@ export async function stopServices(
 
   onStatus?.("Stopping Docker services...");
   try {
+    const envArgs = getEnvFileArgs(dockerComposePath);
     const composeArgs =
       setupMode === "selfhost"
-        ? ["compose", "-f", "docker-compose.prod.yml", "down"]
-        : ["compose", "down"];
+        ? ["compose", ...envArgs, "-f", "docker-compose.prod.yml", "down"]
+        : ["compose", ...envArgs, "down"];
     await runCommand("docker", composeArgs, dockerComposePath);
   } catch {
     // Docker compose may not be running
@@ -179,10 +190,13 @@ export async function areServicesRunning(repoPath: string): Promise<boolean> {
   const setupMode = await detectSetupMode(repoPath);
   try {
     const { execSync } = await import("child_process");
+    const envFlag = fs.existsSync(path.join(dockerComposePath, ".env"))
+      ? "--env-file .env "
+      : "";
     const composeCmd =
       setupMode === "selfhost"
-        ? "docker compose -f docker-compose.prod.yml ps --format json --status running"
-        : "docker compose ps --format json --status running";
+        ? `docker compose ${envFlag}-f docker-compose.prod.yml ps --format json --status running`
+        : `docker compose ${envFlag}ps --format json --status running`;
     const output = execSync(composeCmd, {
       cwd: dockerComposePath,
       stdio: ["pipe", "pipe", "pipe"],
