@@ -1,4 +1,7 @@
 import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
+import { writeConfig } from "../../lib/config.js";
 import { runEnvSetup } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as git from "../../lib/git.js";
@@ -170,10 +173,21 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     store.setStatus("Repository ready!");
   } else {
     store.setStep("Repository Setup");
+    const defaultPath = path.join(os.homedir(), "gaia");
+
+    let cloneFresh = true;
+    repoPath = defaultPath;
+
     while (true) {
       repoPath = (await store.waitForInput("repo_path", {
-        default: "./gaia",
+        default: defaultPath,
       })) as string;
+
+      // Resolve relative paths
+      if (!path.isAbsolute(repoPath)) {
+        repoPath = path.resolve(repoPath);
+      }
+
       if (fs.existsSync(repoPath)) {
         const stat = fs.statSync(repoPath);
         if (!stat.isDirectory()) {
@@ -185,11 +199,37 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
           continue;
         }
 
+        // Check if it's already a gaia repo
+        const isGaiaRepo = fs.existsSync(
+          path.join(repoPath, "apps/api/app/config/settings_validator.py"),
+        );
+
+        if (isGaiaRepo) {
+          store.updateData("existingRepoPath", repoPath);
+          const action = (await store.waitForInput("existing_repo")) as string;
+
+          if (action === "use_existing") {
+            cloneFresh = false;
+            break;
+          } else if (action === "delete_reclone") {
+            store.setStatus("Removing existing installation...");
+            fs.rmSync(repoPath, { recursive: true, force: true });
+            break;
+          } else if (action === "different_path") {
+            continue;
+          } else {
+            // exit
+            store.setError(new Error("Setup cancelled by user."));
+            return;
+          }
+        }
+
+        // Non-empty directory that isn't a gaia repo
         const files = fs.readdirSync(repoPath);
         if (files.length > 0) {
           store.setError(
             new Error(
-              `Directory ${repoPath} is not empty. Please choose another path.`,
+              `Directory ${repoPath} is not empty and is not a GAIA installation. Please choose another path.`,
             ),
           );
           await delay(2000);
@@ -200,31 +240,35 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
       break;
     }
 
-    store.setStep("Repository Setup");
-    store.setStatus("Preparing repository...");
-    store.updateData("repoProgress", 0);
-    store.updateData("repoPhase", "");
+    if (cloneFresh) {
+      store.setStep("Repository Setup");
+      store.setStatus("Preparing repository...");
+      store.updateData("repoProgress", 0);
+      store.updateData("repoPhase", "");
 
-    try {
-      await git.setupRepo(
-        repoPath,
-        "https://github.com/theexperiencecompany/gaia.git",
-        (progress, phase) => {
-          store.updateData("repoProgress", progress);
-          if (phase) {
-            store.updateData("repoPhase", phase);
-            store.setStatus(`${phase}...`);
-          } else {
-            store.setStatus(
-              `Cloning repository to ${repoPath}... ${progress}%`,
-            );
-          }
-        },
-      );
-      store.setStatus("Repository ready!");
-    } catch (e) {
-      store.setError(e as Error);
-      return;
+      try {
+        await git.setupRepo(
+          repoPath,
+          "https://github.com/theexperiencecompany/gaia.git",
+          (progress, phase) => {
+            store.updateData("repoProgress", progress);
+            if (phase) {
+              store.updateData("repoPhase", phase);
+              store.setStatus(`${phase}...`);
+            } else {
+              store.setStatus(
+                `Cloning repository to ${repoPath}... ${progress}%`,
+              );
+            }
+          },
+        );
+        store.setStatus("Repository ready!");
+      } catch (e) {
+        store.setError(e as Error);
+        return;
+      }
+    } else {
+      store.setStatus("Using existing repository!");
     }
   }
 
@@ -241,6 +285,28 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
 
   if (setupMode === "selfhost") {
     // Selfhost mode: everything runs in Docker, no local tools needed
+    const envMethod = (store.currentState.data.envMethod as string) || "manual";
+    writeConfig({
+      version: "0.1.8",
+      setupComplete: true,
+      setupMethod: envMethod as "manual" | "infisical",
+      repoPath,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    // Auto-install CLI globally
+    store.setStep("Installing CLI");
+    store.setStatus("Installing gaia CLI globally...");
+    try {
+      await runCommand("npm", ["install", "-g", "@heygaia/cli"], repoPath);
+      store.setStatus("CLI installed globally!");
+    } catch {
+      // Non-fatal
+    }
+
+    await delay(500);
+
     store.setStep("Finished");
     store.setStatus(
       "Setup complete! Run 'gaia start' to build and start all services in Docker.",
@@ -338,6 +404,28 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
   }
 
   await delay(1000);
+
+  const envMethod = (store.currentState.data.envMethod as string) || "manual";
+  writeConfig({
+    version: "0.1.8",
+    setupComplete: true,
+    setupMethod: envMethod as "manual" | "infisical",
+    repoPath,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+
+  // Auto-install CLI globally
+  store.setStep("Installing CLI");
+  store.setStatus("Installing gaia CLI globally...");
+  try {
+    await runCommand("npm", ["install", "-g", "@heygaia/cli"], repoPath);
+    store.setStatus("CLI installed globally!");
+  } catch {
+    // Non-fatal — user can still use npx
+  }
+
+  await delay(500);
 
   store.setStep("Finished");
   store.setStatus("Setup complete!");

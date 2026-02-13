@@ -21,6 +21,7 @@ export async function runEnvSetup(
 
   store.setStatus("Configuring environment variables...");
   const envMethod = await store.waitForInput("env_method");
+  store.updateData("envMethod", envMethod);
 
   const envValues: Record<string, string> = {};
   envValues["ENV"] = "development";
@@ -264,11 +265,7 @@ async function writeAllEnvFiles(
         // .env override only works after patching.
         envWriter.patchDockerComposePorts(repoPath);
       }
-      envWriter.writeDockerComposeEnv(
-        repoPath,
-        portOverrides ?? {},
-        setupMode,
-      );
+      envWriter.writeDockerComposeEnv(repoPath, portOverrides ?? {}, setupMode);
       store.setStatus("Docker Compose environment configured!");
     } catch (e) {
       throw new Error(

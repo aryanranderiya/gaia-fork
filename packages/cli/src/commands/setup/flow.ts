@@ -1,3 +1,4 @@
+import { updateConfig } from "../../lib/config.js";
 import { runEnvSetup } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as prereqs from "../../lib/prerequisites.js";
@@ -157,7 +158,13 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
   const setupMode = store.currentState.data.setupMode as string;
 
   if (setupMode === "selfhost") {
-    // Selfhost mode: everything runs in Docker, no local tools needed
+    const envMethod = (store.currentState.data.envMethod as string) || "manual";
+    updateConfig({
+      setupComplete: true,
+      setupMethod: envMethod as "manual" | "infisical",
+      repoPath,
+    });
+
     store.setStep("Finished");
     store.setStatus(
       "Setup complete! Run 'gaia start' to build and start all services in Docker.",
@@ -236,6 +243,13 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
   }
 
   await delay(1000);
+
+  const envMethod = (store.currentState.data.envMethod as string) || "manual";
+  updateConfig({
+    setupComplete: true,
+    setupMethod: envMethod as "manual" | "infisical",
+    repoPath,
+  });
 
   store.setStep("Finished");
   store.setStatus("Setup complete!");

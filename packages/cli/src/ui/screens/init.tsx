@@ -204,12 +204,51 @@ const PathInputStep: React.FC<{
   );
 };
 
+const ExistingRepoStep: React.FC<{
+  repoPath: string;
+  onAction: (action: string) => void;
+}> = ({ repoPath, onAction }) => {
+  const options = [
+    { label: "Use existing installation", value: "use_existing" },
+    { label: "Delete and re-clone", value: "delete_reclone" },
+    { label: "Choose a different path", value: "different_path" },
+    { label: "Exit setup", value: "exit" },
+  ];
+
+  return (
+    <Box
+      flexDirection="column"
+      marginTop={1}
+      paddingX={1}
+      borderStyle="round"
+      borderColor="yellow"
+    >
+      <Box marginBottom={1}>
+        <Text bold color="yellow">
+          Existing Installation Found
+        </Text>
+      </Box>
+      <Text>
+        Found a GAIA installation at{" "}
+        <Text color="cyan" bold>
+          {repoPath}
+        </Text>
+      </Text>
+      <Box marginTop={1}>
+        <Text color="gray">What would you like to do?</Text>
+      </Box>
+      <Box marginTop={1}>
+        <Select options={options} onChange={(value) => onAction(value)} />
+      </Box>
+    </Box>
+  );
+};
+
 const FinishedStep: React.FC<{
   setupMode?: SetupMode;
-  repoPath?: string;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, repoPath, portOverrides, onConfirm }) => {
+}> = ({ setupMode, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -217,7 +256,6 @@ const FinishedStep: React.FC<{
   });
 
   const mode = setupMode || "developer";
-  const dir = repoPath || "./gaia";
   const webPort = portOverrides?.[3000] ?? 3000;
   const apiPort = portOverrides?.[8000] ?? 8000;
 
@@ -242,7 +280,6 @@ const FinishedStep: React.FC<{
           borderColor="gray"
           flexDirection="column"
         >
-          <Text color="cyan">$ cd {dir}</Text>
           <Text color="cyan">$ gaia start</Text>
         </Box>
         <Box marginTop={1}>
@@ -442,8 +479,7 @@ export const StartServicesStep: React.FC<{
           </Box>
         ) : (
           <Box flexDirection="column">
-            <Text color="cyan">$ cd {repoPath}</Text>
-            <Text color="cyan">$ mise dev</Text>
+            <Text color="cyan">$ gaia start</Text>
           </Box>
         )}
       </Box>
@@ -532,9 +568,8 @@ export const ServicesRunningStep: React.FC<{
 // Manual commands display (shown when user skips auto-start)
 export const ManualCommandsStep: React.FC<{
   setupMode: SetupMode;
-  repoPath: string;
   onConfirm: () => void;
-}> = ({ setupMode, repoPath, onConfirm }) => {
+}> = ({ setupMode, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -573,8 +608,7 @@ export const ManualCommandsStep: React.FC<{
           </Box>
         ) : (
           <Box flexDirection="column">
-            <Text color="cyan">$ cd {repoPath}</Text>
-            <Text color="cyan">$ mise dev</Text>
+            <Text color="cyan">$ gaia start</Text>
           </Box>
         )}
       </Box>
@@ -1580,6 +1614,14 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         />
       )}
 
+      {state.inputRequest?.id === "existing_repo" &&
+        state.data.existingRepoPath && (
+          <ExistingRepoStep
+            repoPath={state.data.existingRepoPath}
+            onAction={(action) => store.submitInput(action)}
+          />
+        )}
+
       {state.step === "Repository Setup" && !state.inputRequest && (
         <Box
           flexDirection="column"
@@ -1667,7 +1709,6 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
       {state.step === "Finished" && (
         <FinishedStep
           setupMode={state.data.setupMode}
-          repoPath={state.data.repoPath}
           portOverrides={state.data.portOverrides}
           onConfirm={() => store.submitInput("exit")}
         />

@@ -191,7 +191,6 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
       {state.step === "Finished" && (
         <FinishedStep
           setupMode={state.data.setupMode}
-          repoPath={state.data.repoPath}
           portOverrides={state.data.portOverrides}
           onConfirm={() => store.submitInput("exit")}
         />
@@ -283,16 +282,14 @@ const PortConflictStep: React.FC<{
 
 const FinishedStep: React.FC<{
   setupMode?: string;
-  repoPath?: string;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, repoPath, portOverrides, onConfirm }) => {
+}> = ({ setupMode, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) onConfirm();
   });
 
   const mode = setupMode || "developer";
-  const dir = repoPath || ".";
   const webPort = portOverrides?.[3000] ?? 3000;
   const apiPort = portOverrides?.[8000] ?? 8000;
 
@@ -317,7 +314,6 @@ const FinishedStep: React.FC<{
           borderColor="gray"
           flexDirection="column"
         >
-          <Text color="cyan">$ cd {dir}</Text>
           <Text color="cyan">$ gaia start</Text>
         </Box>
         <Box marginTop={1}>

@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import { readConfig } from "./config.js";
 import type { SetupMode } from "./env-parser.js";
 import { portOverridesToDockerEnv } from "./env-writer.js";
 
@@ -98,13 +99,7 @@ export async function stopServices(
     const envArgs = getEnvFileArgs(dockerComposePath);
     const composeArgs =
       mode === "selfhost"
-        ? [
-            "compose",
-            "-f",
-            "docker-compose.selfhost.yml",
-            ...envArgs,
-            "down",
-          ]
+        ? ["compose", "-f", "docker-compose.selfhost.yml", ...envArgs, "down"]
         : ["compose", ...envArgs, "down"];
     await runCommand("docker", composeArgs, dockerComposePath);
   } catch {
@@ -285,5 +280,16 @@ export function findRepoRoot(startDir?: string): string | null {
     }
     currentDir = path.dirname(currentDir);
   }
+
+  const config = readConfig();
+  if (
+    config?.repoPath &&
+    fs.existsSync(
+      path.join(config.repoPath, "apps/api/app/config/settings_validator.py"),
+    )
+  ) {
+    return config.repoPath;
+  }
+
   return null;
 }
