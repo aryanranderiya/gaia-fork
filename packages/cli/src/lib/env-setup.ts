@@ -59,7 +59,13 @@ export async function runEnvSetup(
   }
 
   try {
-    await writeAllEnvFiles(store, repoPath, envValues, setupMode, portOverrides);
+    await writeAllEnvFiles(
+      store,
+      repoPath,
+      envValues,
+      setupMode,
+      portOverrides,
+    );
   } catch (e) {
     store.setError(e as Error);
     return;
