@@ -4,7 +4,7 @@ services:
   # FastAPI Application
   gaia-backend:
     container_name: gaia-backend
-    profiles: ["backend"]
+    profiles: ["", "backend-only"]
     image: ghcr.io/theexperiencecompany/gaia:latest
     working_dir: /app/apps/api
     command:
@@ -40,14 +40,12 @@ services:
     env_file:
       - ../../apps/api/.env
     ports:
-      - "${API_HOST_PORT:-8000}:80"
+      - "8000:80"
     restart: on-failure
     tty: true
     stdin_open: true
     depends_on:
       chromadb:
-        condition: service_healthy
-      mongo:
         condition: service_healthy
       postgres:
         condition: service_healthy
@@ -67,6 +65,7 @@ services:
   chromadb:
     image: chromadb/chroma:1.0.0
     container_name: chromadb
+    profiles: ["", "backend-only"]
     volumes:
       - chroma_data:/chroma/chroma
     environment:
@@ -74,7 +73,7 @@ services:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_PORT=8000
     ports:
-      - "${CHROMADB_HOST_PORT:-8080}:8000"
+      - "8080:8000"
     restart: on-failure
     healthcheck:
       test:
@@ -89,12 +88,13 @@ services:
   postgres:
     image: postgres:alpine
     container_name: postgres
+    profiles: ["", "backend-only"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres # pragma: allowlist secret
       POSTGRES_DB: langgraph
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: on-failure
@@ -110,8 +110,9 @@ services:
   redis:
     image: redis:alpine
     container_name: redis
+    profiles: ["", "backend-only"]
     ports:
-      - "${REDIS_HOST_PORT:-6379}:6379"
+      - "6379:6379"
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -125,8 +126,9 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    profiles: ["", "backend-only"]
     ports:
-      - "${RABBITMQ_HOST_PORT:-5672}:5672" # AMQP protocol
+      - "5672:5672" # AMQP protocol
       - "15672:15672" # Management UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
@@ -139,28 +141,11 @@ services:
     networks:
       - gaia_network
 
-  # MongoDB Service
-  mongo:
-    image: mongo:latest
-    container_name: mongo
-    volumes:
-      - mongo_data:/data/db
-    restart: on-failure
-    ports:
-      - "${MONGO_HOST_PORT:-27017}:27017"
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    networks:
-      - gaia_network
-
   # Arq Worker
   arq_worker:
     container_name: arq_worker
     image: ghcr.io/theexperiencecompany/gaia:latest
-    profiles: ["backend"]
+    profiles: ["", "backend-only"]
     working_dir: /app/apps/api
     env_file:
       - ../../apps/api/.env
@@ -197,32 +182,8 @@ services:
     networks:
       - gaia_network
 
-  # Web Frontend (Next.js production build)
-  gaia-web:
-    container_name: gaia-web
-    profiles: ["web"]
-    build:
-      context: ../..
-      dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-    ports:
-      - "${WEB_HOST_PORT:-3000}:3000"
-    restart: on-failure
-    depends_on:
-      gaia-backend:
-        condition: service_healthy
-    networks:
-      - gaia_network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-
 volumes:
   chroma_data:
-  mongo_data:
   pgdata:
   rabbitmq_data:
   voice_agent_models:
