@@ -4,7 +4,7 @@
  * @module store
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 /**
  * Represents the complete state of the CLI application.
@@ -34,18 +34,14 @@ export interface CLIState {
  */
 export class CLIStore extends EventEmitter {
   private state: CLIState = {
-    step: 'init',
-    status: '',
+    step: "init",
+    status: "",
     error: null,
     data: {},
     inputRequest: null,
   };
   // biome-ignore lint: Allow any for flexible input resolver
   private inputResolver: ((value: any) => void) | null = null;
-
-  constructor() {
-    super();
-  }
 
   /**
    * Gets the current state snapshot.
@@ -61,7 +57,7 @@ export class CLIStore extends EventEmitter {
    */
   setStep(step: string): void {
     this.state.step = step;
-    this.emit('change', this.state);
+    this.emit("change", this.state);
   }
 
   /**
@@ -70,16 +66,23 @@ export class CLIStore extends EventEmitter {
    */
   setStatus(status: string): void {
     this.state.status = status;
-    this.emit('change', this.state);
+    this.emit("change", this.state);
   }
 
   /**
    * Sets or clears the current error.
+   * When setting a non-null error, resolves any pending input with null
+   * and clears the input request to prevent stuck promises.
    * @param error - Error to display, or null to clear
    */
   setError(error: Error | null): void {
     this.state.error = error;
-    this.emit('change', this.state);
+    if (error !== null && this.inputResolver) {
+      this.inputResolver(null);
+      this.inputResolver = null;
+      this.state.inputRequest = null;
+    }
+    this.emit("change", this.state);
   }
 
   /**
@@ -90,7 +93,7 @@ export class CLIStore extends EventEmitter {
   // biome-ignore lint: Allow any for flexible state storage
   updateData(key: string, value: any): void {
     this.state.data = { ...this.state.data, [key]: value };
-    this.emit('change', this.state);
+    this.emit("change", this.state);
   }
 
   /**
@@ -102,7 +105,7 @@ export class CLIStore extends EventEmitter {
   // biome-ignore lint: Allow any for flexible meta and return types
   waitForInput(id: string, meta?: any): Promise<any> {
     this.state.inputRequest = { id, meta };
-    this.emit('change', this.state);
+    this.emit("change", this.state);
     return new Promise((resolve) => {
       this.inputResolver = resolve;
     });
@@ -118,7 +121,7 @@ export class CLIStore extends EventEmitter {
       this.inputResolver(value);
       this.inputResolver = null;
       this.state.inputRequest = null;
-      this.emit('change', this.state);
+      this.emit("change", this.state);
     }
   }
 }

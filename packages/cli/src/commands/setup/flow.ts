@@ -65,6 +65,21 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     });
   }
 
+  // Check for failed prerequisites before proceeding to port checks
+  const failedChecks: string[] = [];
+  if (gitStatus === "error") failedChecks.push("Git");
+  if (dockerStatus === "error") failedChecks.push("Docker");
+  if (miseStatus === "error") failedChecks.push("Mise");
+
+  if (failedChecks.length > 0) {
+    store.setError(
+      new Error(
+        `Prerequisites failed: ${failedChecks.join(", ")} ${failedChecks.length === 1 ? "is" : "are"} not installed or not working. Please install and try again.`,
+      ),
+    );
+    return;
+  }
+
   // Port check
   store.setStatus("Checking Ports...");
   const requiredPorts = [8000, 5432, 6379, 27017, 5672, 3000, 8080, 8083];
@@ -105,25 +120,16 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     }
   }
 
-  const failedChecks: string[] = [];
-  if (gitStatus === "error") failedChecks.push("Git");
-  if (dockerStatus === "error") failedChecks.push("Docker");
-  if (miseStatus === "error") failedChecks.push("Mise");
-
-  if (failedChecks.length > 0) {
-    store.setError(
-      new Error(
-        `Prerequisites failed: ${failedChecks.join(", ")} ${failedChecks.length === 1 ? "is" : "are"} not installed or not working. Please install and try again.`,
-      ),
-    );
-    return;
-  }
-
+  store.updateData("portOverrides", portOverrides);
   store.setStatus("Prerequisites check complete!");
   await delay(1000);
 
   // 3. Environment Setup
   await runEnvSetup(store, repoPath, portOverrides);
+
+  if (store.currentState.error) {
+    return; // Abort if env setup failed
+  }
 
   // 4. Project Setup (mise setup)
   store.setStep("Project Setup");

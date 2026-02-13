@@ -18,18 +18,21 @@ const SERVICES = [
   { name: "ChromaDB", port: 8080, type: "tcp" as const },
 ];
 
-export async function checkAllServices(): Promise<ServiceStatus[]> {
-  const results: ServiceStatus[] = [];
+export async function checkAllServices(
+  portOverrides?: Record<number, number>,
+): Promise<ServiceStatus[]> {
+  const services = SERVICES.map((service) => ({
+    ...service,
+    port: portOverrides?.[service.port] ?? service.port,
+  }));
 
-  for (const service of SERVICES) {
-    if (service.type === "http") {
-      results.push(await checkHttpService(service.name, service.port, service.path));
-    } else {
-      results.push(await checkTcpService(service.name, service.port));
-    }
-  }
+  const promises = services.map((service) =>
+    service.type === "http"
+      ? checkHttpService(service.name, service.port, service.path)
+      : checkTcpService(service.name, service.port),
+  );
 
-  return results;
+  return Promise.all(promises);
 }
 
 async function checkHttpService(
@@ -46,12 +49,12 @@ async function checkHttpService(
     return {
       name,
       port,
-      status: res.ok ? "up" : "down",
+      status: "up",
       latency,
-      details: `HTTP ${res.status}`,
+      details: res.ok ? `HTTP ${res.status}` : `HTTP ${res.status} (error)`,
     };
   } catch {
-    return { name, port, status: "down" };
+    return { name, port, status: "down", details: "Connection failed" };
   }
 }
 

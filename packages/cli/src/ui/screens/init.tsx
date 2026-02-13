@@ -207,8 +207,9 @@ const PathInputStep: React.FC<{
 const FinishedStep: React.FC<{
   setupMode?: SetupMode;
   repoPath?: string;
+  portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, repoPath, onConfirm }) => {
+}> = ({ setupMode, repoPath, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -217,6 +218,8 @@ const FinishedStep: React.FC<{
 
   const mode = setupMode || "developer";
   const dir = repoPath || "./gaia";
+  const webPort = portOverrides?.[3000] ?? 3000;
+  const apiPort = portOverrides?.[8000] ?? 8000;
 
   return (
     <Box
@@ -247,6 +250,24 @@ const FinishedStep: React.FC<{
             {mode === "selfhost"
               ? "Runs: docker compose --profile all up -d (background)"
               : "Runs: mise dev (interactive — keep terminal open)"}
+          </Text>
+        </Box>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text bold>Access GAIA at:</Text>
+        <Box marginLeft={2} flexDirection="column">
+          <Text>
+            Web:{" "}
+            <Text color="cyan" bold>
+              http://localhost:{webPort}
+            </Text>
+          </Text>
+          <Text>
+            API:{" "}
+            <Text color="cyan" bold>
+              http://localhost:{apiPort}
+            </Text>
           </Text>
         </Box>
       </Box>
@@ -339,6 +360,7 @@ const DependencyInstallStep: React.FC<{
             minHeight={6}
           >
             {logs.map((log, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
               <Text key={i} color="gray" wrap="truncate">
                 {log}
               </Text>
@@ -445,13 +467,17 @@ export const StartServicesStep: React.FC<{
 // Services running success step
 export const ServicesRunningStep: React.FC<{
   setupMode: SetupMode;
+  portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, onConfirm }) => {
+}> = ({ setupMode, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
     }
   });
+
+  const webPort = portOverrides?.[3000] ?? 3000;
+  const apiPort = portOverrides?.[8000] ?? 8000;
 
   return (
     <Box
@@ -482,13 +508,13 @@ export const ServicesRunningStep: React.FC<{
           <Text>
             Web:{" "}
             <Text color="cyan" bold>
-              http://localhost:3000
+              http://localhost:{webPort}
             </Text>
           </Text>
           <Text>
             API:{" "}
             <Text color="cyan" bold>
-              http://localhost:8000
+              http://localhost:{apiPort}
             </Text>
           </Text>
         </Box>
@@ -1009,8 +1035,8 @@ export const EnvGroupConfigStep: React.FC<{
 interface AlternativeGroupSelectionProps {
   /** Array of alternative categories (e.g., OpenAI and Google AI) */
   alternatives: EnvCategory[];
-  /** Callback when user selects and configures an alternative */
-  onSubmit: (selectedGroup: string, values: Record<string, string>) => void;
+  /** Callback when user selects and configures alternatives */
+  onSubmit: (selectedGroups: string[], values: Record<string, string>) => void;
 }
 
 /**
@@ -1050,7 +1076,7 @@ export const AlternativeGroupSelectionStep: React.FC<
       }
     }
     setAllValues(initial);
-  }, []);
+  }, [alternatives]);
 
   // Build navigation items list: providers + their fields (when enabled) + submit
   const navItems: NavItem[] = [];
@@ -1139,8 +1165,7 @@ export const AlternativeGroupSelectionStep: React.FC<
 
   const handleSubmit = () => {
     // Validate: at least one provider must be enabled with a value
-    let hasConfiguredProvider = false;
-    let configuredGroup = "";
+    const configuredGroups: string[] = [];
     const configuredValues: Record<string, string> = {};
 
     for (const catIdx of enabledProviders) {
@@ -1151,8 +1176,7 @@ export const AlternativeGroupSelectionStep: React.FC<
         allValues[v.name]?.trim(),
       );
       if (hasValue) {
-        hasConfiguredProvider = true;
-        configuredGroup = category.name;
+        configuredGroups.push(category.name);
         // Collect values from this provider
         for (const v of category.variables) {
           const val = allValues[v.name];
@@ -1163,7 +1187,7 @@ export const AlternativeGroupSelectionStep: React.FC<
       }
     }
 
-    if (!hasConfiguredProvider) {
+    if (configuredGroups.length === 0) {
       if (enabledProviders.size === 0) {
         setError("Enable at least one provider (press Space or Enter)");
       } else {
@@ -1172,7 +1196,7 @@ export const AlternativeGroupSelectionStep: React.FC<
       return;
     }
 
-    onSubmit(configuredGroup, configuredValues);
+    onSubmit(configuredGroups, configuredValues);
   };
 
   return (
@@ -1356,8 +1380,8 @@ export const EnvConfigStep: React.FC<{
     setError(null);
   }, [currentVar.name]);
 
-  useInput((input, key) => {
-    if (key.escape || input === "s") {
+  useInput((_input, key) => {
+    if (key.escape) {
       if (currentVar.required && !value.trim()) {
         setError("This field is required and cannot be skipped");
         return;
@@ -1619,8 +1643,8 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         state.data.alternativeGroups && (
           <AlternativeGroupSelectionStep
             alternatives={state.data.alternativeGroups}
-            onSubmit={(selectedGroup, values) =>
-              store.submitInput({ selectedGroup, values })
+            onSubmit={(selectedGroups, values) =>
+              store.submitInput({ selectedGroups, values })
             }
           />
         )}
@@ -1629,6 +1653,7 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         <FinishedStep
           setupMode={state.data.setupMode}
           repoPath={state.data.repoPath}
+          portOverrides={state.data.portOverrides}
           onConfirm={() => store.submitInput(true)}
         />
       )}
@@ -1642,7 +1667,11 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           }
           phase={state.data.dependencyPhase || ""}
           progress={state.data.dependencyProgress || 0}
-          isComplete={state.data.dependencyComplete || false}
+          isComplete={
+            state.step === "Install Tools"
+              ? state.data.toolComplete || false
+              : state.data.dependencyComplete || false
+          }
           logs={state.data.dependencyLogs || []}
         />
       )}

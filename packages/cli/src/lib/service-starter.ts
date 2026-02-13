@@ -23,6 +23,8 @@ export async function startServices(
         "-f",
         "docker-compose.prod.yml",
         "--profile",
+        "backend",
+        "--profile",
         "web",
         "up",
         "-d",
@@ -35,27 +37,53 @@ export async function startServices(
   } else {
     onStatus?.("Starting development servers...");
     const { spawn } = await import("child_process");
-    const devLog = fs.openSync(path.join(repoPath, DEV_LOG_FILE), "a");
-    spawn("mise", ["dev"], {
-      cwd: repoPath,
-      stdio: ["ignore", devLog, devLog],
-      detached: true,
-      shell: true,
-    }).unref();
+    const logPath = path.join(repoPath, DEV_LOG_FILE);
+    const devLog = fs.openSync(logPath, "a");
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn("mise", ["dev"], {
+        cwd: repoPath,
+        stdio: ["ignore", devLog, devLog],
+        detached: true,
+        shell: true,
+      });
+      child.unref();
+    } finally {
+      fs.closeSync(devLog);
+    }
     await delay(1500);
-    onStatus?.("Development servers started!");
+
+    // Verify the spawned process is still running
+    if (child.pid != null) {
+      try {
+        // Sending signal 0 checks if the process is alive without killing it
+        process.kill(child.pid, 0);
+      } catch {
+        throw new Error(
+          `Development servers crashed on startup. Check logs at: ${logPath}`,
+        );
+      }
+    }
+
+    onStatus?.(`Development servers started! Logs: ${logPath}`);
   }
 }
 
 export async function stopServices(
   repoPath: string,
   onStatus?: (status: string) => void,
+  portOverrides?: Record<number, number>,
 ): Promise<void> {
   const dockerComposePath = path.join(repoPath, "infra/docker");
+  const setupMode = await detectSetupMode(repoPath);
 
   onStatus?.("Stopping Docker services...");
   try {
-    await runCommand("docker", ["compose", "down"], dockerComposePath);
+    const composeArgs =
+      setupMode === "selfhost"
+        ? ["compose", "-f", "docker-compose.prod.yml", "down"]
+        : ["compose", "down"];
+    await runCommand("docker", composeArgs, dockerComposePath);
   } catch {
     // Docker compose may not be running
   }
@@ -65,15 +93,38 @@ export async function stopServices(
     // Only kill host-side GAIA processes (API and Web).
     // Infrastructure services (Redis, Postgres, Mongo, RabbitMQ, ChromaDB) are
     // managed by Docker and already stopped by `docker compose down` above.
-    for (const port of [8000, 3000]) {
-      try {
-        await runCommand(
-          "sh",
-          ["-c", `lsof -ti :${port} | xargs kill 2>/dev/null || true`],
-          repoPath,
-        );
-      } catch {
-        // Port not in use
+    const apiPort = portOverrides?.[8000] ?? 8000;
+    const webPort = portOverrides?.[3000] ?? 3000;
+
+    if (process.platform === "win32") {
+      for (const port of [apiPort, webPort]) {
+        try {
+          await runCommand(
+            "powershell",
+            [
+              "-Command",
+              `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`,
+            ],
+            repoPath,
+          );
+        } catch {
+          // Port not in use
+        }
+      }
+    } else {
+      for (const port of [apiPort, webPort]) {
+        try {
+          await runCommand(
+            "sh",
+            [
+              "-c",
+              `lsof -ti :${port} -sTCP:LISTEN | xargs kill 2>/dev/null || true`,
+            ],
+            repoPath,
+          );
+        } catch {
+          // Port not in use
+        }
       }
     }
   } catch {
@@ -90,11 +141,11 @@ export async function detectSetupMode(
   if (!fs.existsSync(apiEnvPath)) return null;
 
   const content = fs.readFileSync(apiEnvPath, "utf-8");
-  
+
   // First, check for explicit SETUP_MODE marker (most robust)
   const setupModeMatch = content.match(/^SETUP_MODE=(.+)$/m);
-  if (setupModeMatch) {
-    const mode = setupModeMatch[1].trim();
+  if (setupModeMatch?.[1]) {
+    const mode = setupModeMatch[1].trim().replace(/^["']|["']$/g, "");
     if (mode === "selfhost" || mode === "developer") {
       return mode;
     }
@@ -104,14 +155,16 @@ export async function detectSetupMode(
     // Fallback: string matching for backward compatibility
     return "selfhost";
   if (content.includes("mongodb://localhost:")) return "developer";
-  
+
   return "developer";
 }
 
 export async function checkUrl(url: string, retries = 30): Promise<boolean> {
   for (let i = 0; i < retries; i++) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(5000),
+      });
       if (res.ok) return true;
     } catch {
       // ignore
@@ -123,12 +176,17 @@ export async function checkUrl(url: string, retries = 30): Promise<boolean> {
 
 export async function areServicesRunning(repoPath: string): Promise<boolean> {
   const dockerComposePath = path.join(repoPath, "infra/docker");
+  const setupMode = await detectSetupMode(repoPath);
   try {
     const { execSync } = await import("child_process");
-    const output = execSync(
-      "docker compose ps --format json --status running",
-      { cwd: dockerComposePath, stdio: ["pipe", "pipe", "pipe"] },
-    ).toString();
+    const composeCmd =
+      setupMode === "selfhost"
+        ? "docker compose -f docker-compose.prod.yml ps --format json --status running"
+        : "docker compose ps --format json --status running";
+    const output = execSync(composeCmd, {
+      cwd: dockerComposePath,
+      stdio: ["pipe", "pipe", "pipe"],
+    }).toString();
     const lines = output.trim().split("\n").filter(Boolean);
     return lines.length >= 3;
   } catch {
@@ -148,7 +206,7 @@ export async function runCommand(
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args, {
       cwd,
-      stdio: ["inherit", "pipe", "pipe"],
+      stdio: ["ignore", "pipe", "pipe"],
       shell: true,
     });
 
@@ -167,6 +225,8 @@ export async function runCommand(
       const chunk = data.toString();
       output += chunk;
       onLog?.(chunk);
+      progress = Math.min(progress + 5, 95);
+      onProgress?.(progress);
     });
 
     proc.on("close", (code) => {
@@ -188,7 +248,7 @@ export async function runCommand(
 
 export function findRepoRoot(startDir?: string): string | null {
   let currentDir = startDir || process.cwd();
-  while (currentDir !== "/") {
+  while (currentDir !== path.dirname(currentDir)) {
     if (
       fs.existsSync(
         path.join(currentDir, "apps/api/app/config/settings_validator.py"),

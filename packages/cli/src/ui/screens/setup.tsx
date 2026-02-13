@@ -116,8 +116,8 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         state.data.alternativeGroups && (
           <AlternativeGroupSelectionStep
             alternatives={state.data.alternativeGroups}
-            onSubmit={(selectedGroup, values) =>
-              store.submitInput({ selectedGroup, values })
+            onSubmit={(selectedGroups, values) =>
+              store.submitInput({ selectedGroups, values })
             }
           />
         )}
@@ -162,6 +162,7 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
                   minHeight={6}
                 >
                   {state.data.dependencyLogs.map((log: string, i: number) => (
+                    // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
                     <Text key={i} color="gray" wrap="truncate">
                       {log}
                     </Text>
@@ -176,7 +177,7 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         <FinishedStep
           setupMode={state.data.setupMode}
           repoPath={state.data.repoPath}
-          onConfirm={() => process.exit(0)}
+          onConfirm={() => store.submitInput(true)}
         />
       )}
 

@@ -1,7 +1,7 @@
 import { render } from "ink";
 import React from "react";
-import { createStore } from "../../ui/store.js";
 import { App } from "../../ui/app.js";
+import { createStore } from "../../ui/store.js";
 import { runStatusFlow } from "./flow.js";
 
 export async function runStatus(): Promise<void> {
@@ -21,18 +21,10 @@ export async function runStatus(): Promise<void> {
     store.setError(error as Error);
   }
 
-  // Keep alive until user exits
-  await new Promise<void>((resolve) => {
-    const check = () => {
-      if (store.currentState.data.exitRequested) {
-        resolve();
-      } else {
-        setTimeout(check, 100);
-      }
-    };
-    check();
-  });
+  if (store.currentState.error) {
+    await store.waitForInput("exit");
+  }
 
   unmount();
-  process.exit(0);
+  process.exit(store.currentState.error ? 1 : 0);
 }

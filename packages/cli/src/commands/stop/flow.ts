@@ -1,5 +1,5 @@
+import { findRepoRoot, stopServices } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
-import { stopServices, findRepoRoot } from "../../lib/service-starter.js";
 
 export async function runStopFlow(store: CLIStore): Promise<void> {
   store.setStep("Stopping");
@@ -29,5 +29,8 @@ export async function runStopFlow(store: CLIStore): Promise<void> {
     store.setError(
       new Error(`Failed to stop services: ${(e as Error).message}`),
     );
+    return;
   }
+
+  await store.waitForInput("exit");
 }

@@ -4,7 +4,7 @@ services:
   # FastAPI Application
   gaia-backend:
     container_name: gaia-backend
-    profiles: ["", "backend-only"]
+    profiles: ["backend"]
     image: ghcr.io/theexperiencecompany/gaia:latest
     working_dir: /app/apps/api
     command:
@@ -47,6 +47,8 @@ services:
     depends_on:
       chromadb:
         condition: service_healthy
+      mongo:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       rabbitmq:
@@ -65,7 +67,6 @@ services:
   chromadb:
     image: chromadb/chroma:1.0.0
     container_name: chromadb
-    profiles: ["", "backend-only"]
     volumes:
       - chroma_data:/chroma/chroma
     environment:
@@ -88,7 +89,6 @@ services:
   postgres:
     image: postgres:alpine
     container_name: postgres
-    profiles: ["", "backend-only"]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres # pragma: allowlist secret
@@ -110,7 +110,6 @@ services:
   redis:
     image: redis:alpine
     container_name: redis
-    profiles: ["", "backend-only"]
     ports:
       - "6379:6379"
     restart: always
@@ -126,7 +125,6 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
-    profiles: ["", "backend-only"]
     ports:
       - "5672:5672" # AMQP protocol
       - "15672:15672" # Management UI
@@ -141,11 +139,28 @@ services:
     networks:
       - gaia_network
 
+  # MongoDB Service
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    volumes:
+      - mongo_data:/data/db
+    restart: on-failure
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - gaia_network
+
   # Arq Worker
   arq_worker:
     container_name: arq_worker
     image: ghcr.io/theexperiencecompany/gaia:latest
-    profiles: ["", "backend-only"]
+    profiles: ["backend"]
     working_dir: /app/apps/api
     env_file:
       - ../../apps/api/.env
@@ -191,10 +206,6 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
-        NEXT_PUBLIC_API_URL: http://localhost:8000
-        NEXT_PUBLIC_APP_URL: http://localhost:3000
-        NEXT_PUBLIC_BACKEND_URL: http://localhost:8000
-        NEXT_PUBLIC_WS_URL: ws://localhost:8000
     ports:
       - "3000:3000"
     restart: on-failure
@@ -211,6 +222,7 @@ services:
 
 volumes:
   chroma_data:
+  mongo_data:
   pgdata:
   rabbitmq_data:
   voice_agent_models:

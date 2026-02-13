@@ -2,7 +2,6 @@ import { Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { runStatusChecks } from "../../commands/status/flow.js";
 import type { ContainerStatus } from "../../lib/docker.js";
 import type { ServiceStatus } from "../../lib/healthcheck.js";
 import { Header } from "../components/Header.js";
@@ -11,6 +10,7 @@ import type { CLIStore } from "../store.js";
 
 export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
   const [state, setState] = useState(store.currentState);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const update = () => setState({ ...store.currentState });
@@ -20,12 +20,24 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
     };
   }, [store]);
 
+  useEffect(() => {
+    if (state.step === "Results") {
+      setIsRefreshing(false);
+    }
+  }, [state.step]);
+
   useInput((_input, key) => {
     if ((key.return || key.escape) && state.step === "Results") {
-      store.updateData("exitRequested", true);
+      store.submitInput("exit");
     }
-    if (_input === "r" && state.step === "Results" && state.data.refreshable) {
-      runStatusChecks(store);
+    if (
+      _input === "r" &&
+      state.step === "Results" &&
+      state.data.refreshable &&
+      !isRefreshing
+    ) {
+      setIsRefreshing(true);
+      store.submitInput("refresh");
     }
   });
 

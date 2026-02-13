@@ -1,9 +1,9 @@
-import type { CLIStore } from "../../ui/store.js";
 import {
-  startServices,
   detectSetupMode,
   findRepoRoot,
+  startServices,
 } from "../../lib/service-starter.js";
+import type { CLIStore } from "../../ui/store.js";
 
 export async function runStartFlow(store: CLIStore): Promise<void> {
   store.setStep("Starting");
@@ -46,5 +46,8 @@ export async function runStartFlow(store: CLIStore): Promise<void> {
     store.setError(
       new Error(`Failed to start services: ${(e as Error).message}`),
     );
+    return;
   }
+
+  await store.waitForInput("exit");
 }

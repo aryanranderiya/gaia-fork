@@ -23,5 +23,15 @@ export async function runStatusChecks(store: CLIStore): Promise<void> {
 }
 
 export async function runStatusFlow(store: CLIStore): Promise<void> {
-  await runStatusChecks(store);
+  while (true) {
+    await runStatusChecks(store);
+
+    const action = (await store.waitForInput("exit_or_refresh")) as
+      | "exit"
+      | "refresh";
+
+    if (action !== "refresh") {
+      break;
+    }
+  }
 }

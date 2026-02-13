@@ -3,8 +3,8 @@
 import { Command } from "commander";
 import { runInit } from "./commands/init/handler.js";
 import { runSetup } from "./commands/setup/handler.js";
-import { runStatus } from "./commands/status/handler.js";
 import { runStart } from "./commands/start/handler.js";
+import { runStatus } from "./commands/status/handler.js";
 import { runStop } from "./commands/stop/handler.js";
 
 const program = new Command();

@@ -30,7 +30,7 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
       (key.return || key.escape) &&
       (state.data.started || state.data.stopped || state.error)
     ) {
-      store.updateData("exitRequested", true);
+      store.submitInput("exit");
     }
   });
 
@@ -79,13 +79,13 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
               <Text>
                 Web:{" "}
                 <Text color="cyan" bold>
-                  http://localhost:3000
+                  http://localhost:{state.data.webPort || 3000}
                 </Text>
               </Text>
               <Text>
                 API:{" "}
                 <Text color="cyan" bold>
-                  http://localhost:8000
+                  http://localhost:{state.data.apiPort || 8000}
                 </Text>
               </Text>
             </Box>

@@ -32,7 +32,7 @@ export async function checkGit(): Promise<CheckResult> {
 
 export async function checkDocker(): Promise<CheckResult> {
   try {
-    await execa("docker", ["--version"]);
+    await execa("docker", ["info"]);
     return "success";
   } catch {
     return "error";
@@ -49,11 +49,23 @@ export async function checkMise(): Promise<CheckResult> {
 }
 
 export async function installMise(): Promise<boolean> {
+  const os = await import("node:os");
+  const platform = os.platform();
+
+  if (platform === "win32") {
+    try {
+      await execa("powershell", [
+        "-Command",
+        "irm https://mise.jdx.dev/install.ps1 | iex",
+      ]);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   try {
-    await execa("sh", [
-      "-c",
-      "curl https://mise.jdx.dev/install.sh | sh",
-    ]);
+    await execa("sh", ["-c", "curl https://mise.jdx.dev/install.sh | sh"]);
     return true;
   } catch {
     return false;
@@ -136,6 +148,40 @@ export async function checkPortsWithFallback(
 }
 
 async function getPortUser(port: number): Promise<string | undefined> {
+  const os = await import("node:os");
+  const platform = os.platform();
+
+  if (platform === "win32") {
+    try {
+      const { stdout } = await execa("netstat", ["-ano", "-p", "TCP"]);
+      const lines = stdout.trim().split("\n");
+      for (const line of lines) {
+        if (line.includes(`:${port}`) && line.includes("LISTENING")) {
+          const parts = line.trim().split(/\s+/);
+          const pid = parts[parts.length - 1];
+          if (pid) {
+            try {
+              const { stdout: taskOut } = await execa("tasklist", [
+                "/FI",
+                `PID eq ${pid}`,
+                "/FO",
+                "CSV",
+                "/NH",
+              ]);
+              const name = taskOut.trim().split(",")[0]?.replace(/"/g, "");
+              return name || `PID ${pid}`;
+            } catch {
+              return `PID ${pid}`;
+            }
+          }
+        }
+      }
+    } catch {
+      // netstat may not be available
+    }
+    return undefined;
+  }
+
   try {
     const { stdout } = await execa("lsof", [
       "-i",

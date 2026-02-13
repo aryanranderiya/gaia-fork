@@ -68,8 +68,25 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     });
   }
 
+  // Check for failed prerequisites before proceeding to port checks
+  const failedChecks: string[] = [];
+  if (gitStatus === "error") failedChecks.push("Git");
+  if (dockerStatus === "error") failedChecks.push("Docker");
+  if (miseStatus === "error") failedChecks.push("Mise");
+
+  if (failedChecks.length > 0) {
+    store.setError(
+      new Error(
+        `Prerequisites failed: ${failedChecks.join(", ")} ${failedChecks.length === 1 ? "is" : "are"} not installed or not working. Please install and try again.`,
+      ),
+    );
+    return;
+  }
+
   // Check Ports
   store.setStatus("Checking Ports...");
+  // Note: 8083 (Mongo Express) is only used in dev mode, but we check it here
+  // since mode selection happens later in the flow.
   const requiredPorts = [8000, 5432, 6379, 27017, 5672, 3000, 8080, 8083];
   const portResults = await prereqs.checkPortsWithFallback(requiredPorts);
   const portOverrides: Record<number, number> = {};
@@ -108,20 +125,7 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     }
   }
 
-  const failedChecks: string[] = [];
-  if (gitStatus === "error") failedChecks.push("Git");
-  if (dockerStatus === "error") failedChecks.push("Docker");
-  if (miseStatus === "error") failedChecks.push("Mise");
-
-  if (failedChecks.length > 0) {
-    store.setError(
-      new Error(
-        `Prerequisites failed: ${failedChecks.join(", ")} ${failedChecks.length === 1 ? "is" : "are"} not installed or not working. Please install and try again.`,
-      ),
-    );
-    return;
-  }
-
+  store.updateData("portOverrides", portOverrides);
   store.setStatus("Prerequisites check complete!");
   await delay(1000);
 
@@ -142,6 +146,7 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     await delay(500);
     store.setStatus("Repository ready!");
   } else {
+    store.setStep("Repository Setup");
     while (true) {
       repoPath = (await store.waitForInput("repo_path", {
         default: "./gaia",
@@ -241,6 +246,10 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
 
   // 3. Environment Setup (shared)
   await runEnvSetup(store, repoPath, portOverrides);
+
+  if (store.currentState.error) {
+    return; // Abort if env setup failed
+  }
 
   // 4. Project Setup
   store.setStep("Project Setup");

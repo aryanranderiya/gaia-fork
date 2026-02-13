@@ -3,8 +3,8 @@
  * @module components/Footer
  */
 
-import type React from "react";
 import { Box, Text } from "ink";
+import type React from "react";
 import { THEME_COLOR } from "../constants.js";
 
 /**

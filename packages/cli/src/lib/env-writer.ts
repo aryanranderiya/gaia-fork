@@ -22,7 +22,7 @@ export function getApiEnvPath(repoRoot: string): string {
 }
 
 export function getWebEnvPath(repoRoot: string): string {
-  return path.join(repoRoot, "apps", "web", ".env");
+  return path.join(repoRoot, "apps", "web", ".env.local");
 }
 
 function backupIfExists(filePath: string): void {
@@ -42,14 +42,65 @@ export function writeEnvFile(repoPath: string, values: EnvValues): void {
     "",
   ];
 
+  const KNOWN_PREFIXES = [
+    "MONGO",
+    "REDIS",
+    "POSTGRES",
+    "CHROMADB",
+    "RABBITMQ",
+    "WORKOS",
+    "GOOGLE",
+    "OPENAI",
+    "INFISICAL",
+    "LANGSMITH",
+    "DISCORD",
+    "SLACK",
+    "TELEGRAM",
+    "CLOUDINARY",
+    "COMPOSIO",
+    "FIRECRAWL",
+    "LIVEKIT",
+    "DEEPGRAM",
+    "ELEVENLABS",
+    "RESEND",
+    "SENTRY",
+    "POSTHOG",
+    "MEM0",
+    "E2B",
+    "DODO",
+    "NEXT_PUBLIC",
+    "GAIA",
+  ];
+
+  function getGroupKey(key: string): string {
+    // Check known prefixes (longest match first for multi-word prefixes like NEXT_PUBLIC)
+    for (const prefix of KNOWN_PREFIXES) {
+      if (key === prefix || key.startsWith(`${prefix}_`)) {
+        return prefix;
+      }
+    }
+    // Single-word vars (no underscore) go into "Core"
+    const parts = key.split("_");
+    if (parts.length === 1) {
+      return "Core";
+    }
+    // Unknown vars: group by first underscore segment
+    return parts[0] || "Core";
+  }
+
   const grouped: Map<string, string[]> = new Map();
 
   for (const [key, value] of Object.entries(values)) {
-    const prefix = key.split("_")[0] || key;
-    if (!grouped.has(prefix)) {
-      grouped.set(prefix, []);
+    const group = getGroupKey(key);
+    if (!grouped.has(group)) {
+      grouped.set(group, []);
     }
-    grouped.get(prefix)!.push(`${key}=${value}`);
+    // Quote value if it contains spaces, #, or other special chars
+    const needsQuoting = /[\s#"'\\]/.test(value) || value === "";
+    const quotedValue = needsQuoting
+      ? `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`
+      : value;
+    grouped.get(group)!.push(`${key}=${quotedValue}`);
   }
 
   for (const [prefix, vars] of grouped.entries()) {
@@ -66,7 +117,7 @@ export function writeWebEnvFile(
   mode: SetupMode,
   portOverrides?: Record<number, number>,
 ): void {
-  const webEnvPath = path.join(repoPath, "apps", "web", ".env");
+  const webEnvPath = path.join(repoPath, "apps", "web", ".env.local");
   backupIfExists(webEnvPath);
 
   // Parse existing .env to discover all vars
@@ -137,7 +188,22 @@ export function readEnvFile(repoRoot: string): EnvValues {
     if (trimmed && !trimmed.startsWith("#")) {
       const [key, ...valueParts] = trimmed.split("=");
       if (key) {
-        values[key.trim()] = valueParts.join("=").trim();
+        let value = valueParts.join("=").trim();
+        // Check if value is quoted
+        const isQuoted =
+          (value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"));
+        if (isQuoted) {
+          // Strip matching quotes, don't touch content
+          value = value.slice(1, -1);
+        } else {
+          // Remove inline comments only for unquoted values
+          const commentIdx = value.indexOf(" #");
+          if (commentIdx !== -1) {
+            value = value.substring(0, commentIdx).trim();
+          }
+        }
+        values[key.trim()] = value;
       }
     }
   }

@@ -4,11 +4,11 @@
  * @module commands/init/handler
  */
 
-import { render } from 'ink';
-import React from 'react';
-import { createStore } from '../../ui/store.js';
-import { App } from '../../ui/app.js';
-import { runInitFlow } from './flow.js';
+import { render } from "ink";
+import React from "react";
+import { App } from "../../ui/app.js";
+import { createStore } from "../../ui/store.js";
+import { runInitFlow } from "./flow.js";
 
 /**
  * Executes the init command.
@@ -16,16 +16,22 @@ import { runInitFlow } from './flow.js';
  * Handles errors by displaying them in the UI before exiting.
  */
 export async function runInit(): Promise<void> {
-    const store = createStore();
-    
-    const { unmount } = render(React.createElement(App, { store, command: 'init' }));
+  const store = createStore();
 
-    try {
-        await runInitFlow(store);
-    } catch (error) {
-        store.setError(error as Error);
-    }
-    
-    unmount();
-    process.exit(0);
+  const { unmount } = render(
+    React.createElement(App, { store, command: "init" }),
+  );
+
+  try {
+    await runInitFlow(store);
+  } catch (error) {
+    store.setError(error as Error);
+  }
+
+  if (store.currentState.error) {
+    await store.waitForInput("exit");
+  }
+
+  unmount();
+  process.exit(store.currentState.error ? 1 : 0);
 }

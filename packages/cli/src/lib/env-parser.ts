@@ -78,15 +78,6 @@ const DEPLOYMENT_DEFAULTS: Record<SetupMode, Record<string, string>> = {
   },
 };
 
-const WEB_INFRASTRUCTURE_DEFAULTS: Record<SetupMode, Record<string, string>> = {
-  selfhost: {
-    NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000",
-  },
-  developer: {
-    NEXT_PUBLIC_API_BASE_URL: "http://localhost:8000",
-  },
-};
-
 export function getDefaultValue(
   varName: string,
   mode: SetupMode,
@@ -135,7 +126,10 @@ export async function parseSettings(repoPath: string): Promise<EnvCategory[]> {
 }
 
 export function parseWebEnv(repoPath: string): WebEnvVar[] {
-  const envPath = path.join(repoPath, "apps", "web", ".env");
+  const envLocalPath = path.join(repoPath, "apps", "web", ".env.local");
+  const envPath = fs.existsSync(envLocalPath)
+    ? envLocalPath
+    : path.join(repoPath, "apps", "web", ".env");
   if (!fs.existsSync(envPath)) return [];
 
   const content = fs.readFileSync(envPath, "utf-8");
@@ -169,24 +163,19 @@ export function parseWebEnv(repoPath: string): WebEnvVar[] {
 }
 
 export function getWebInfrastructureDefaults(
-  mode: SetupMode,
+  _mode: SetupMode,
   portOverrides?: Record<number, number>,
 ): Record<string, string> {
-  const defaults = { ...WEB_INFRASTRUCTURE_DEFAULTS[mode] };
+  const apiPort = portOverrides?.[8000] ?? 8000;
+  const webPort = portOverrides?.[3000] ?? 3000;
 
-  if (portOverrides) {
-    const apiPort = portOverrides[8000] || 8000;
-    const webPort = portOverrides[3000] || 3000;
+  const defaults: Record<string, string> = {
+    NEXT_PUBLIC_API_BASE_URL: `http://localhost:${apiPort}/api/v1/`,
+    NEXT_PUBLIC_WS_URL: `ws://localhost:${apiPort}/api/v1/`,
+  };
 
-    if (apiPort !== 8000) {
-      defaults["NEXT_PUBLIC_API_BASE_URL"] = `http://localhost:${apiPort}`;
-      defaults["NEXT_PUBLIC_API_URL"] = `http://localhost:${apiPort}`;
-      defaults["NEXT_PUBLIC_BACKEND_URL"] = `http://localhost:${apiPort}`;
-      defaults["NEXT_PUBLIC_WS_URL"] = `ws://localhost:${apiPort}`;
-    }
-    if (webPort !== 3000) {
-      defaults["NEXT_PUBLIC_APP_URL"] = `http://localhost:${webPort}`;
-    }
+  if (webPort !== 3000) {
+    defaults["NEXT_PUBLIC_APP_URL"] = `http://localhost:${webPort}`;
   }
 
   return defaults;
@@ -199,9 +188,8 @@ export function applyPortOverrides(
   for (const [original, replacement] of Object.entries(portOverrides)) {
     const origPort = Number(original);
     for (const [key, value] of Object.entries(envValues)) {
-      if (value.includes(`:${origPort}`)) {
-        envValues[key] = value.replace(`:${origPort}`, `:${replacement}`);
-      }
+      const portPattern = new RegExp(`:${origPort}(?=[/\\s]|$)`, "g");
+      envValues[key] = value.replaceAll(portPattern, `:${replacement}`);
     }
   }
 }

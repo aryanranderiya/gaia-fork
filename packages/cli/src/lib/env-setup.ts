@@ -23,13 +23,13 @@ export async function runEnvSetup(
   const envMethod = await store.waitForInput("env_method");
 
   const envValues: Record<string, string> = {};
-  envValues["ENV"] = "development";
+  envValues["ENV"] = setupMode === "selfhost" ? "production" : "development";
 
   const infraVars = envParser.getInfrastructureVariables();
   for (const varName of infraVars) {
     const defaultVal = envParser.getDefaultValue(varName, setupMode);
     if (defaultVal) {
-    envValues[varName] = defaultVal;
+      envValues[varName] = defaultVal;
     }
   }
 
@@ -42,18 +42,28 @@ export async function runEnvSetup(
   if (envMethod === "infisical") {
     await collectInfisicalEnv(store, envValues);
     store.setStatus(
-      "Infisical credentials saved. Other secrets will be loaded from Infisical at runtime.",
+      "Infisical credentials saved. Ensure your Infisical project contains all required variables.",
     );
     // Skip manual env collection - all secrets managed in Infisical
   } else {
-    await collectManualEnv(store, repoPath, envValues, setupMode);
+    try {
+      await collectManualEnv(store, repoPath, envValues, setupMode);
+    } catch (e) {
+      store.setError(e as Error);
+      return;
+    }
   }
 
   if (portOverrides) {
     envParser.applyPortOverrides(envValues, portOverrides);
   }
 
-  await writeAllEnvFiles(store, repoPath, envValues, setupMode, portOverrides);
+  try {
+    await writeAllEnvFiles(store, repoPath, envValues, setupMode, portOverrides);
+  } catch (e) {
+    store.setError(e as Error);
+    return;
+  }
   await delay(1000);
 }
 
@@ -63,13 +73,11 @@ async function collectInfisicalEnv(
 ): Promise<void> {
   store.setStatus("Configuring Infisical...");
   const infisicalConfig = (await store.waitForInput("env_infisical")) as {
-    INFISICAL_TOKEN: string;
     INFISICAL_PROJECT_ID: string;
     INFISICAL_MACHINE_IDENTITY_CLIENT_ID: string;
     INFISICAL_MACHINE_IDENTITY_CLIENT_SECRET: string;
   };
 
-  envValues["INFISICAL_TOKEN"] = infisicalConfig.INFISICAL_TOKEN;
   envValues["INFISICAL_PROJECT_ID"] = infisicalConfig.INFISICAL_PROJECT_ID;
   envValues["INFISICAL_MACHINE_IDENTITY_CLIENT_ID"] =
     infisicalConfig.INFISICAL_MACHINE_IDENTITY_CLIENT_ID;
@@ -89,10 +97,7 @@ async function collectManualEnv(
     categories = await envParser.parseSettings(repoPath);
     categories = envParser.applyModeDefaults(categories, setupMode);
   } catch (e) {
-    store.setError(
-      new Error(`Failed to parse settings: ${(e as Error).message}`),
-    );
-    return;
+    throw new Error(`Failed to parse settings: ${(e as Error).message}`);
   }
 
   const alternativeGroupNames = new Set<string>();
@@ -130,7 +135,7 @@ async function collectManualEnv(
     store.setStatus("Choose an AI provider...");
 
     const result = (await store.waitForInput("env_alternatives")) as {
-      selectedGroup: string;
+      selectedGroups: string[];
       values: Record<string, string>;
     };
 
@@ -168,7 +173,7 @@ async function collectManualEnv(
       varName: envVar.name,
     })) as string;
 
-    if (value || envVar.required) {
+    if (value || envVar.required || envVar.defaultValue) {
       envValues[envVar.name] = value || envVar.defaultValue || "";
     }
   }
@@ -200,7 +205,7 @@ async function collectManualEnv(
 
     for (const [key, value] of Object.entries(groupValues)) {
       const varDef = group.variables.find((v) => v.name === key);
-      if (value || varDef?.required) {
+      if (value || varDef?.required || varDef?.defaultValue) {
         envValues[key] = value || varDef?.defaultValue || "";
       }
     }
@@ -221,10 +226,7 @@ async function writeAllEnvFiles(
     envWriter.writeEnvFile(apiEnvPath, envValues);
     store.setStatus("API environment variables configured!");
   } catch (e) {
-    store.setError(
-      new Error(`Failed to write API .env file: ${(e as Error).message}`),
-    );
-    return;
+    throw new Error(`Failed to write API .env file: ${(e as Error).message}`);
   }
 
   // Write web .env
@@ -233,8 +235,6 @@ async function writeAllEnvFiles(
     envWriter.writeWebEnvFile(repoPath, setupMode, portOverrides);
     store.setStatus("Web environment variables configured!");
   } catch (e) {
-    store.setError(
-      new Error(`Failed to write web .env file: ${(e as Error).message}`),
-    );
+    throw new Error(`Failed to write web .env file: ${(e as Error).message}`);
   }
 }
