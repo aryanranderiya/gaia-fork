@@ -2,6 +2,20 @@ import { execa } from "execa";
 
 export type CheckResult = "success" | "error" | "missing" | "pending";
 
+export interface PrerequisiteInfo {
+  name: string;
+  installUrl: string;
+  installed: boolean;
+  working: boolean;
+  errorMessage?: string;
+}
+
+export const PREREQUISITE_URLS = {
+  git: "https://git-scm.com/downloads",
+  docker: "https://docs.docker.com/get-docker/",
+  mise: "https://mise.jdx.dev/getting-started.html",
+} as const;
+
 export interface PortCheckResult {
   port: number;
   service: string;
@@ -32,11 +46,52 @@ export async function checkGit(): Promise<CheckResult> {
 
 export async function checkDocker(): Promise<CheckResult> {
   try {
-    await execa("docker", ["info"]);
+    await execa("docker", ["--version"]);
+  } catch {
+    return "error";
+  }
+
+  try {
+    await execa("docker", ["info"], { timeout: 5000 });
     return "success";
   } catch {
     return "error";
   }
+}
+
+export async function checkDockerDetailed(): Promise<PrerequisiteInfo> {
+  let installed = false;
+  let working = false;
+  let errorMessage: string | undefined;
+
+  try {
+    await execa("docker", ["--version"]);
+    installed = true;
+  } catch {
+    return {
+      name: "Docker",
+      installUrl: PREREQUISITE_URLS.docker,
+      installed: false,
+      working: false,
+      errorMessage: "Docker is not installed",
+    };
+  }
+
+  try {
+    await execa("docker", ["info"], { timeout: 5000 });
+    working = true;
+  } catch {
+    errorMessage =
+      "Docker is installed but the daemon is not running. Please start Docker Desktop or the Docker daemon.";
+  }
+
+  return {
+    name: "Docker",
+    installUrl: PREREQUISITE_URLS.docker,
+    installed,
+    working,
+    errorMessage,
+  };
 }
 
 export async function checkMise(): Promise<CheckResult> {

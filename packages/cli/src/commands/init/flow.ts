@@ -45,11 +45,15 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
   });
 
   store.setStatus("Checking Docker...");
-  const dockerStatus = await prereqs.checkDocker();
+  const dockerInfo = await prereqs.checkDockerDetailed();
+  const dockerStatus = dockerInfo.working ? "success" : "error";
   store.updateData("checks", {
     ...store.currentState.data.checks,
     docker: dockerStatus,
   });
+  if (!dockerInfo.working) {
+    store.updateData("dockerError", dockerInfo.errorMessage);
+  }
 
   store.setStatus("Checking Mise...");
   let miseStatus = await prereqs.checkMise();
@@ -69,17 +73,36 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
   }
 
   // Check for failed prerequisites before proceeding to port checks
-  const failedChecks: string[] = [];
-  if (gitStatus === "error") failedChecks.push("Git");
-  if (dockerStatus === "error") failedChecks.push("Docker");
-  if (miseStatus === "error") failedChecks.push("Mise");
+  const failedChecks: Array<{ name: string; message?: string }> = [];
+  if (gitStatus === "error") failedChecks.push({ name: "Git" });
+  if (dockerStatus === "error")
+    failedChecks.push({ name: "Docker", message: dockerInfo.errorMessage });
+  if (miseStatus === "error") failedChecks.push({ name: "Mise" });
 
   if (failedChecks.length > 0) {
-    store.setError(
-      new Error(
-        `Prerequisites failed: ${failedChecks.join(", ")} ${failedChecks.length === 1 ? "is" : "are"} not installed or not working. Please install and try again.`,
-      ),
-    );
+    const errorLines: string[] = [];
+    errorLines.push("Prerequisites failed:");
+    for (const check of failedChecks) {
+      errorLines.push(
+        `  • ${check.name}: ${check.message || "Not installed or not working"}`,
+      );
+    }
+    errorLines.push("\nInstallation guides:");
+    if (gitStatus === "error")
+      errorLines.push(`  • Git: ${prereqs.PREREQUISITE_URLS.git}`);
+    if (dockerStatus === "error") {
+      if (dockerInfo.installed) {
+        errorLines.push(
+          `  • Docker: Start Docker Desktop or run 'sudo systemctl start docker'`,
+        );
+      } else {
+        errorLines.push(`  • Docker: ${prereqs.PREREQUISITE_URLS.docker}`);
+      }
+    }
+    if (miseStatus === "error")
+      errorLines.push(`  • Mise: ${prereqs.PREREQUISITE_URLS.mise}`);
+
+    store.setError(new Error(errorLines.join("\n")));
     return;
   }
 
