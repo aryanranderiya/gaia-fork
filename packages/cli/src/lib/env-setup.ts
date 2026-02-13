@@ -243,4 +243,17 @@ async function writeAllEnvFiles(
   } catch (e) {
     throw new Error(`Failed to write web .env file: ${(e as Error).message}`);
   }
+
+  // Write Docker Compose .env for port overrides
+  if (portOverrides && Object.keys(portOverrides).length > 0) {
+    store.setStatus("Writing Docker Compose port overrides...");
+    try {
+      envWriter.writeDockerComposeEnv(repoPath, portOverrides);
+      store.setStatus("Docker Compose ports configured!");
+    } catch (e) {
+      throw new Error(
+        `Failed to write Docker Compose .env: ${(e as Error).message}`,
+      );
+    }
+  }
 }

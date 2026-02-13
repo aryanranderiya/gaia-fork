@@ -50,12 +50,27 @@ function CodeBlock({ code }: { code: string }) {
   );
 }
 
-function InstallTab({ code, hint }: { code: string; hint: string }) {
+function InstallTab({
+  code,
+  hint,
+  skipInitHint,
+}: {
+  code: string;
+  hint: string;
+  skipInitHint?: boolean;
+}) {
   return (
     <div className="flex flex-col items-center space-y-4 py-1">
       <CodeBlock code={code} />
       <p className="text-sm text-zinc-400 text-center">
-        After installation, run <InlineCode>gaia init</InlineCode> {hint}
+        {skipInitHint ? (
+          hint
+        ) : (
+          <>
+            After installation, run{" "}
+            <InlineCode>gaia init</InlineCode> {hint}
+          </>
+        )}
       </p>
     </div>
   );
@@ -67,6 +82,13 @@ const installMethods = [
     title: "curl",
     code: "curl -fsSL https://heygaia.io/install.sh | sh",
     hint: "to set up GAIA.",
+  },
+  {
+    key: "npx",
+    title: "npx",
+    code: "npx @heygaia/cli init",
+    hint: "Run directly — no global install needed.",
+    skipInitHint: true,
   },
   {
     key: "npm",
@@ -152,7 +174,11 @@ export function InstallPageClient() {
           >
             {installMethods.map((method) => (
               <Tab key={method.key} title={method.title}>
-                <InstallTab code={method.code} hint={method.hint} />
+                <InstallTab
+                  code={method.code}
+                  hint={method.hint}
+                  skipInitHint={"skipInitHint" in method}
+                />
               </Tab>
             ))}
           </Tabs>

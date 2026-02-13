@@ -1,3 +1,4 @@
+import { readDockerComposePortOverrides } from "../../lib/env-writer.js";
 import { findRepoRoot, stopServices } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
 
@@ -16,11 +17,12 @@ export async function runStopFlow(store: CLIStore): Promise<void> {
   }
 
   store.updateData("repoPath", repoPath);
+  const portOverrides = readDockerComposePortOverrides(repoPath);
 
   try {
     await stopServices(repoPath, (status) => {
       store.setStatus(status);
-    });
+    }, portOverrides);
 
     store.setStep("Stopped");
     store.setStatus("All services stopped.");

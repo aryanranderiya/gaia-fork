@@ -91,18 +91,29 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 
 ### Self-Hosted Setup
 
-Get started with GAIA's interactive CLI setup wizard:
+Install the GAIA CLI and run the interactive setup wizard:
+
+```bash
+# Install the CLI
+curl -fsSL https://heygaia.io/install.sh | sh
+
+# Run the setup wizard
+gaia init
+```
+
+Or run directly without installing:
 
 ```bash
 npx @heygaia/cli init
 ```
 
-The CLI wizard will:
-- Check prerequisites (Docker, Node.js, etc.)
-- Auto-discover and configure environment variables for API and Web
-- Set up Docker containers for all required services
-- Configure and start your GAIA instance
+The `gaia init` wizard will:
+- Check prerequisites (Docker, Git)
+- Clone the repository and install tools
+- Auto-discover and configure environment variables
+- Set up Docker containers and start your GAIA instance
 
+See the [CLI documentation](https://docs.heygaia.io/cli/installation) for all installation methods and commands.
 
 ### Cloud-Hosted (Zero Setup)
 
@@ -113,8 +124,8 @@ No installation needed — just visit [heygaia.io](https://heygaia.io) to get st
 Choose how you'd like to use GAIA:
 
 - **Use GAIA instantly**: No setup required — just visit [heygaia.io](https://heygaia.io).
-- **Self-host GAIA**: Use our CLI tool with `npx @heygaia/cli init` or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual setup.
-- **Develop or contribute**: Get started quickly with `npx @heygaia/cli init` or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
+- **Self-host GAIA**: Install the CLI with `curl -fsSL https://heygaia.io/install.sh | sh` then run `gaia init`, or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual Docker setup.
+- **Develop or contribute**: Run `npx @heygaia/cli init` for quick setup, or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
 
 ## Documentation
 

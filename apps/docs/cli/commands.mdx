@@ -177,17 +177,17 @@ When a developer adds a new variable to either location, the CLI picks it up aut
 
 <AccordionGroup>
   <Accordion title="command not found: gaia">
-    Ensure the install directory is in your PATH:
+    Ensure the global bin directory is in your PATH:
 
     ```bash
-    # Bun
-    export PATH="$HOME/.bun/bin:$PATH"
-
     # npm
-    export PATH="$HOME/.npm-global/bin:$PATH"
+    export PATH="$(npm config get prefix)/bin:$PATH"
+
+    # bun
+    export PATH="$HOME/.bun/bin:$PATH"
     ```
 
-    Or run without installing: `npx @heygaia/cli` or `bunx @heygaia/cli`
+    Or run without installing: `npx @heygaia/cli init`
   </Accordion>
 
   <Accordion title="Raw mode is not supported">
