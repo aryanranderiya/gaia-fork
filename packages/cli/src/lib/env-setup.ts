@@ -6,17 +6,26 @@ import * as envWriter from "./env-writer.js";
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
+export async function selectSetupMode(
+  store: CLIStore,
+): Promise<envParser.SetupMode> {
+  store.setStep("Setup Mode");
+  store.setStatus("Choose how to run GAIA...");
+  const setupMode = (await store.waitForInput(
+    "setup_mode",
+  )) as envParser.SetupMode;
+  store.updateData("setupMode", setupMode);
+  return setupMode;
+}
+
 export async function runEnvSetup(
   store: CLIStore,
   repoPath: string,
+  setupMode: envParser.SetupMode,
   portOverrides?: Record<number, number>,
 ): Promise<void> {
   store.setStep("Environment Setup");
   store.setStatus("Configuring environment...");
-
-  const setupMode = (await store.waitForInput(
-    "setup_mode",
-  )) as envParser.SetupMode;
   store.updateData("setupMode", setupMode);
 
   store.setStatus("Configuring environment variables...");

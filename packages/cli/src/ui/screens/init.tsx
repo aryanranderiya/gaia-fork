@@ -10,41 +10,11 @@ import TextInput from "ink-text-input";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { EnvCategory, EnvVar, SetupMode } from "../../lib/env-parser.js";
-import type { PortCheckResult } from "../../lib/prerequisites.js";
+
 import { Shell } from "../components/Shell.js";
+import { CheckItem, PortConflictStep } from "../components/shared-steps.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
-
-/**
- * Props for the CheckItem component.
- */
-interface CheckItemProps {
-  /** Label text for the check item */
-  label: string;
-  /** Current status of the check */
-  status: "pending" | "success" | "error" | "missing";
-}
-
-/**
- * Displays a single prerequisite check item with status indicator.
- * Shows spinner for pending, checkmark for success, X for error, warning for missing.
- */
-const CheckItem: React.FC<CheckItemProps> = ({ label, status }) => (
-  <Box>
-    <Box marginRight={1}>
-      {status === "pending" ? (
-        <Spinner type="dots" />
-      ) : status === "success" ? (
-        <Text color={THEME_COLOR}>✔</Text>
-      ) : status === "error" ? (
-        <Text color="red">✖</Text>
-      ) : (
-        <Text color="yellow">⚠</Text>
-      )}
-    </Box>
-    <Text>{label}</Text>
-  </Box>
-);
 
 /**
  * Props for the WelcomeStep component.
@@ -72,109 +42,20 @@ const WelcomeStep: React.FC<WelcomeStepProps> = ({ onConfirm }) => {
       borderStyle="round"
       borderColor={THEME_COLOR}
     >
-      <Text bold>Welcome to the Interactive GAIA Setup</Text>
+      <Text bold>Welcome to GAIA Setup</Text>
 
       <Box flexDirection="column" marginTop={1} marginBottom={1}>
         <Text>This wizard will guide you through the setup process:</Text>
-        <Text> 1. Check Prerequisites (Git, Docker, Mise)</Text>
-        <Text> 2. Clone Repository (from GitHub)</Text>
-        <Text> 3. Install Tools (node, python, uv via mise)</Text>
-        <Text> 4. Configure Env Vars (databases, API keys, etc.)</Text>
-        <Text> 5. Setup Project (install all dependencies)</Text>
+        <Text> 1. Check prerequisites and choose setup mode</Text>
+        <Text> 2. Clone repository</Text>
+        <Text> 3. Configure environment variables</Text>
+        <Text> 4. Install tools and dependencies</Text>
       </Box>
-      <Text color={THEME_COLOR}>Press Enter to start...</Text>
-    </Box>
-  );
-};
-
-const PortConflictStep: React.FC<{
-  portResults: PortCheckResult[];
-  onAccept: () => void;
-  onAbort: () => void;
-}> = ({ portResults, onAccept, onAbort }) => {
-  useInput((_input, key) => {
-    if (key.return) {
-      onAccept();
-    } else if (key.escape) {
-      onAbort();
-    }
-  });
-
-  const conflicts = portResults.filter((r) => !r.available);
-
-  return (
-    <Box
-      flexDirection="column"
-      marginTop={1}
-      paddingX={1}
-      borderStyle="round"
-      borderColor="yellow"
-    >
-      <Box marginBottom={1}>
-        <Text bold color="yellow">
-          Port Conflicts Detected
+      <Text dimColor>~5-15 min depending on network speed</Text>
+      <Box marginTop={1}>
+        <Text color={THEME_COLOR}>
+          <Text bold>Enter</Text> to start
         </Text>
-      </Box>
-
-      {portResults.map((result) => (
-        <Box key={result.port}>
-          <Text
-            color={
-              result.available ? "green" : result.alternative ? "yellow" : "red"
-            }
-          >
-            {result.available
-              ? "\u2714"
-              : result.alternative
-                ? "\u26a0"
-                : "\u2716"}{" "}
-          </Text>
-          <Text>
-            {result.service} (:{result.port})
-          </Text>
-          {!result.available && (
-            <Text color={result.alternative ? "gray" : "red"}>
-              {" "}
-              - in use{result.usedBy ? ` by ${result.usedBy}` : ""}
-              {result.alternative
-                ? ` → will use :${result.alternative}`
-                : " — NO ALTERNATIVE FOUND"}
-            </Text>
-          )}
-        </Box>
-      ))}
-
-      <Box marginTop={1} flexDirection="column">
-        {conflicts.some((c) => !c.alternative) && (
-          <Box
-            borderStyle="single"
-            borderColor="red"
-            paddingX={1}
-            marginBottom={1}
-          >
-            <Text color="red">
-              Some ports have no available alternative. Free them and retry.
-            </Text>
-          </Box>
-        )}
-        {!conflicts.some((c) => !c.alternative) &&
-          conflicts.some((c) => c.alternative) && (
-            <Text color="gray">
-              Alternative ports will be used for conflicting services.
-            </Text>
-          )}
-        <Box marginTop={1}>
-          <Text>
-            <Text color="green" bold>
-              Enter
-            </Text>
-            {" to continue with alternatives  "}
-            <Text color="yellow" bold>
-              Escape
-            </Text>
-            {" to abort"}
-          </Text>
-        </Box>
       </Box>
     </Box>
   );
@@ -194,12 +75,14 @@ const PathInputStep: React.FC<{
       borderStyle="round"
       borderColor={THEME_COLOR}
     >
-      <Text>Where should we clone the repository?</Text>
-      <Box>
-        <Text color={THEME_COLOR}>➜ </Text>
+      <Text>Clone repository to:</Text>
+      <Text color="gray" dimColor>
+        Press Enter for default, or type a custom path
+      </Text>
+      <Box marginTop={1}>
+        <Text color={THEME_COLOR}>→ </Text>
         <TextInput value={value} onChange={setValue} onSubmit={onSubmit} />
       </Box>
-      <Text color="gray">(Press Enter for default: {defaultValue})</Text>
     </Box>
   );
 };
@@ -248,14 +131,13 @@ const FinishedStep: React.FC<{
   setupMode?: SetupMode;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, portOverrides, onConfirm }) => {
+}> = ({ portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
     }
   });
 
-  const mode = setupMode || "developer";
   const webPort = portOverrides?.[3000] ?? 3000;
   const apiPort = portOverrides?.[8000] ?? 8000;
 
@@ -268,86 +150,41 @@ const FinishedStep: React.FC<{
       padding={1}
     >
       <Text color={THEME_COLOR} bold>
-        You are all set!
+        You're all set!
       </Text>
 
-      <Box marginTop={1} flexDirection="column">
-        <Text bold>To start GAIA, run:</Text>
-        <Box
-          marginTop={1}
-          padding={1}
-          borderStyle="single"
-          borderColor="gray"
-          flexDirection="column"
-        >
-          <Text color="cyan">$ gaia start</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text color="gray" dimColor>
-            {mode === "selfhost"
-              ? "Runs: docker compose --profile all up -d (background)"
-              : "Runs: mise dev (interactive — keep terminal open)"}
-          </Text>
-        </Box>
-      </Box>
-
-      <Box marginTop={1} flexDirection="column">
-        <Text bold>Access GAIA at:</Text>
-        <Box marginLeft={2} flexDirection="column">
-          <Text>
-            Web:{" "}
-            <Text color="cyan" bold>
-              http://localhost:{webPort}
-            </Text>
-          </Text>
-          <Text>
-            API:{" "}
-            <Text color="cyan" bold>
-              http://localhost:{apiPort}
-            </Text>
-          </Text>
-        </Box>
-      </Box>
-
-      <CommandsSummary />
       <Box marginTop={1}>
-        <Text dimColor>Press Enter to exit</Text>
+        <Text bold>Run: </Text>
+        <Text color="cyan">$ gaia start</Text>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text>
+          Web:{" "}
+          <Text color="cyan" bold>
+            http://localhost:{webPort}
+          </Text>
+        </Text>
+        <Text>
+          API:{" "}
+          <Text color="cyan" bold>
+            http://localhost:{apiPort}
+          </Text>
+        </Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text color="gray">gaia stop · gaia status · gaia setup</Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>
+          <Text bold>Enter</Text> to exit
+        </Text>
       </Box>
     </Box>
   );
 };
-
-export const CommandsSummary: React.FC = () => (
-  <Box marginTop={1} flexDirection="column">
-    <Text bold>Available commands:</Text>
-    <Box marginLeft={2} flexDirection="column">
-      <Text>
-        <Text color={THEME_COLOR} bold>
-          gaia start{" "}
-        </Text>
-        <Text color="gray"> Start all services</Text>
-      </Text>
-      <Text>
-        <Text color={THEME_COLOR} bold>
-          gaia stop{" "}
-        </Text>
-        <Text color="gray"> Stop all services</Text>
-      </Text>
-      <Text>
-        <Text color={THEME_COLOR} bold>
-          gaia status
-        </Text>
-        <Text color="gray"> Check service health</Text>
-      </Text>
-      <Text>
-        <Text color={THEME_COLOR} bold>
-          gaia setup{" "}
-        </Text>
-        <Text color="gray"> Reconfigure environment</Text>
-      </Text>
-    </Box>
-  </Box>
-);
 
 // Dependency installation progress step
 const DependencyInstallStep: React.FC<{
@@ -387,15 +224,7 @@ const DependencyInstallStep: React.FC<{
 
         {/* Logs Window */}
         {!isComplete && logs && logs.length > 0 && (
-          <Box
-            flexDirection="column"
-            marginTop={1}
-            borderStyle="single"
-            borderColor="gray"
-            paddingX={1}
-            paddingY={0}
-            minHeight={6}
-          >
+          <Box flexDirection="column" marginTop={1} marginLeft={1}>
             {logs.map((log, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
               <Text key={i} color="gray" wrap="truncate">
@@ -463,13 +292,7 @@ export const StartServicesStep: React.FC<{
         </Box>
       </Box>
 
-      <Box
-        flexDirection="column"
-        marginTop={1}
-        padding={1}
-        borderStyle="single"
-        borderColor="gray"
-      >
+      <Box flexDirection="column" marginTop={1} marginLeft={2}>
         <Text dimColor>Command that will run:</Text>
         {setupMode === "selfhost" ? (
           <Box flexDirection="column">
@@ -486,14 +309,9 @@ export const StartServicesStep: React.FC<{
 
       <Box marginTop={1} flexDirection="column">
         <Text>
-          <Text color="green" bold>
-            Enter
-          </Text>{" "}
-          to start GAIA{"  •  "}
-          <Text color="yellow" bold>
-            Escape
-          </Text>{" "}
-          to skip and see manual commands
+          <Text dimColor>
+            <Text bold>Enter</Text> start · <Text bold>ESC</Text> skip
+          </Text>
         </Text>
       </Box>
     </Box>
@@ -505,7 +323,7 @@ export const ServicesRunningStep: React.FC<{
   setupMode: SetupMode;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, portOverrides, onConfirm }) => {
+}> = ({ portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -521,45 +339,39 @@ export const ServicesRunningStep: React.FC<{
       marginTop={1}
       paddingX={1}
       borderStyle="round"
-      borderColor={THEME_COLOR}
+      borderColor="green"
     >
-      <Box marginBottom={1}>
-        <Text bold color={THEME_COLOR}>
-          GAIA is Running!
+      <Text bold color="green">
+        GAIA is Running!
+      </Text>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text color="green">✓ All services started</Text>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text>
+          Web:{" "}
+          <Text color="cyan" bold>
+            http://localhost:{webPort}
+          </Text>
+        </Text>
+        <Text>
+          API:{" "}
+          <Text color="cyan" bold>
+            http://localhost:{apiPort}
+          </Text>
         </Text>
       </Box>
 
-      <Box flexDirection="column" marginBottom={1}>
-        <Text color="green">✓ Docker services started successfully</Text>
-        <Text color="green">✓ API server running</Text>
-        <Text color="green">✓ Web frontend running</Text>
-        {setupMode === "selfhost" && (
-          <Text color="green">✓ Background workers running</Text>
-        )}
+      <Box marginTop={1}>
+        <Text color="gray">gaia stop · gaia status · gaia setup</Text>
       </Box>
-
-      <Box flexDirection="column" marginBottom={1}>
-        <Text>Access GAIA at:</Text>
-        <Box marginLeft={2} flexDirection="column">
-          <Text>
-            Web:{" "}
-            <Text color="cyan" bold>
-              http://localhost:{webPort}
-            </Text>
-          </Text>
-          <Text>
-            API:{" "}
-            <Text color="cyan" bold>
-              http://localhost:{apiPort}
-            </Text>
-          </Text>
-        </Box>
-      </Box>
-
-      <CommandsSummary />
 
       <Box marginTop={1}>
-        <Text dimColor>Press Enter to exit</Text>
+        <Text dimColor>
+          <Text bold>Enter</Text> to exit
+        </Text>
       </Box>
     </Box>
   );
@@ -569,7 +381,7 @@ export const ServicesRunningStep: React.FC<{
 export const ManualCommandsStep: React.FC<{
   setupMode: SetupMode;
   onConfirm: () => void;
-}> = ({ setupMode, onConfirm }) => {
+}> = ({ onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -584,39 +396,25 @@ export const ManualCommandsStep: React.FC<{
       borderStyle="round"
       borderColor={THEME_COLOR}
     >
-      <Box marginBottom={1}>
-        <Text bold color={THEME_COLOR}>
-          Setup Complete!
+      <Text bold color={THEME_COLOR}>
+        Setup Complete!
+      </Text>
+
+      <Box marginTop={1}>
+        <Text>Run: </Text>
+        <Text color="cyan" bold>
+          $ gaia start
         </Text>
       </Box>
 
-      <Box flexDirection="column" marginBottom={1}>
-        <Text>To start GAIA, run:</Text>
+      <Box marginTop={1}>
+        <Text color="gray">gaia stop · gaia status · gaia setup</Text>
       </Box>
-
-      <Box
-        flexDirection="column"
-        padding={1}
-        borderStyle="single"
-        borderColor="gray"
-      >
-        {setupMode === "selfhost" ? (
-          <Box flexDirection="column">
-            <Text color="cyan">$ docker compose --profile all up -d</Text>
-            <Text color="cyan">$ nx build web</Text>
-            <Text color="cyan">$ nx start web</Text>
-          </Box>
-        ) : (
-          <Box flexDirection="column">
-            <Text color="cyan">$ gaia start</Text>
-          </Box>
-        )}
-      </Box>
-
-      <CommandsSummary />
 
       <Box marginTop={1}>
-        <Text dimColor>Press Enter to exit</Text>
+        <Text dimColor>
+          <Text bold>Enter</Text> to exit
+        </Text>
       </Box>
     </Box>
   );
@@ -627,11 +425,11 @@ export const SetupModeSelectionStep: React.FC<{
 }> = ({ onSelect }) => {
   const options = [
     {
-      label: "Self-Host (Docker)",
+      label: "Self-Host — run everything in Docker",
       value: "selfhost",
     },
     {
-      label: "Developer Mode (Local)",
+      label: "Developer — local dev with hot reload",
       value: "developer",
     },
   ];
@@ -653,16 +451,6 @@ export const SetupModeSelectionStep: React.FC<{
           options={options}
           onChange={(value) => onSelect(value as SetupMode)}
         />
-      </Box>
-      <Box marginTop={1} flexDirection="column">
-        <Text color="gray" dimColor>
-          Self-Host: Run everything in Docker containers (recommended for
-          deployment)
-        </Text>
-        <Text color="gray" dimColor>
-          Developer: Run backend locally with Docker services (recommended for
-          contributing)
-        </Text>
       </Box>
     </Box>
   );
@@ -790,16 +578,10 @@ export const InfisicalSetupStep: React.FC<{
         </Text>
       </Box>
 
-      <Box
-        marginBottom={1}
-        borderStyle="single"
-        borderColor="cyan"
-        paddingX={1}
-      >
-        <Text color="cyan">
-          All environment variables (API keys, auth secrets, etc.) must be
-          configured in your Infisical project. Only Infisical credentials will
-          be stored locally.
+      <Box marginBottom={1}>
+        <Text color="gray">
+          All secrets managed in your Infisical project. Only credentials stored
+          locally.
         </Text>
       </Box>
 
@@ -864,8 +646,8 @@ export const InfisicalSetupStep: React.FC<{
       )}
 
       <Box marginTop={1}>
-        <Text color="gray" dimColor>
-          ↑↓/Tab to navigate • Enter to confirm
+        <Text dimColor>
+          <Text bold>Enter</Text> confirm · <Text bold>↑↓</Text> navigate
         </Text>
       </Box>
     </Box>
@@ -961,32 +743,8 @@ export const EnvGroupConfigStep: React.FC<{
         </Text>
       </Box>
 
-      {/* Group Info */}
-      <Box marginTop={1} flexDirection="column">
-        <Box>
-          <Text color="cyan" bold>
-            Purpose:{" "}
-          </Text>
-          <Text color="white">{category.description}</Text>
-        </Box>
-
-        {category.affectedFeatures && (
-          <Box>
-            <Text color="cyan" bold>
-              Affects:{" "}
-            </Text>
-            <Text color="gray">{category.affectedFeatures}</Text>
-          </Box>
-        )}
-
-        {category.docsUrl && (
-          <Box marginTop={1}>
-            <Text color="green">📖 Docs: </Text>
-            <Text color="blue" underline>
-              {category.docsUrl}
-            </Text>
-          </Box>
-        )}
+      <Box marginTop={1}>
+        <Text color="gray">{category.description}</Text>
       </Box>
 
       {/* All variables in the group */}
@@ -1052,11 +810,15 @@ export const EnvGroupConfigStep: React.FC<{
         </Box>
       )}
 
-      {/* Help Text */}
-      <Box marginTop={1} flexDirection="column">
-        <Text color="gray" dimColor>
-          ↵ Enter to next field • Tab/↓ move down • ↑ move up
-          {!hasAnyRequired && " • ESC skip group"}
+      <Box marginTop={1}>
+        <Text dimColor>
+          <Text bold>Enter</Text> next · <Text bold>↑↓</Text> navigate
+          {!hasAnyRequired && (
+            <Text>
+              {" "}
+              · <Text bold>ESC</Text> skip
+            </Text>
+          )}
         </Text>
       </Box>
     </Box>
@@ -1444,81 +1206,30 @@ export const EnvConfigStep: React.FC<{
       borderColor={error ? "red" : THEME_COLOR}
     >
       <Box justifyContent="space-between">
-        <Text bold>Configure Environment Variables</Text>
-        <Text color="gray">
-          {currentIndex + 1} / {totalCount}
-        </Text>
-      </Box>
-
-      <Box marginTop={1} flexDirection="column">
-        {/* Variable Name */}
         <Box>
           <Text color={THEME_COLOR} bold>
             {currentVar.name}
           </Text>
           {currentVar.required ? (
-            <Text color="red" bold>
-              {" "}
-              * required
-            </Text>
+            <Text color="red"> *</Text>
           ) : (
             <Text color="gray" dimColor>
               {" "}
-              (optional)
+              optional
             </Text>
           )}
         </Box>
-
-        {/* Category */}
-        <Box marginTop={1}>
-          <Text color="cyan" bold>
-            Category:{" "}
-          </Text>
-          <Text color="white">{currentVar.category}</Text>
-        </Box>
-
-        {/* Purpose/Description */}
-        <Box>
-          <Text color="cyan" bold>
-            Purpose:{" "}
-          </Text>
-          <Text color="white">{currentVar.description}</Text>
-        </Box>
-
-        {/* Affected Features */}
-        {currentVar.affectedFeatures && (
-          <Box>
-            <Text color="cyan" bold>
-              Affects:{" "}
-            </Text>
-            <Text color="gray">{currentVar.affectedFeatures}</Text>
-          </Box>
-        )}
-
-        {/* Documentation Link */}
-        {currentVar.docsUrl && (
-          <Box marginTop={1}>
-            <Text color="green">📖 Docs: </Text>
-            <Text color="blue" underline>
-              {currentVar.docsUrl}
-            </Text>
-          </Box>
-        )}
-
-        {/* Default Value */}
-        {hasDefault && (
-          <Box marginTop={1}>
-            <Text color="green" bold>
-              Default:{" "}
-            </Text>
-            <Text color="white">{currentVar.defaultValue}</Text>
-          </Box>
-        )}
+        <Text color="gray">
+          {currentIndex + 1}/{totalCount}
+        </Text>
       </Box>
 
-      {/* Input */}
+      <Box marginLeft={1}>
+        <Text color="gray">{currentVar.description}</Text>
+      </Box>
+
       <Box marginTop={1}>
-        <Text color={THEME_COLOR}>➜ </Text>
+        <Text color={THEME_COLOR}>→ </Text>
         <TextInput
           value={value}
           onChange={(newValue) => {
@@ -1528,38 +1239,30 @@ export const EnvConfigStep: React.FC<{
           onSubmit={handleSubmit}
           placeholder={
             hasDefault
-              ? "Press Enter to use default"
+              ? `Default: ${currentVar.defaultValue}`
               : currentVar.required
-                ? "Enter a value (required)"
-                : "Press Enter to skip"
+                ? "required"
+                : "skip with Enter"
           }
         />
       </Box>
 
-      {/* Error Message */}
       {error && (
         <Box marginTop={1}>
-          <Text color="red" bold>
-            ⚠ {error}
-          </Text>
+          <Text color="red">{error}</Text>
         </Box>
       )}
 
-      {/* Help Text */}
-      <Box marginTop={1} flexDirection="column">
-        {currentVar.required ? (
-          <Text color="yellow" dimColor>
-            ↵ Enter to confirm (required field)
-          </Text>
-        ) : hasDefault ? (
-          <Text color="green" dimColor>
-            ↵ Enter to use default • ESC to skip
-          </Text>
-        ) : (
-          <Text color="gray" dimColor>
-            ↵ Enter to confirm • ESC to skip
-          </Text>
-        )}
+      <Box marginTop={1}>
+        <Text dimColor>
+          <Text bold>Enter</Text> confirm
+          {!currentVar.required && (
+            <Text>
+              {" "}
+              · <Text bold>ESC</Text> skip
+            </Text>
+          )}
+        </Text>
       </Box>
     </Box>
   );
@@ -1730,6 +1433,24 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
           }
           logs={state.data.dependencyLogs || []}
         />
+      )}
+
+      {state.step === "Installing CLI" && (
+        <Box
+          flexDirection="column"
+          borderStyle="round"
+          padding={1}
+          borderColor={THEME_COLOR}
+        >
+          <Text bold color={THEME_COLOR}>
+            Installing CLI
+          </Text>
+          <Box marginTop={1}>
+            <Spinner
+              label={state.status || "Installing gaia CLI globally..."}
+            />
+          </Box>
+        </Box>
       )}
 
       {state.error && (

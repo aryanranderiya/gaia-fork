@@ -8,10 +8,12 @@ import { Header } from "./Header.js";
 export const INIT_STEPS = [
   "Welcome",
   "Prerequisites",
+  "Setup Mode",
   "Repository Setup",
-  "Install Tools",
   "Environment Setup",
+  "Install Tools",
   "Project Setup",
+  "Installing CLI",
   "Finished",
 ] as const;
 
@@ -37,23 +39,19 @@ interface StepperProps {
 
 const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
   const currentIndex = steps.indexOf(currentStep);
+  const total = steps.length;
+  const stepNum = currentIndex + 1;
 
   return (
-    <Box marginBottom={1}>
-      {steps.map((step, index) => {
-        const isActive = step === currentStep;
-        const isDone = currentIndex > index;
-
-        return (
-          <Box key={step} marginRight={2}>
-            <Text color={isActive ? THEME_COLOR : isDone ? "green" : "gray"}>
-              {isDone ? "✓ " : isActive ? "● " : "○ "}
-              {step}
-            </Text>
-            {index < steps.length - 1 && <Text color="gray"> › </Text>}
-          </Box>
-        );
-      })}
+    <Box marginBottom={1} gap={1}>
+      {currentIndex > 0 && <Text color="green">✓ {currentIndex}</Text>}
+      <Text color="gray">
+        {stepNum}/{total}
+      </Text>
+      <Text color="gray">·</Text>
+      <Text color={THEME_COLOR} bold>
+        {currentStep}
+      </Text>
     </Box>
   );
 };

@@ -5,7 +5,6 @@
 
 import { Box, Text } from "ink";
 import type React from "react";
-import { THEME_COLOR } from "../constants.js";
 
 /**
  * Props for the Footer component.
@@ -27,17 +26,8 @@ interface FooterProps {
 export const Footer: React.FC<FooterProps> = ({ status, step }) => {
   if (step.toLowerCase() === "welcome") return null;
   return (
-    <Box
-      width="100%"
-      borderStyle="single"
-      borderColor="gray"
-      paddingX={1}
-      justifyContent="space-between"
-    >
-      <Text color={THEME_COLOR}>
-        <Text bold>Status:</Text> {step}
-      </Text>
-      <Text color="white" dimColor>
+    <Box width="100%" paddingX={1} marginTop={1}>
+      <Text color="gray" dimColor>
         {status}
       </Text>
     </Box>

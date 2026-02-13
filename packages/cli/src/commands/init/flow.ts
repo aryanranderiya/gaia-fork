@@ -2,9 +2,10 @@ import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
 import { writeConfig } from "../../lib/config.js";
-import { runEnvSetup } from "../../lib/env-setup.js";
+import { runEnvSetup, selectSetupMode } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as git from "../../lib/git.js";
+import { ensureGaiaInPath } from "../../lib/path-setup.js";
 import * as prereqs from "../../lib/prerequisites.js";
 import { findRepoRoot, runCommand } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
@@ -155,6 +156,9 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
   store.setStatus("Prerequisites check complete!");
   await delay(1000);
 
+  // 2. Setup Mode
+  const setupMode = await selectSetupMode(store);
+
   let repoPath = "";
 
   if (DEV_MODE) {
@@ -173,7 +177,10 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     store.setStatus("Repository ready!");
   } else {
     store.setStep("Repository Setup");
-    const defaultPath = path.join(os.homedir(), "gaia");
+    const defaultPath =
+      setupMode === "selfhost"
+        ? path.join(os.homedir(), "gaia")
+        : path.resolve("gaia");
 
     let cloneFresh = true;
     repoPath = defaultPath;
@@ -275,13 +282,11 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
   await delay(1000);
 
   // 3. Environment Setup (moved before tool install so we know the mode)
-  await runEnvSetup(store, repoPath, portOverrides);
+  await runEnvSetup(store, repoPath, setupMode, portOverrides);
 
   if (store.currentState.error) {
     return; // Abort if env setup failed
   }
-
-  const setupMode = store.currentState.data.setupMode as string;
 
   if (setupMode === "selfhost") {
     // Selfhost mode: everything runs in Docker, no local tools needed
@@ -295,14 +300,23 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
       updatedAt: new Date().toISOString(),
     });
 
-    // Auto-install CLI globally
     store.setStep("Installing CLI");
     store.setStatus("Installing gaia CLI globally...");
     try {
       await runCommand("npm", ["install", "-g", "@heygaia/cli"], repoPath);
-      store.setStatus("CLI installed globally!");
+      store.setStatus("Verifying PATH...");
+      const pathResult = await ensureGaiaInPath();
+      if (pathResult.inPath) {
+        store.setStatus("CLI installed! gaia command is ready.");
+      } else if (pathResult.pathAdded) {
+        store.setStatus(pathResult.message);
+      } else {
+        store.setStatus(pathResult.message);
+      }
     } catch {
-      // Non-fatal
+      store.setStatus(
+        "CLI install failed. Install manually: npm install -g @heygaia/cli",
+      );
     }
 
     await delay(500);
@@ -415,14 +429,23 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
     updatedAt: new Date().toISOString(),
   });
 
-  // Auto-install CLI globally
   store.setStep("Installing CLI");
   store.setStatus("Installing gaia CLI globally...");
   try {
     await runCommand("npm", ["install", "-g", "@heygaia/cli"], repoPath);
-    store.setStatus("CLI installed globally!");
+    store.setStatus("Verifying PATH...");
+    const pathResult = await ensureGaiaInPath();
+    if (pathResult.inPath) {
+      store.setStatus("CLI installed! gaia command is ready.");
+    } else if (pathResult.pathAdded) {
+      store.setStatus(pathResult.message);
+    } else {
+      store.setStatus(pathResult.message);
+    }
   } catch {
-    // Non-fatal — user can still use npx
+    store.setStatus(
+      "CLI install failed. Install manually: npm install -g @heygaia/cli",
+    );
   }
 
   await delay(500);

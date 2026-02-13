@@ -2,13 +2,13 @@ import { ProgressBar, Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
-import type { PortCheckResult } from "../../lib/prerequisites.js";
+
 import { SETUP_STEPS, Shell } from "../components/Shell.js";
+import { CheckItem, PortConflictStep } from "../components/shared-steps.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
 import {
   AlternativeGroupSelectionStep,
-  CommandsSummary,
   EnvConfigStep,
   EnvGroupConfigStep,
   EnvMethodSelectionStep,
@@ -168,14 +168,7 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
               )}
             {!state.data.dependencyComplete &&
               state.data.dependencyLogs?.length > 0 && (
-                <Box
-                  flexDirection="column"
-                  marginTop={1}
-                  borderStyle="single"
-                  borderColor="gray"
-                  paddingX={1}
-                  minHeight={6}
-                >
+                <Box flexDirection="column" marginTop={1} marginLeft={1}>
                   {state.data.dependencyLogs.map((log: string, i: number) => (
                     // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
                     <Text key={i} color="gray" wrap="truncate">
@@ -205,91 +198,15 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
   );
 };
 
-const CheckItem: React.FC<{
-  label: string;
-  status: "pending" | "success" | "error" | "missing";
-}> = ({ label, status }) => (
-  <Box>
-    <Box marginRight={1}>
-      {status === "pending" ? (
-        <Spinner type="dots" />
-      ) : status === "success" ? (
-        <Text color={THEME_COLOR}>{"\u2714"}</Text>
-      ) : status === "error" ? (
-        <Text color="red">{"\u2716"}</Text>
-      ) : (
-        <Text color="yellow">{"\u26A0"}</Text>
-      )}
-    </Box>
-    <Text>{label}</Text>
-  </Box>
-);
-
-const PortConflictStep: React.FC<{
-  portResults: PortCheckResult[];
-  onAccept: () => void;
-  onAbort: () => void;
-}> = ({ portResults, onAccept, onAbort }) => {
-  useInput((_input, key) => {
-    if (key.return) onAccept();
-    else if (key.escape) onAbort();
-  });
-
-  return (
-    <Box
-      flexDirection="column"
-      marginTop={1}
-      paddingX={1}
-      borderStyle="round"
-      borderColor="yellow"
-    >
-      <Text bold color="yellow">
-        Port Conflicts Detected
-      </Text>
-      {portResults.map((result) => (
-        <Box key={result.port}>
-          <Text color={result.available ? "green" : "red"}>
-            {result.available ? "\u2714" : "\u2716"}{" "}
-          </Text>
-          <Text>
-            {result.service} (:{result.port})
-          </Text>
-          {!result.available && (
-            <Text color="gray">
-              {" "}
-              - in use
-              {result.usedBy ? ` by ${result.usedBy}` : ""}
-              {result.alternative ? ` (alt: :${result.alternative})` : ""}
-            </Text>
-          )}
-        </Box>
-      ))}
-      <Box marginTop={1}>
-        <Text>
-          <Text color="green" bold>
-            Enter
-          </Text>
-          {" continue  "}
-          <Text color="yellow" bold>
-            Escape
-          </Text>
-          {" abort"}
-        </Text>
-      </Box>
-    </Box>
-  );
-};
-
 const FinishedStep: React.FC<{
   setupMode?: string;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ setupMode, portOverrides, onConfirm }) => {
+}> = ({ portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) onConfirm();
   });
 
-  const mode = setupMode || "developer";
   const webPort = portOverrides?.[3000] ?? 3000;
   const apiPort = portOverrides?.[8000] ?? 8000;
 
@@ -305,47 +222,34 @@ const FinishedStep: React.FC<{
         Setup Complete!
       </Text>
 
-      <Box marginTop={1} flexDirection="column">
-        <Text bold>To start GAIA, run:</Text>
-        <Box
-          marginTop={1}
-          padding={1}
-          borderStyle="single"
-          borderColor="gray"
-          flexDirection="column"
-        >
-          <Text color="cyan">$ gaia start</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text color="gray" dimColor>
-            {mode === "selfhost"
-              ? "Runs: docker compose --profile all up -d (background)"
-              : "Runs: mise dev (interactive — keep terminal open)"}
-          </Text>
-        </Box>
-      </Box>
-
-      <Box marginTop={1} flexDirection="column">
-        <Text bold>Access GAIA at:</Text>
-        <Box marginLeft={2} flexDirection="column">
-          <Text>
-            Web:{" "}
-            <Text color="cyan" bold>
-              http://localhost:{webPort}
-            </Text>
-          </Text>
-          <Text>
-            API:{" "}
-            <Text color="cyan" bold>
-              http://localhost:{apiPort}
-            </Text>
-          </Text>
-        </Box>
-      </Box>
-
-      <CommandsSummary />
       <Box marginTop={1}>
-        <Text dimColor>Press Enter to exit</Text>
+        <Text bold>Run: </Text>
+        <Text color="cyan">$ gaia start</Text>
+      </Box>
+
+      <Box marginTop={1} flexDirection="column">
+        <Text>
+          Web:{" "}
+          <Text color="cyan" bold>
+            http://localhost:{webPort}
+          </Text>
+        </Text>
+        <Text>
+          API:{" "}
+          <Text color="cyan" bold>
+            http://localhost:{apiPort}
+          </Text>
+        </Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text color="gray">gaia stop · gaia status · gaia setup</Text>
+      </Box>
+
+      <Box marginTop={1}>
+        <Text dimColor>
+          <Text bold>Enter</Text> to exit
+        </Text>
       </Box>
     </Box>
   );

@@ -11,6 +11,7 @@ import type { CLIStore } from "../store.js";
 export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
   const [state, setState] = useState(store.currentState);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastChecked, setLastChecked] = useState<string | null>(null);
 
   useEffect(() => {
     const update = () => setState({ ...store.currentState });
@@ -23,6 +24,7 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
   useEffect(() => {
     if (state.step === "Results") {
       setIsRefreshing(false);
+      setLastChecked(new Date().toLocaleTimeString());
     }
   }, [state.step]);
 
@@ -66,9 +68,16 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
             paddingX={2}
             paddingY={1}
           >
-            <Text bold color={THEME_COLOR}>
-              GAIA Service Status
-            </Text>
+            <Box justifyContent="space-between">
+              <Text bold color={THEME_COLOR}>
+                GAIA Service Status
+              </Text>
+              {lastChecked && (
+                <Text color="gray" dimColor>
+                  checked {lastChecked} · <Text bold>r</Text> refresh
+                </Text>
+              )}
+            </Box>
             <Box marginTop={1} flexDirection="column">
               <Box>
                 <Box width={22}>
@@ -82,28 +91,34 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
                 </Box>
               </Box>
               <Text color="gray">{"─".repeat(42)}</Text>
-              {state.data.services.map((service: ServiceStatus) => (
-                <Box key={service.name}>
-                  <Box width={22}>
-                    <Text>
-                      {service.name} (:{service.port})
-                    </Text>
+              {[...state.data.services]
+                .sort((a: ServiceStatus, b: ServiceStatus) => {
+                  if (a.status === "down" && b.status !== "down") return -1;
+                  if (a.status !== "down" && b.status === "down") return 1;
+                  return a.name.localeCompare(b.name);
+                })
+                .map((service: ServiceStatus) => (
+                  <Box key={service.name}>
+                    <Box width={22}>
+                      <Text>
+                        {service.name} (:{service.port})
+                      </Text>
+                    </Box>
+                    <Box width={10}>
+                      <Text
+                        color={service.status === "up" ? "green" : "red"}
+                        bold
+                      >
+                        {service.status === "up" ? "\u2713 UP" : "\u2717 DOWN"}
+                      </Text>
+                    </Box>
+                    <Box width={10}>
+                      <Text color="gray">
+                        {service.latency ? `${service.latency}ms` : "--"}
+                      </Text>
+                    </Box>
                   </Box>
-                  <Box width={10}>
-                    <Text
-                      color={service.status === "up" ? "green" : "red"}
-                      bold
-                    >
-                      {service.status === "up" ? "\u2713 UP" : "\u2717 DOWN"}
-                    </Text>
-                  </Box>
-                  <Box width={10}>
-                    <Text color="gray">
-                      {service.latency ? `${service.latency}ms` : "--"}
-                    </Text>
-                  </Box>
-                </Box>
-              ))}
+                ))}
             </Box>
           </Box>
 
@@ -153,8 +168,7 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
 
           <Box marginTop={1}>
             <Text dimColor>
-              Press Enter or Escape to exit · Press{" "}
-              <Text color={THEME_COLOR}>r</Text> to refresh
+              <Text bold>Enter</Text> exit · <Text bold>r</Text> refresh
             </Text>
           </Box>
         </Box>

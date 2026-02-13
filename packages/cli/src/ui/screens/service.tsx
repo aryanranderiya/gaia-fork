@@ -11,10 +11,7 @@ interface ServiceScreenProps {
   command: "start" | "stop";
 }
 
-export const ServiceScreen: React.FC<ServiceScreenProps> = ({
-  store,
-  command,
-}) => {
+export const ServiceScreen: React.FC<ServiceScreenProps> = ({ store }) => {
   const [state, setState] = useState(store.currentState);
 
   useEffect(() => {
@@ -33,8 +30,6 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
       store.submitInput("exit");
     }
   });
-
-  const _isStart = command === "start";
 
   return (
     <Box flexDirection="column" width="100%">
@@ -103,7 +98,9 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
             </Box>
           )}
           <Box marginTop={1}>
-            <Text dimColor>Press Enter to exit</Text>
+            <Text dimColor>
+              <Text bold>Enter</Text> to exit
+            </Text>
           </Box>
         </Box>
       )}
@@ -121,7 +118,9 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
             {"\u2713"} All GAIA services stopped.
           </Text>
           <Box marginTop={1}>
-            <Text dimColor>Press Enter to exit</Text>
+            <Text dimColor>
+              <Text bold>Enter</Text> to exit
+            </Text>
           </Box>
         </Box>
       )}
@@ -130,7 +129,9 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({
         <Box borderStyle="single" borderColor="red" padding={1} marginTop={2}>
           <Text color="red">Error: {state.error.message}</Text>
           <Box marginTop={1}>
-            <Text dimColor>Press Enter to exit</Text>
+            <Text dimColor>
+              <Text bold>Enter</Text> to exit
+            </Text>
           </Box>
         </Box>
       )}

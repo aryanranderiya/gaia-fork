@@ -1,5 +1,5 @@
 import { updateConfig } from "../../lib/config.js";
-import { runEnvSetup } from "../../lib/env-setup.js";
+import { runEnvSetup, selectSetupMode } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as prereqs from "../../lib/prerequisites.js";
 import { findRepoRoot, runCommand } from "../../lib/service-starter.js";
@@ -148,14 +148,15 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
   store.setStatus("Prerequisites check complete!");
   await delay(1000);
 
-  // 3. Environment Setup
-  await runEnvSetup(store, repoPath, portOverrides);
+  // 3. Setup Mode
+  const setupMode = await selectSetupMode(store);
+
+  // 4. Environment Setup
+  await runEnvSetup(store, repoPath, setupMode, portOverrides);
 
   if (store.currentState.error) {
     return; // Abort if env setup failed
   }
-
-  const setupMode = store.currentState.data.setupMode as string;
 
   if (setupMode === "selfhost") {
     const envMethod = (store.currentState.data.envMethod as string) || "manual";
