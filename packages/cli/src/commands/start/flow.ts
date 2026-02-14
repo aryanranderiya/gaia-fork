@@ -39,12 +39,29 @@ export async function runStartFlow(store: CLIStore): Promise<void> {
   store.updateData("setupMode", mode);
   store.updateData("webPort", webPort);
   store.updateData("apiPort", apiPort);
+  store.updateData("dockerLogs", []);
   store.setStatus(`Starting GAIA in ${mode} mode...`);
 
+  const logHandler = (chunk: string) => {
+    const lines = chunk
+      .split("\n")
+      .map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
+      .filter((l) => l.length > 0);
+    if (lines.length === 0) return;
+    const current: string[] = store.currentState.data.dockerLogs || [];
+    store.updateData("dockerLogs", [...current, ...lines].slice(-50));
+  };
+
   try {
-    await startServices(repoPath, mode, (status) => {
-      store.setStatus(status);
-    }, portOverrides);
+    await startServices(
+      repoPath,
+      mode,
+      (status) => {
+        store.setStatus(status);
+      },
+      portOverrides,
+      logHandler,
+    );
 
     store.setStep("Running");
     store.setStatus("GAIA is running!");

@@ -23,6 +23,7 @@ export async function startServices(
   setupMode: SetupMode,
   onStatus?: (status: string) => void,
   portOverrides?: Record<number, number>,
+  onLog?: (chunk: string) => void,
 ): Promise<void> {
   if (setupMode === "selfhost") {
     onStatus?.("Starting all services in Docker (selfhost mode)...");
@@ -47,7 +48,7 @@ export async function startServices(
       ],
       dockerComposePath,
       undefined,
-      undefined,
+      onLog,
       dockerEnv,
     );
     onStatus?.("All services started in Docker!");

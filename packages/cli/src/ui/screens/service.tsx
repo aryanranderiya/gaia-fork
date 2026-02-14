@@ -54,6 +54,16 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({ store }) => {
               <Text color="gray">Mode: {state.data.setupMode}</Text>
             </Box>
           )}
+          {state.data.dockerLogs && state.data.dockerLogs.length > 0 && (
+            <Box flexDirection="column" marginTop={1} marginLeft={1}>
+              {(state.data.dockerLogs as string[]).map((line, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
+                <Text key={i} color="gray" wrap="truncate">
+                  {line}
+                </Text>
+              ))}
+            </Box>
+          )}
         </Box>
       )}
 
