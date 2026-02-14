@@ -17,8 +17,9 @@ program
 program
   .command("init")
   .description("Full setup from scratch (clone, configure, start)")
-  .action(async () => {
-    await runInit();
+  .option("--branch <branch>", "Git branch to clone")
+  .action(async (options: { branch?: string }) => {
+    await runInit({ branch: options.branch });
   });
 
 program

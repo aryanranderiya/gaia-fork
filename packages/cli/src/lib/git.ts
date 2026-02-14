@@ -43,6 +43,7 @@ export async function setupRepo(
   targetDir: string,
   repoUrl: string,
   onProgress: ProgressCallback,
+  branch?: string,
 ): Promise<void> {
   if (fs.existsSync(targetDir)) {
     const gitDir = `${targetDir}/.git`;
@@ -57,12 +58,13 @@ export async function setupRepo(
   } else {
     try {
       // Use execa to run git with progress output
-      const gitProcess = execa("git", [
-        "clone",
-        "--progress",
-        repoUrl,
-        targetDir,
-      ]);
+      const cloneArgs = ["clone", "--progress"];
+      if (branch) {
+        cloneArgs.push("--branch", branch);
+      }
+      cloneArgs.push(repoUrl, targetDir);
+
+      const gitProcess = execa("git", cloneArgs);
 
       // Git progress is written to stderr
       gitProcess.stderr?.on("data", (data: Buffer) => {

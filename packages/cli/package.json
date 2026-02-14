@@ -1,6 +1,6 @@
 {
   "name": "@heygaia/cli",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "description": "CLI tool for setting up and managing GAIA",
   "type": "module",
   "bin": {

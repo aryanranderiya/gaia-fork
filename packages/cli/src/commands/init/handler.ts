@@ -15,7 +15,7 @@ import { runInitFlow } from "./flow.js";
  * Creates the store, renders the UI, and runs the initialization flow.
  * Handles errors by displaying them in the UI before exiting.
  */
-export async function runInit(): Promise<void> {
+export async function runInit(options: { branch?: string } = {}): Promise<void> {
   const store = createStore();
 
   const { unmount } = render(
@@ -23,7 +23,7 @@ export async function runInit(): Promise<void> {
   );
 
   try {
-    await runInitFlow(store);
+    await runInitFlow(store, options.branch);
   } catch (error) {
     store.setError(error as Error);
   }

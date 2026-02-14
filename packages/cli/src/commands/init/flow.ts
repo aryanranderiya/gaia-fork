@@ -15,7 +15,7 @@ const DEV_MODE = process.env.GAIA_CLI_DEV === "true";
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
-export async function runInitFlow(store: CLIStore): Promise<void> {
+export async function runInitFlow(store: CLIStore, branch?: string): Promise<void> {
   // 0. Welcome
   store.setStep("Welcome");
   store.setStatus("Waiting for user input...");
@@ -268,6 +268,7 @@ export async function runInitFlow(store: CLIStore): Promise<void> {
               );
             }
           },
+          branch,
         );
         store.setStatus("Repository ready!");
       } catch (e) {
