@@ -40,7 +40,7 @@ export default function RightSidebar({
   if (variant === "sidebar") {
     return (
       <aside
-        className="relative flex flex-col bg-secondary-bg transition-all duration-300 ease-in-out "
+        className="relative flex shrink-0 flex-col bg-secondary-bg transition-all duration-300 ease-in-out"
         style={{
           width: isOpen ? "350px" : "0px",
           minWidth: isOpen ? "350px" : "0px",
