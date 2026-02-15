@@ -1,24 +1,25 @@
-import type { ReactElement } from "react";
-
 import {
   BlushBrush02Icon,
   BookOpen02Icon,
   ConnectIcon,
   CreditCardPosIcon,
-  DiscordIcon,
-  Github,
   GlobalIcon,
-  HeartHandIcon,
   Home01Icon,
   Idea01Icon,
-  LinkedinIcon,
   MapsIcon,
   MessageMultiple02Icon,
   QuillWrite01Icon,
+} from "@icons";
+import type { ReactElement } from "react";
+import {
+  DiscordIcon,
+  Github,
+  HeartHandIcon,
+  LinkedinIcon,
   TwitterIcon,
   WhatsappIcon,
   YoutubeIcon,
-} from "@/icons";
+} from "@/components/shared/icons";
 
 export interface AppLink {
   label: string;
@@ -166,13 +167,13 @@ export const appConfig = {
         href: "/about",
         label: "About",
         icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
-        description: "Meet the team behind GAIA",
+        description: "Learn about GAIA and the team behind it",
       },
       {
         href: "/manifesto",
         label: "Manifesto",
         icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
-        description: "about our mission",
+        description: "Our mission and vision",
       },
       {
         href: "/brand",
@@ -240,7 +241,7 @@ export const appConfig = {
         description: "Join WhatsApp Community",
       },
       {
-        href: "https://youtube.com/@heygaia_io",
+        href: "https://youtube.com/@theexperiencecompany",
         label: "YouTube",
         icon: <YoutubeIcon width={25} height={25} color="#FF0000" />,
         external: true,

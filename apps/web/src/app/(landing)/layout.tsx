@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import Footer from "@/components/navigation/Footer";
 import Navbar from "@/components/navigation/Navbar";
 import BlurStack, { type BlurLayer } from "@/components/ui/blur-stack";
+import LazyMotionProvider from "@/features/landing/components/LazyMotionProvider";
 
 export default function LandingLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -22,6 +23,12 @@ export default function LandingLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative ">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-9999 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-black focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <div
         id="navbar-backdrop"
         className="pointer-events-none fixed inset-0 z-40 bg-black/20 opacity-0 backdrop-blur-sm transition-opacity duration-300 ease-in-out"
@@ -34,7 +41,9 @@ export default function LandingLayout({ children }: { children: ReactNode }) {
 
       {!isDesktopLogin && <Navbar />}
 
-      <div className="min-h-screen">{children}</div>
+      <main id="main-content" className="min-h-screen">
+        <LazyMotionProvider>{children}</LazyMotionProvider>
+      </main>
 
       {!isDesktopLogin && <Footer />}
     </div>
