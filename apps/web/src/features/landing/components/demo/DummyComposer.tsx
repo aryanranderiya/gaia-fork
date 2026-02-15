@@ -25,7 +25,8 @@ import DummySlashCommandDropdown from "./DummySlashCommandDropdown";
 const DummyComposer: React.FC<{
   hideIntegrationBanner?: boolean;
   fullWidth?: boolean;
-}> = ({ hideIntegrationBanner = false, fullWidth = false }) => {
+  onSend?: (message: string) => void;
+}> = ({ hideIntegrationBanner = false, fullWidth = false, onSend }) => {
   const [message, setMessage] = useState("");
   const [isSlashDropdownOpen, setIsSlashDropdownOpen] = useState(false);
 
@@ -51,7 +52,7 @@ const DummyComposer: React.FC<{
 
   const handleSend = () => {
     if (message.trim()) {
-      console.log("Sending message:", message);
+      onSend?.(message);
       setMessage("");
     }
   };
@@ -68,7 +69,7 @@ const DummyComposer: React.FC<{
       {/* Composer */}
       <div className="searchbar_container relative w-full pb-1">
         {/* Slash dropdown — absolute, overlays upward into messages area */}
-        <div className="searchbar absolute bottom-full z-200 -mb-3 w-full">
+        <div className="searchbar absolute bottom-full z-200 -mb-3 w-full max-w-lg">
           <DummySlashCommandDropdown
             isVisible={isSlashDropdownOpen}
             onClose={() => setIsSlashDropdownOpen(false)}
