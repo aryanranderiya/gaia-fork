@@ -160,6 +160,7 @@ export type CommandContext = BotUserContext & {
 export interface IntegrationInfo {
   name: string;
   logoUrl: string | null;
+  status: "created" | "connected";
 }
 
 /**

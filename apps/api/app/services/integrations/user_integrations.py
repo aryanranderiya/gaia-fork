@@ -51,14 +51,13 @@ async def get_user_integrations(user_id: str) -> UserIntegrationsListResponse:
 
 @Cacheable(key_pattern="tools:user:{user_id}:integrations", ttl=ONE_DAY_TTL)
 async def get_user_connected_integrations(user_id: str) -> List[Dict[str, Any]]:
-    """Get only the integrations that user has connected (status='connected')."""
+    """Get all user integrations (both 'created' and 'connected' status).
+
+    Note: Despite the name, this now returns ALL integrations to allow
+    status display in bots and other interfaces.
+    """
     results = []
-    cursor = user_integrations_collection.find(
-        {
-            "user_id": user_id,
-            "status": "connected",
-        }
-    )
+    cursor = user_integrations_collection.find({"user_id": user_id})
 
     async for doc in cursor:
         results.append(serialize_document(doc))

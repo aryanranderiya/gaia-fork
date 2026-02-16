@@ -434,9 +434,10 @@ export class GaiaClient {
         selectedModelIconUrl: data.selected_model_icon_url ?? null,
         connectedIntegrations:
           data.connected_integrations?.map(
-            (i: { name: string; logo_url?: string }) => ({
+            (i: { name: string; logo_url?: string; status: string }) => ({
               name: i.name,
               logoUrl: i.logo_url ?? null,
+              status: i.status,
             }),
           ) ?? [],
       };

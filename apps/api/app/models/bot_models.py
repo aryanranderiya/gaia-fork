@@ -87,6 +87,7 @@ class IntegrationInfo(BaseModel):
 
     name: str = Field(..., description="Integration name")
     logo_url: Optional[str] = Field(None, description="Integration logo URL")
+    status: str = Field(..., description="Integration status: 'created' or 'connected'")
 
 
 class BotSettingsResponse(BaseModel):

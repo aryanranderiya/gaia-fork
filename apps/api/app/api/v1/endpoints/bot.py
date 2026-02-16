@@ -404,13 +404,15 @@ async def get_settings(
         integrations = await get_user_connected_integrations(user_id)
         for integration_doc in integrations:
             integration_id = integration_doc.get("integration_id")
+            status = integration_doc.get("status", "created")
             if integration_id:
                 integration_details = await get_integration_details(integration_id)
                 if integration_details:
                     connected_integrations_list.append(
                         IntegrationInfo(
                             name=integration_details.name,
-                            logo_url=integration_details.logo_url,
+                            logo_url=integration_details.icon_url,
+                            status=status,
                         )
                     )
     except Exception as e:

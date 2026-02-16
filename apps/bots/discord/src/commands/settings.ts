@@ -1,15 +1,31 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  MessageFlags,
-  EmbedBuilder,
-} from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
 import { formatBotError } from "@gaia/shared";
+import {
+  type ChatInputCommandInteraction,
+  EmbedBuilder,
+  MessageFlags,
+  SlashCommandBuilder,
+} from "discord.js";
 
 export const data = new SlashCommandBuilder()
   .setName("settings")
   .setDescription("View your GAIA account settings and connected integrations");
+
+/**
+ * Helper to convert relative URLs to absolute URLs.
+ * Discord embeds require absolute URLs (https://...).
+ */
+function toAbsoluteUrl(
+  url: string | null | undefined,
+  frontendUrl: string,
+): string | null {
+  if (!url) return null;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url; // Already absolute
+  }
+  // Relative URL - prepend frontend URL
+  return `${frontendUrl}${url.startsWith("/") ? "" : "/"}${url}`;
+}
 
 export async function execute(
   interaction: ChatInputCommandInteraction,
@@ -28,6 +44,8 @@ export async function execute(
       return;
     }
 
+    const frontendUrl = gaia.getFrontendUrl();
+
     let accountAge = "Unknown";
     if (settings.accountCreatedAt) {
       const createdDate = new Date(settings.accountCreatedAt);
@@ -41,7 +59,10 @@ export async function execute(
     let integrationsText = "None connected";
     if (settings.connectedIntegrations.length > 0) {
       integrationsText = settings.connectedIntegrations
-        .map((i) => `• ${i.name}`)
+        .map((i) => {
+          const statusDot = i.status === "connected" ? "🟢" : "🟠";
+          return `${statusDot} ${i.name}`;
+        })
         .join("\n");
     }
 
@@ -71,15 +92,17 @@ export async function execute(
       .setFooter({ text: "Manage settings at heygaia.io/settings" })
       .setTimestamp();
 
-    if (settings.profileImageUrl) {
-      embed.setThumbnail(settings.profileImageUrl);
-    }
-
-    if (settings.selectedModelIconUrl) {
+    // Set profile image in author section and thumbnail
+    const profileImageUrl = toAbsoluteUrl(
+      settings.profileImageUrl,
+      frontendUrl,
+    );
+    if (profileImageUrl) {
       embed.setAuthor({
-        name: settings.selectedModelName || "AI Model",
-        iconURL: settings.selectedModelIconUrl,
+        name: settings.userName || "GAIA User",
+        iconURL: profileImageUrl,
       });
+      embed.setThumbnail(profileImageUrl);
     }
 
     await interaction.editReply({ embeds: [embed] });
