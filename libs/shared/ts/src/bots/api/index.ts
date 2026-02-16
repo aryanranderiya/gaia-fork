@@ -673,7 +673,7 @@ export class GaiaClient {
   }
 
   getConversationUrl(conversationId: string): string {
-    return `${this.frontendUrl}/chat/${conversationId}`;
+    return `${this.frontendUrl}/c/${conversationId}`;
   }
 
   /**

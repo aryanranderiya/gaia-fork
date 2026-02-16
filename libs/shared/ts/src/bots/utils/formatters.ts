@@ -10,7 +10,7 @@
  * falls back to axios-style errors, then generic Error messages.
  */
 import { GaiaApiError } from "../api";
-import type { Workflow, Todo, Conversation } from "../types";
+import type { Conversation, Todo, Workflow } from "../types";
 
 /**
  * Formats a workflow for display in a bot message.
@@ -63,7 +63,7 @@ export function formatConversation(
   baseUrl: string,
 ): string {
   const title = conversation.title || "Untitled Conversation";
-  const url = `${baseUrl}/chat/${conversation.conversation_id}`;
+  const url = `${baseUrl}/c/${conversation.conversation_id}`;
   const messageCount = conversation.message_count
     ? ` (${conversation.message_count} messages)`
     : "";
