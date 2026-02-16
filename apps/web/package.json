@@ -1,7 +1,7 @@
 {
   "name": "gaia",
   "description": "Frontend Website of GAIA - The personal AI assistant",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "private": true,
   "homepage": "https://github.com/theexperiencecompany/gaia",
   "bugs": {
@@ -103,6 +103,7 @@
     "@tiptap/react": "^2.26.1",
     "@tiptap/starter-kit": "^2.26.1",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/mdast": "^4.0.4",
     "@types/d3": "^7.4.3",
     "@types/he": "^1.2.3",
     "@types/lodash": "^4.17.20",
@@ -132,7 +133,6 @@
     "dexie": "^4.2.0",
     "dompurify": "^3.2.6",
     "emblor": "^1.4.8",
-    "framer-motion": "^12.29.2",
     "fuse.js": "^7.1.0",
     "glob": "^11.0.3",
     "gray-matter": "^4.0.3",
@@ -150,7 +150,7 @@
     "mermaid": "^11.10.1",
     "moment-timezone": "^0.6.0",
     "motion": "^12.23.12",
-    "next": "16.0.10",
+    "next": "16.1.6",
     "next-themes": "^0.4.6",
     "npm": "^11.5.2",
     "postcss": "^8.5.6",
@@ -174,8 +174,12 @@
     "rehype-highlight": "^7.0.2",
     "rehype-katex": "^7.0.1",
     "rehype-sanitize": "^6.0.0",
+    "mdast-util-to-string": "^4.0.0",
     "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
     "remark-math": "^6.0.0",
     "remark-smartypants": "^3.0.2",
     "remark-supersub": "^1.0.0",
@@ -206,7 +210,7 @@
     "barrelsby": "^2.8.1",
     "depcheck": "^1.4.7",
     "schema-dts": "^1.1.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "packageManager": "pnpm@10.18.3"
 }
