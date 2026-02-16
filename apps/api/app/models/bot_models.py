@@ -19,35 +19,6 @@ class BotChatRequest(BaseModel):
     )
 
 
-class BotChatResponse(BaseModel):
-    """Response model for bot chat messages."""
-
-    response: str = Field(..., description="Bot's response text")
-    conversation_id: str = Field(..., description="Conversation ID")
-    authenticated: bool = Field(
-        ..., description="Whether user is authenticated with GAIA"
-    )
-    session_token: Optional[str] = Field(
-        None, description="JWT session token for subsequent API requests"
-    )
-
-
-class SessionResponse(BaseModel):
-    """Response model for bot session operations."""
-
-    conversation_id: str = Field(..., description="Active conversation ID")
-    platform: str = Field(..., description="Platform name")
-    platform_user_id: str = Field(..., description="User's platform ID")
-
-
-class ResetSessionRequest(BaseModel):
-    """Request model for resetting bot session."""
-
-    platform: str = Field(..., description="Platform name")
-    platform_user_id: str = Field(..., description="User's platform ID")
-    channel_id: Optional[str] = Field(None, description="Channel/group ID")
-
-
 class BotAuthStatusResponse(BaseModel):
     """Response model for bot authentication status check."""
 

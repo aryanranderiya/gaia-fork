@@ -1,9 +1,8 @@
 import json
 import secrets
 from datetime import datetime, timezone
-from typing import Optional
 
-from app.agents.core.agent import call_agent, call_agent_silent
+from app.agents.core.agent import call_agent
 from app.config.loggers import chat_logger as logger
 from app.config.settings import settings
 from app.constants.cache import PLATFORM_LINK_TOKEN_PREFIX, PLATFORM_LINK_TOKEN_TTL
@@ -11,13 +10,10 @@ from app.db.redis import redis_cache
 from app.models.bot_models import (
     BotAuthStatusResponse,
     BotChatRequest,
-    BotChatResponse,
     BotSettingsResponse,
     CreateLinkTokenRequest,
     CreateLinkTokenResponse,
     IntegrationInfo,
-    ResetSessionRequest,
-    SessionResponse,
 )
 from app.models.chat_models import MessageModel, UpdateMessagesRequest
 from app.models.message_models import MessageRequestWithHistory
@@ -73,138 +69,6 @@ async def create_link_token(
     auth_url = f"{settings.FRONTEND_URL}/auth/link-platform?platform={body.platform}&token={token}"
 
     return CreateLinkTokenResponse(token=token, auth_url=auth_url)
-
-
-@router.post(
-    "/chat",
-    response_model=BotChatResponse,
-    status_code=200,
-    summary="Authenticated Bot Chat",
-    description="Process a chat message from an authenticated bot user.",
-)
-async def bot_chat(request: Request, body: BotChatRequest) -> BotChatResponse:
-    await require_bot_api_key(request)
-    await BotService.enforce_rate_limit(body.platform, body.platform_user_id)
-
-    # Use middleware-resolved user if available, otherwise look up
-    user = getattr(request.state, "user", None)
-    if not user or not getattr(request.state, "authenticated", False):
-        user = await PlatformLinkService.get_user_by_platform_id(
-            body.platform, body.platform_user_id
-        )
-
-    if not user:
-        return BotChatResponse(
-            response="Please authenticate first using /auth",
-            conversation_id="",
-            authenticated=False,
-        )
-
-    user_id = user.get("user_id") or str(user.get("_id", ""))
-
-    conversation_id = await BotService.get_or_create_session(
-        body.platform, body.platform_user_id, body.channel_id, user
-    )
-
-    history = await BotService.load_conversation_history(conversation_id, user_id)
-    history.append({"role": "user", "content": body.message})
-
-    message_request = MessageRequestWithHistory(
-        message=body.message,
-        conversation_id=conversation_id,
-        messages=history,
-    )
-
-    try:
-        response_text, _meta = await call_agent_silent(
-            request=message_request,
-            conversation_id=conversation_id,
-            user=user,
-            user_time=datetime.now(timezone.utc),
-        )
-    except Exception as e:
-        logger.error(f"Bot chat error: {e}")
-        response_text = "An error occurred while processing your request."
-
-    now = datetime.now(timezone.utc).isoformat()
-    try:
-        update_req = UpdateMessagesRequest(
-            conversation_id=conversation_id,
-            messages=[
-                MessageModel(type="user", response=body.message, date=now),
-                MessageModel(type="bot", response=response_text, date=now),
-            ],
-        )
-        await update_messages(update_req, user)
-    except Exception as e:
-        logger.error(f"Failed to save bot messages: {e}")
-
-    session_token = create_bot_session_token(
-        user_id=user_id,
-        platform=body.platform,
-        platform_user_id=body.platform_user_id,
-        expires_minutes=15,
-    )
-
-    return BotChatResponse(
-        response=response_text,
-        conversation_id=conversation_id,
-        authenticated=True,
-        session_token=session_token,
-    )
-
-
-@router.get(
-    "/session/{platform}/{platform_user_id}",
-    response_model=SessionResponse,
-    status_code=200,
-    summary="Get Session",
-    description="Retrieve or create a session for a platform user.",
-)
-async def get_session(
-    request: Request,
-    platform: str,
-    platform_user_id: str,
-    channel_id: Optional[str] = None,
-) -> SessionResponse:
-    await require_bot_api_key(request)
-    user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not linked")
-
-    conversation_id = await BotService.get_or_create_session(
-        platform, platform_user_id, channel_id, user
-    )
-    return SessionResponse(
-        conversation_id=conversation_id,
-        platform=platform,
-        platform_user_id=platform_user_id,
-    )
-
-
-@router.post(
-    "/session/new",
-    response_model=SessionResponse,
-    status_code=200,
-    summary="Reset Session",
-    description="Delete the existing session and create a fresh conversation.",
-)
-async def reset_session(request: Request, body: ResetSessionRequest) -> SessionResponse:
-    await require_bot_api_key(request)
-    user = await PlatformLinkService.get_user_by_platform_id(
-        body.platform, body.platform_user_id
-    )
-    if not user:
-        raise HTTPException(status_code=404, detail="User not linked")
-
-    conversation_id = await BotService.reset_session(
-        body.platform, body.platform_user_id, body.channel_id, user
-    )
-    return SessionResponse(
-        conversation_id=conversation_id,
-        platform=body.platform,
-        platform_user_id=body.platform_user_id,
-    )
 
 
 @router.post(

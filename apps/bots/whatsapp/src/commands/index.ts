@@ -68,45 +68,11 @@ export function registerCommands(
     await message.reply(response);
   });
 
-  commands.set("gaia", async (message, gaia, args) => {
-    const userMessage = args.join(" ");
-    if (!userMessage) {
-      await message.reply("Usage: /gaia <your message>");
-      return;
-    }
-
-    const ctx = getContext(message);
-
-    try {
-      const response = await gaia.chat({
-        message: userMessage,
-        platform: ctx.platform,
-        platformUserId: ctx.platformUserId,
-      });
-
-      if (!response.authenticated) {
-        try {
-          const { authUrl } = await gaia.createLinkToken(
-            ctx.platform,
-            ctx.platformUserId,
-          );
-          await message.reply(
-            `🔗 Please link your GAIA account first:\n${authUrl}\n\nAfter linking, you can chat with GAIA!`,
-          );
-        } catch {
-          await message.reply(
-            "🔗 Please link your GAIA account first. Use /auth to get a link.",
-          );
-        }
-        return;
-      }
-
-      await message.reply(truncateResponse(response.response, "whatsapp"));
-    } catch (error: unknown) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      await message.reply(`Error: ${errorMessage}`);
-    }
+  // TODO: Replace with streaming chat once WhatsApp bot is fully implemented.
+  // gaia.chat() (non-streaming) has been removed. Use handleStreamingChat() instead,
+  // which requires a message edit callback compatible with WhatsApp's reply API.
+  commands.set("gaia", async (message) => {
+    await message.reply("Chat is not yet available. Check back soon!");
   });
 
   commands.set("workflow", async (message, gaia, args) => {

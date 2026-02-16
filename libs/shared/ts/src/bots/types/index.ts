@@ -27,30 +27,6 @@ export interface ChatRequest {
 }
 
 /**
- * Represents the response from the GAIA bot API.
- */
-export interface ChatResponse {
-  /** The agent's response text. */
-  response: string;
-  /** The unique identifier for the conversation session. */
-  conversationId: string;
-  /** Whether the user is authenticated with GAIA. */
-  authenticated: boolean;
-}
-
-/**
- * Represents session information for a bot conversation.
- */
-export interface SessionInfo {
-  /** The unique identifier for the conversation session. */
-  conversationId: string;
-  /** The platform associated with this session. */
-  platform: string;
-  /** The user ID on the platform. */
-  platformUserId: string;
-}
-
-/**
  * Configuration required for the bot to operate.
  */
 export interface BotConfig {
@@ -137,12 +113,6 @@ export interface ConversationListResponse {
   conversations: Conversation[];
   total: number;
   page: number;
-}
-
-export interface SearchResponse {
-  messages: Record<string, unknown>[];
-  conversations: Record<string, unknown>[];
-  notes: Record<string, unknown>[];
 }
 
 export interface BotUserContext {

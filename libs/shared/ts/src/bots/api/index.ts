@@ -4,13 +4,9 @@ import type {
   AuthStatus,
   BotUserContext,
   ChatRequest,
-  ChatResponse,
-  CommandContext,
   Conversation,
   ConversationListResponse,
   CreateTodoRequest,
-  SearchResponse,
-  SessionInfo,
   SettingsResponse,
   Todo,
   TodoListResponse,
@@ -122,43 +118,6 @@ export class GaiaClient {
       const message = error instanceof Error ? error.message : "Unknown error";
       throw new GaiaApiError(`API error: ${status || message}`, status);
     }
-  }
-
-  /**
-   * Sends a chat message to the GAIA agent (authenticated users only).
-   */
-  async chat(request: ChatRequest): Promise<ChatResponse> {
-    const ctx = {
-      platform: request.platform,
-      platformUserId: request.platformUserId,
-      channelId: request.channelId,
-    };
-
-    return this.requestWithAuth(async () => {
-      const { data } = await this.client.post(
-        "/api/v1/bot/chat",
-        {
-          message: request.message,
-          platform: request.platform,
-          platform_user_id: request.platformUserId,
-          channel_id: request.channelId,
-        },
-        {
-          headers: this.userHeaders(ctx),
-        },
-      );
-
-      if (data.session_token) {
-        const sessionKey = this.getSessionKey(ctx);
-        this.sessionTokens.set(sessionKey, data.session_token);
-      }
-
-      return {
-        response: data.response,
-        conversationId: data.conversation_id,
-        authenticated: data.authenticated,
-      };
-    }, ctx);
   }
 
   /**
@@ -351,38 +310,6 @@ export class GaiaClient {
     }
 
     return conversationId;
-  }
-
-  /**
-   * Retrieves or creates a session for a user on a specific platform.
-   */
-  async getSession(
-    platform: string,
-    platformUserId: string,
-    channelId?: string,
-  ): Promise<SessionInfo> {
-    return this.request(async () => {
-      const params = new URLSearchParams();
-      if (channelId) {
-        params.set("channel_id", channelId);
-      }
-
-      const { data } = await this.client.get(
-        `/api/v1/bot/session/${platform}/${platformUserId}?${params.toString()}`,
-        {
-          headers: {
-            "X-Bot-API-Key": this.apiKey,
-            "X-Bot-Platform": platform,
-            "X-Bot-Platform-User-Id": platformUserId,
-          },
-        },
-      );
-      return {
-        conversationId: data.conversation_id ?? data.conversationId,
-        platform: data.platform,
-        platformUserId: data.platform_user_id ?? data.platformUserId,
-      } as SessionInfo;
-    });
   }
 
   /**
@@ -673,33 +600,6 @@ export class GaiaClient {
     return `${this.frontendUrl}/c/${conversationId}`;
   }
 
-  /**
-   * Gets weather information via the agent.
-   */
-  async getWeather(location: string, ctx: CommandContext): Promise<string> {
-    const response = await this.chat({
-      message: `What's the weather in ${location}?`,
-      platform: ctx.platform,
-      platformUserId: ctx.platformUserId,
-      channelId: ctx.channelId,
-    });
-    return response.response;
-  }
-
-  /**
-   * Searches messages, conversations, and notes.
-   * Uses the regular /api/v1/search endpoint via bot middleware auth.
-   */
-  async search(query: string, ctx: BotUserContext): Promise<SearchResponse> {
-    return this.requestWithAuth(async () => {
-      const { data } = await this.client.get<SearchResponse>(
-        `/api/v1/search?query=${encodeURIComponent(query)}`,
-        { headers: this.userHeaders(ctx) },
-      );
-      return data;
-    }, ctx);
-  }
-
   getBaseUrl(): string {
     return this.baseUrl;
   }
@@ -736,37 +636,6 @@ export class GaiaClient {
     });
   }
 
-  /**
-   * Resets the session for a user, creating a fresh conversation.
-   */
-  async resetSession(
-    platform: string,
-    platformUserId: string,
-    channelId?: string,
-  ): Promise<SessionInfo> {
-    return this.request(async () => {
-      const { data } = await this.client.post(
-        "/api/v1/bot/session/new",
-        {
-          platform,
-          platform_user_id: platformUserId,
-          channel_id: channelId,
-        },
-        {
-          headers: {
-            "X-Bot-API-Key": this.apiKey,
-            "X-Bot-Platform": platform,
-            "X-Bot-Platform-User-Id": platformUserId,
-          },
-        },
-      );
-      return {
-        conversationId: data.conversation_id ?? data.conversationId,
-        platform: data.platform,
-        platformUserId: data.platform_user_id ?? data.platformUserId,
-      } as SessionInfo;
-    });
-  }
 }
 
 /**
