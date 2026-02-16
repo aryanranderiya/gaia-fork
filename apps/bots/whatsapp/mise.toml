@@ -1,0 +1,23 @@
+# WhatsApp Bot mise.toml for GAIA
+# This file defines tasks for the GAIA WhatsApp bot.
+#
+# Quick Start:
+#   mise dev             # Start WhatsApp bot in dev mode
+#   mise build           # Build bot
+#   mise tasks           # List all available commands
+
+[tasks.dev]
+description = "Run WhatsApp bot in dev mode"
+run = "pnpm dev"
+
+[tasks.build]
+description = "Build WhatsApp bot"
+run = "pnpm build"
+
+[tasks.start]
+description = "Start WhatsApp bot in production mode"
+run = "pnpm start"
+
+[tasks.deps]
+description = "Install dependencies"
+run = "pnpm install"
