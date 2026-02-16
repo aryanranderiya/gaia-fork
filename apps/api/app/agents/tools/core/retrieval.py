@@ -453,10 +453,19 @@ def get_retrieve_tools_function(
         available_tool_names = tool_registry.get_tool_names()
         logger.info(f"Registry has {len(available_tool_names)} available tools")
 
-        # Get user_id from config
+        # Get user_id from config (try configurable first, then metadata as fallback)
         user_id = config.get("configurable", {}).get("user_id")
         if not user_id:
-            logger.warning("retrieve_tools called with NO user_id")
+            # Fallback to metadata
+            user_id = config.get("metadata", {}).get("user_id")
+            if user_id and "configurable" in config:
+                # Update configurable with user_id for consistency
+                config["configurable"]["user_id"] = user_id
+
+        if not user_id:
+            logger.warning(
+                "retrieve_tools called with NO user_id (not in configurable or metadata)"
+            )
 
         # BINDING MODE: Validate and bind exact tool names
         if exact_tool_names:
