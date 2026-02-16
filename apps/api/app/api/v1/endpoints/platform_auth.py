@@ -4,14 +4,20 @@ Platform Authentication Endpoints
 Simple endpoints for managing user platform account links (Discord, Slack, Telegram, WhatsApp).
 """
 
+from datetime import datetime, timezone
 from typing import Optional
 
 from app.api.v1.middleware.auth import get_current_user
 from app.config.settings import settings
 from app.db.mongodb.collections import users_collection
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 
 router = APIRouter()
+
+
+class LinkPlatformRequest(BaseModel):
+    platform_user_id: str
 
 
 @router.get("/user/platform-links")
@@ -68,6 +74,56 @@ async def get_platform_links(
             else None,
         }
     }
+
+
+@router.post("/{platform}/link")
+async def link_platform(
+    platform: str,
+    body: LinkPlatformRequest,
+    current_user: Optional[dict] = Depends(get_current_user),
+):
+    """Link a platform account to the authenticated GAIA user."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if platform not in ["discord", "slack", "telegram", "whatsapp"]:
+        raise HTTPException(status_code=400, detail="Invalid platform")
+
+    user_id = current_user.get("user_id")
+    platform_user_id = body.platform_user_id
+
+    # Check if this platform ID is already linked to another user
+    existing = await users_collection.find_one(
+        {f"platform_links.{platform}": platform_user_id}
+    )
+    if existing and existing.get("user_id") != user_id:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This {platform} account is already linked to another GAIA user",
+        )
+
+    # Check if this user already has a different ID linked for this platform
+    user = await users_collection.find_one({"user_id": user_id})
+    if user:
+        current_link = user.get("platform_links", {}).get(platform)
+        if current_link and current_link != platform_user_id:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Your account already has a different {platform} account linked",
+            )
+
+    now = datetime.now(timezone.utc).isoformat()
+    await users_collection.update_one(
+        {"user_id": user_id},
+        {
+            "$set": {
+                f"platform_links.{platform}": platform_user_id,
+                f"platform_links_connected_at.{platform}": now,
+            }
+        },
+    )
+
+    return {"status": "linked", "platform": platform}
 
 
 @router.post("/{platform}/connect")
