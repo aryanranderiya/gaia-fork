@@ -4,7 +4,7 @@ import {
   MessageFlags,
 } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
-import { formatBotError, truncateMessage } from "@gaia/shared";
+import { handleWeather, truncateResponse } from "@gaia/shared";
 
 export const data = new SlashCommandBuilder()
   .setName("weather")
@@ -22,14 +22,15 @@ export async function execute(
 ) {
   const location = interaction.options.getString("location", true);
   const userId = interaction.user.id;
+  const ctx = {
+    platform: "discord" as const,
+    platformUserId: userId,
+    channelId: interaction.channelId,
+  };
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  try {
-    const response = await gaia.getWeather(location, "discord", userId);
-    const truncated = truncateMessage(response, "discord");
-    await interaction.editReply({ content: truncated });
-  } catch (error) {
-    await interaction.editReply({ content: formatBotError(error) });
-  }
+  const response = await handleWeather(gaia, location, ctx);
+  const truncated = truncateResponse(response, "discord");
+  await interaction.editReply({ content: truncated });
 }

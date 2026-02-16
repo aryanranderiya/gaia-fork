@@ -5,6 +5,7 @@ import { data as workflowCommand } from "./commands/workflow";
 import { data as todoCommand } from "./commands/todo";
 import { data as conversationCommand } from "./commands/conversation";
 import { data as weatherCommand } from "./commands/weather";
+import { data as newCommand } from "./commands/new";
 import { data as searchCommand } from "./commands/search";
 
 const commands = [
@@ -15,6 +16,7 @@ const commands = [
   conversationCommand.toJSON(),
   weatherCommand.toJSON(),
   searchCommand.toJSON(),
+  newCommand.toJSON(),
 ];
 
 const token = process.env.DISCORD_BOT_TOKEN;

@@ -1,14 +1,11 @@
 import type { Message } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
-import { truncateResponse, formatError } from "@gaia/shared";
+import {
+  handleStreamingChat,
+  STREAMING_DEFAULTS,
+  formatBotError,
+} from "@gaia/shared";
 
-/**
- * Handles messages where the bot is mentioned.
- * Treats these as public (unauthenticated) chat requests.
- *
- * @param {Message} message - The Discord message object.
- * @param {GaiaClient} gaia - The GAIA API client.
- */
 export async function handleMention(message: Message, gaia: GaiaClient) {
   const content = message.content.replace(/<@!?\d+>/g, "").trim();
 
@@ -18,19 +15,34 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
   }
 
   try {
-    if ('sendTyping' in message.channel) {
+    if ("sendTyping" in message.channel) {
       await message.channel.sendTyping();
     }
 
-    const response = await gaia.chatPublic({
-      message: content,
-      platform: "discord",
-      platformUserId: message.author.id
-    });
+    const reply = await message.reply("Thinking...");
 
-    const truncated = truncateResponse(response.response, "discord");
-    await message.reply(truncated);
+    await handleStreamingChat(
+      gaia,
+      {
+        message: content,
+        platform: "discord",
+        platformUserId: message.author.id,
+        channelId: message.channelId,
+      },
+      async (text) => {
+        await reply.edit(text);
+      },
+      async (authUrl) => {
+        await reply.edit(
+          `Please link your account first: ${authUrl}`,
+        );
+      },
+      async (errMsg) => {
+        await reply.edit(errMsg);
+      },
+      STREAMING_DEFAULTS.discord,
+    );
   } catch (error) {
-    await message.reply(formatError(error));
+    await message.reply(formatBotError(error));
   }
 }

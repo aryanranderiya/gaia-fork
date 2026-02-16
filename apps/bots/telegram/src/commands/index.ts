@@ -7,6 +7,7 @@ import { registerWorkflowCommand } from "./workflow";
 import { registerTodoCommand } from "./todo";
 import { registerConversationCommand } from "./conversation";
 import { registerWeatherCommand } from "./weather";
+import { registerNewCommand } from "./new";
 import { registerSearchCommand } from "./search";
 
 export function registerCommands(bot: Bot, gaia: GaiaClient) {
@@ -18,4 +19,5 @@ export function registerCommands(bot: Bot, gaia: GaiaClient) {
   registerConversationCommand(bot, gaia);
   registerWeatherCommand(bot, gaia);
   registerSearchCommand(bot, gaia);
+  registerNewCommand(bot, gaia);
 }

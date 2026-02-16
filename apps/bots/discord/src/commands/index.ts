@@ -12,6 +12,7 @@ import * as workflow from "./workflow";
 import * as todo from "./todo";
 import * as conversation from "./conversation";
 import * as weather from "./weather";
+import * as newCmd from "./new";
 import * as search from "./search";
 
 export interface Command {
@@ -34,5 +35,6 @@ export function registerCommands(): Collection<string, Command> {
   commands.set(conversation.data.name, conversation);
   commands.set(weather.data.name, weather);
   commands.set(search.data.name, search);
+  commands.set(newCmd.data.name, newCmd);
   return commands;
 }

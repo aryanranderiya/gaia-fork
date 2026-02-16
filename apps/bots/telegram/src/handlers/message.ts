@@ -1,6 +1,6 @@
 import type { Bot } from "grammy";
 import type { GaiaClient } from "@gaia/shared";
-import { truncateResponse, formatError } from "@gaia/shared";
+import { handleStreamingChat, STREAMING_DEFAULTS } from "@gaia/shared";
 
 export function registerMessageHandler(bot: Bot, gaia: GaiaClient) {
   bot.on("message:text", async (ctx) => {
@@ -12,36 +12,36 @@ export function registerMessageHandler(bot: Bot, gaia: GaiaClient) {
 
     const loading = await ctx.reply("Thinking...");
 
-    try {
-      const response = await gaia.chat({
+    await handleStreamingChat(
+      gaia,
+      {
         message: ctx.message.text,
         platform: "telegram",
         platformUserId: userId,
         channelId: ctx.chat.id.toString(),
-      });
-
-      if (!response.authenticated) {
-        const authUrl = gaia.getAuthUrl("telegram", userId);
+      },
+      async (text) => {
+        await ctx.api.editMessageText(
+          ctx.chat.id,
+          loading.message_id,
+          text,
+        );
+      },
+      async (authUrl) => {
         await ctx.api.editMessageText(
           ctx.chat.id,
           loading.message_id,
           `Please authenticate first: ${authUrl}`,
         );
-        return;
-      }
-
-      const truncated = truncateResponse(response.response, "telegram");
-      await ctx.api.editMessageText(
-        ctx.chat.id,
-        loading.message_id,
-        truncated,
-      );
-    } catch (error) {
-      await ctx.api.editMessageText(
-        ctx.chat.id,
-        loading.message_id,
-        formatError(error),
-      );
-    }
+      },
+      async (errMsg) => {
+        await ctx.api.editMessageText(
+          ctx.chat.id,
+          loading.message_id,
+          errMsg,
+        );
+      },
+      STREAMING_DEFAULTS.telegram,
+    );
   });
 }

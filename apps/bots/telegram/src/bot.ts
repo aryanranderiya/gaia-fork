@@ -19,7 +19,11 @@ export async function createBot() {
   }
 
   const bot = new Bot(token);
-  const gaia = new GaiaClient(config.gaiaApiUrl, config.gaiaApiKey);
+  const gaia = new GaiaClient(
+    config.gaiaApiUrl,
+    config.gaiaApiKey,
+    config.gaiaFrontendUrl,
+  );
 
   registerCommands(bot, gaia);
   registerHandlers(bot, gaia);

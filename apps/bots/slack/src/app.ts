@@ -28,7 +28,11 @@ export async function createApp() {
     appToken
   });
 
-  const gaia = new GaiaClient(config.gaiaApiUrl, config.gaiaApiKey);
+  const gaia = new GaiaClient(
+    config.gaiaApiUrl,
+    config.gaiaApiKey,
+    config.gaiaFrontendUrl,
+  );
 
   registerCommands(app, gaia);
   registerEvents(app, gaia);

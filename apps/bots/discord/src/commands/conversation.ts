@@ -4,11 +4,7 @@ import {
   MessageFlags,
 } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
-import {
-  formatConversationList,
-  formatBotError,
-  truncateMessage,
-} from "@gaia/shared";
+import { handleConversationList, truncateResponse } from "@gaia/shared";
 
 export const data = new SlashCommandBuilder()
   .setName("conversations")
@@ -29,20 +25,17 @@ export async function execute(
   interaction: ChatInputCommandInteraction,
   gaia: GaiaClient,
 ) {
+  const userId = interaction.user.id;
+  const ctx = {
+    platform: "discord" as const,
+    platformUserId: userId,
+    channelId: interaction.channelId,
+  };
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  try {
-    const page = interaction.options.getInteger("page") || 1;
-    const conversations = await gaia.listConversations({ page, limit: 5 });
-
-    const response = formatConversationList(
-      conversations.conversations,
-      gaia.getBaseUrl(),
-    );
-    const truncated = truncateMessage(response, "discord");
-
-    await interaction.editReply({ content: truncated });
-  } catch (error) {
-    await interaction.editReply({ content: formatBotError(error) });
-  }
+  const page = interaction.options.getInteger("page") || 1;
+  const response = await handleConversationList(gaia, ctx, page);
+  const truncated = truncateResponse(response, "discord");
+  await interaction.editReply({ content: truncated });
 }

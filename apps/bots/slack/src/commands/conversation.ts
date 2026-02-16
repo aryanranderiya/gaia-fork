@@ -1,29 +1,19 @@
 import type { App } from "@slack/bolt";
 import type { GaiaClient } from "@gaia/shared";
-import {
-  formatConversationList,
-  formatBotError,
-  truncateMessage,
-} from "@gaia/shared";
+import { handleConversationList, truncateResponse } from "@gaia/shared";
 
 export function registerConversationCommand(app: App, gaia: GaiaClient) {
   app.command("/conversations", async ({ command, ack, respond }) => {
     await ack();
 
-    try {
-      const conversations = await gaia.listConversations({ page: 1, limit: 5 });
-      const response = formatConversationList(
-        conversations.conversations,
-        gaia.getBaseUrl(),
-      );
-      const truncated = truncateMessage(response, "slack");
+    const ctx = {
+      platform: "slack" as const,
+      platformUserId: command.user_id,
+      channelId: command.channel_id,
+    };
 
-      await respond({ text: truncated, response_type: "ephemeral" });
-    } catch (error) {
-      await respond({
-        text: formatBotError(error),
-        response_type: "ephemeral",
-      });
-    }
+    const response = await handleConversationList(gaia, ctx);
+    const truncated = truncateResponse(response, "slack");
+    await respond({ text: truncated, response_type: "ephemeral" });
   });
 }

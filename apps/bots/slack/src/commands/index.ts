@@ -6,6 +6,7 @@ import { registerWorkflowCommand } from "./workflow";
 import { registerTodoCommand } from "./todo";
 import { registerConversationCommand } from "./conversation";
 import { registerWeatherCommand } from "./weather";
+import { registerNewCommand } from "./new";
 import { registerSearchCommand } from "./search";
 
 export function registerCommands(app: App, gaia: GaiaClient) {
@@ -16,4 +17,5 @@ export function registerCommands(app: App, gaia: GaiaClient) {
   registerConversationCommand(app, gaia);
   registerWeatherCommand(app, gaia);
   registerSearchCommand(app, gaia);
+  registerNewCommand(app, gaia);
 }

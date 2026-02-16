@@ -5,10 +5,11 @@ import {
 } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
 import {
-  formatWorkflowList,
-  formatWorkflow,
-  formatBotError,
-  truncateMessage,
+  handleWorkflowList,
+  handleWorkflowGet,
+  handleWorkflowCreate,
+  handleWorkflowExecute,
+  truncateResponse,
 } from "@gaia/shared";
 
 export const data = new SlashCommandBuilder()
@@ -62,49 +63,41 @@ export async function execute(
   gaia: GaiaClient,
 ) {
   const userId = interaction.user.id;
+  const ctx = {
+    platform: "discord" as const,
+    platformUserId: userId,
+    channelId: interaction.channelId,
+  };
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  try {
-    const subcommand = interaction.options.getSubcommand();
+  let response: string;
+  const subcommand = interaction.options.getSubcommand();
 
-    let response: string;
-
-    switch (subcommand) {
-      case "list": {
-        const workflows = await gaia.listWorkflows();
-        response = formatWorkflowList(workflows.workflows);
-        break;
-      }
-
-      case "get": {
-        const id = interaction.options.getString("id", true);
-        const workflow = await gaia.getWorkflow(id);
-        response = formatWorkflow(workflow);
-        break;
-      }
-
-      case "execute": {
-        const id = interaction.options.getString("id", true);
-        const result = await gaia.executeWorkflow({ workflow_id: id });
-        response = `✅ Workflow execution started!\nExecution ID: \`${result.execution_id}\`\nStatus: ${result.status}`;
-        break;
-      }
-
-      case "create": {
-        const name = interaction.options.getString("name", true);
-        const description = interaction.options.getString("description", true);
-        const workflow = await gaia.createWorkflow({ name, description });
-        response = `✅ Workflow created!\n\n${formatWorkflow(workflow)}`;
-        break;
-      }
-
-      default:
-        response = "Unknown subcommand";
+  switch (subcommand) {
+    case "list":
+      response = await handleWorkflowList(gaia, ctx);
+      break;
+    case "get": {
+      const id = interaction.options.getString("id", true);
+      response = await handleWorkflowGet(gaia, id, ctx);
+      break;
     }
-
-    const truncated = truncateMessage(response, "discord");
-    await interaction.editReply({ content: truncated });
-  } catch (error) {
-    await interaction.editReply({ content: formatBotError(error) });
+    case "execute": {
+      const id = interaction.options.getString("id", true);
+      response = await handleWorkflowExecute(gaia, id, ctx);
+      break;
+    }
+    case "create": {
+      const name = interaction.options.getString("name", true);
+      const description = interaction.options.getString("description", true);
+      response = await handleWorkflowCreate(gaia, name, ctx, description);
+      break;
+    }
+    default:
+      response = "Unknown subcommand";
   }
+
+  const truncated = truncateResponse(response, "discord");
+  await interaction.editReply({ content: truncated });
 }

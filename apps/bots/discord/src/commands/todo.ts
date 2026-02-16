@@ -5,10 +5,11 @@ import {
 } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
 import {
-  formatTodoList,
-  formatTodo,
-  formatBotError,
-  truncateMessage,
+  handleTodoList,
+  handleTodoCreate,
+  handleTodoComplete,
+  handleTodoDelete,
+  truncateResponse,
 } from "@gaia/shared";
 
 export const data = new SlashCommandBuilder()
@@ -68,54 +69,51 @@ export async function execute(
   interaction: ChatInputCommandInteraction,
   gaia: GaiaClient,
 ) {
+  const userId = interaction.user.id;
+  const ctx = {
+    platform: "discord" as const,
+    platformUserId: userId,
+    channelId: interaction.channelId,
+  };
+
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-  try {
-    const subcommand = interaction.options.getSubcommand();
-    let response: string;
+  let response: string;
+  const subcommand = interaction.options.getSubcommand();
 
-    switch (subcommand) {
-      case "list": {
-        const todos = await gaia.listTodos({ completed: false });
-        response = formatTodoList(todos.todos);
-        break;
-      }
-
-      case "add": {
-        const title = interaction.options.getString("title", true);
-        const priority = interaction.options.getString("priority") as
-          | "low"
-          | "medium"
-          | "high"
-          | undefined;
-        const description = interaction.options.getString("description") || undefined;
-
-        const todo = await gaia.createTodo({ title, priority, description });
-        response = `✅ Todo created!\n\n${formatTodo(todo)}`;
-        break;
-      }
-
-      case "complete": {
-        const id = interaction.options.getString("id", true);
-        const todo = await gaia.completeTodo(id);
-        response = `✅ Todo marked as complete: ${todo.title}`;
-        break;
-      }
-
-      case "delete": {
-        const id = interaction.options.getString("id", true);
-        await gaia.deleteTodo(id);
-        response = "✅ Todo deleted successfully";
-        break;
-      }
-
-      default:
-        response = "Unknown subcommand";
+  switch (subcommand) {
+    case "list":
+      response = await handleTodoList(gaia, ctx, false);
+      break;
+    case "add": {
+      const title = interaction.options.getString("title", true);
+      const priority = interaction.options.getString("priority") as
+        | "low"
+        | "medium"
+        | "high"
+        | undefined;
+      const description =
+        interaction.options.getString("description") || undefined;
+      response = await handleTodoCreate(gaia, title, ctx, {
+        priority,
+        description,
+      });
+      break;
     }
-
-    const truncated = truncateMessage(response, "discord");
-    await interaction.editReply({ content: truncated });
-  } catch (error) {
-    await interaction.editReply({ content: formatBotError(error) });
+    case "complete": {
+      const id = interaction.options.getString("id", true);
+      response = await handleTodoComplete(gaia, id, ctx);
+      break;
+    }
+    case "delete": {
+      const id = interaction.options.getString("id", true);
+      response = await handleTodoDelete(gaia, id, ctx);
+      break;
+    }
+    default:
+      response = "Unknown subcommand";
   }
+
+  const truncated = truncateResponse(response, "discord");
+  await interaction.editReply({ content: truncated });
 }

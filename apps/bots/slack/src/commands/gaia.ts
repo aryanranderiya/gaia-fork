@@ -1,16 +1,12 @@
 import type { GaiaClient } from "@gaia/shared";
-import { formatError, truncateResponse } from "@gaia/shared";
+import {
+  handleStreamingChat,
+  STREAMING_DEFAULTS,
+} from "@gaia/shared";
 import type { App } from "@slack/bolt";
 
-/**
- * Registers the /gaia slash command listener.
- * Handles authenticated chat with the GAIA agent.
- *
- * @param {App} app - The Slack App instance.
- * @param {GaiaClient} gaia - The GAIA API client.
- */
 export function registerGaiaCommand(app: App, gaia: GaiaClient) {
-  app.command("/gaia", async ({ command, ack, respond }) => {
+  app.command("/gaia", async ({ command, ack, client }) => {
     await ack();
 
     const userId = command.user_id;
@@ -18,40 +14,47 @@ export function registerGaiaCommand(app: App, gaia: GaiaClient) {
     const message = command.text;
 
     if (!message) {
-      await respond({
+      await client.chat.postEphemeral({
+        channel: channelId,
+        user: userId,
         text: "Please provide a message. Usage: /gaia <your message>",
-        response_type: "ephemeral",
       });
       return;
     }
 
-    try {
-      const response = await gaia.chat({
-        message,
-        platform: "slack",
-        platformUserId: userId,
-        channelId,
-      });
+    const result = await client.chat.postMessage({
+      channel: channelId,
+      text: "Thinking...",
+    });
 
-      if (!response.authenticated) {
-        const authUrl = gaia.getAuthUrl("slack", userId);
-        await respond({
-          text: `Please authenticate first: ${authUrl}`,
-          response_type: "ephemeral",
+    const ts = result.ts;
+    if (!ts) return;
+
+    await handleStreamingChat(
+      gaia,
+      { message, platform: "slack", platformUserId: userId, channelId },
+      async (text) => {
+        await client.chat.update({
+          channel: channelId,
+          ts,
+          text,
         });
-        return;
-      }
-
-      const truncated = truncateResponse(response.response, "slack");
-      await respond({
-        text: truncated,
-        response_type: "ephemeral",
-      });
-    } catch (error) {
-      await respond({
-        text: formatError(error),
-        response_type: "ephemeral",
-      });
-    }
+      },
+      async (authUrl) => {
+        await client.chat.update({
+          channel: channelId,
+          ts,
+          text: `Please authenticate first: ${authUrl}`,
+        });
+      },
+      async (errMsg) => {
+        await client.chat.update({
+          channel: channelId,
+          ts,
+          text: errMsg,
+        });
+      },
+      STREAMING_DEFAULTS.slack,
+    );
   });
 }
