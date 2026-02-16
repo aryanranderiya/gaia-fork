@@ -1,12 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import type { GaiaClient } from "@gaia/shared";
+import { formatBotError, GaiaApiError } from "@gaia/shared";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { MockApiServer } from "../setup/mock-api-server";
 import {
   createTestClient,
-  TEST_USER_ID,
   TEST_CTX,
+  TEST_USER_ID,
 } from "../setup/test-helpers";
-import type { GaiaClient } from "@gaia/shared";
-import { GaiaApiError, formatBotError } from "@gaia/shared";
 
 describe("Error Handling Chain E2E Tests", () => {
   let server: MockApiServer;
@@ -82,36 +82,40 @@ describe("Error Handling Chain E2E Tests", () => {
     });
   });
 
-  describe("getWeather() error propagation", () => {
-    it("should not double-wrap error messages from chatPublic()", async () => {
+  describe("GaiaApiError wrapping", () => {
+    it("should not double-wrap error messages from chat()", async () => {
       server.state.errorStatus = 500;
+      server.state.errorMessage = "Internal server error";
 
       try {
-        await client.getWeather("London", TEST_CTX);
+        await client.chat({
+          message: "Hi",
+          platform: "discord",
+          platformUserId: TEST_USER_ID,
+        });
         expect.fail("Should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(GaiaApiError);
-        const message = (error as GaiaApiError).message;
-
-        const matches = message.match(/API error/g);
-        const count = matches ? matches.length : 0;
-
-        // Fixed: GaiaApiError from chatPublic is re-thrown directly
-        // so there should be exactly 1 "API error" prefix, not 2
-        expect(count).toBe(1);
+        const msg = (error as GaiaApiError).message;
+        // Fixed: GaiaApiError is re-thrown directly
+        const apiErrorCount = (msg.match(/API error/g) || []).length;
+        expect(apiErrorCount).toBe(1);
       }
     });
 
-    it("should preserve status code from chatPublic error", async () => {
-      server.state.errorStatus = 401;
+    it("should preserve status code from chat error", async () => {
+      server.state.errorStatus = 503;
 
       try {
-        await client.getWeather("London", TEST_CTX);
+        await client.chat({
+          message: "Test",
+          platform: "slack",
+          platformUserId: "slack-1",
+        });
         expect.fail("Should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(GaiaApiError);
-        // Fixed: GaiaApiError is re-thrown directly, preserving status
-        expect((error as GaiaApiError).status).toBe(401);
+        expect((error as GaiaApiError).status).toBe(503);
       }
     });
   });

@@ -1,7 +1,6 @@
 import json
 from datetime import datetime, timezone
 from typing import Optional
-from uuid import uuid4
 
 from app.agents.core.agent import call_agent, call_agent_silent
 from app.config.loggers import chat_logger as logger
@@ -108,46 +107,6 @@ async def bot_chat(
     )
 
 
-@router.post(
-    "/chat/public",
-    response_model=BotChatResponse,
-    status_code=200,
-    summary="Public Bot Chat",
-    description="Process a public (unauthenticated) chat message.",
-)
-async def bot_chat_public(
-    request: BotChatRequest, _: None = Depends(verify_bot_api_key)
-) -> BotChatResponse:
-    conversation_id = str(uuid4())
-
-    bot_user = {
-        "user_id": f"bot_{request.platform}",
-        "email": f"bot@{request.platform}.gaia",
-        "name": "GAIA Bot",
-    }
-
-    message_request = MessageRequestWithHistory(
-        message=request.message,
-        conversation_id=conversation_id,
-        messages=[{"role": "user", "content": request.message}],
-    )
-
-    try:
-        response_text, _meta = await call_agent_silent(
-            request=message_request,
-            conversation_id=conversation_id,
-            user=bot_user,
-            user_time=datetime.now(timezone.utc),
-        )
-    except Exception as e:
-        logger.error(f"Bot public chat error: {e}")
-        response_text = "An error occurred while processing your request."
-
-    return BotChatResponse(
-        response=response_text, conversation_id=conversation_id, authenticated=False
-    )
-
-
 @router.get(
     "/session/{platform}/{platform_user_id}",
     response_model=SessionResponse,
@@ -161,9 +120,7 @@ async def get_session(
     channel_id: Optional[str] = None,
     _: None = Depends(verify_bot_api_key),
 ) -> SessionResponse:
-    user = await PlatformLinkService.get_user_by_platform_id(
-        platform, platform_user_id
-    )
+    user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not linked")
 
@@ -218,13 +175,12 @@ async def bot_chat_stream(
     )
 
     if not user:
+
         async def auth_required():
             yield f"data: {json.dumps({'error': 'not_authenticated'})}\n\n"
             yield "data: [DONE]\n\n"
 
-        return StreamingResponse(
-            auth_required(), media_type="text/event-stream"
-        )
+        return StreamingResponse(auth_required(), media_type="text/event-stream")
 
     conversation_id = await BotService.get_or_create_session(
         request.platform, request.platform_user_id, request.channel_id, user
@@ -253,14 +209,12 @@ async def bot_chat_stream(
 
             async for chunk in stream:
                 if chunk.startswith("nostream:"):
-                    payload = json.loads(chunk[len("nostream: "):])
-                    complete_message = payload.get(
-                        "complete_message", complete_message
-                    )
+                    payload = json.loads(chunk[len("nostream: ") :])
+                    complete_message = payload.get("complete_message", complete_message)
                     continue
 
                 if chunk.startswith("data: "):
-                    raw = chunk[len("data: "):].strip()
+                    raw = chunk[len("data: ") :].strip()
                     if raw == "[DONE]":
                         break
 
@@ -283,21 +237,15 @@ async def bot_chat_stream(
                 update_req = UpdateMessagesRequest(
                     conversation_id=conversation_id,
                     messages=[
-                        MessageModel(
-                            type="user", response=request.message, date=now
-                        ),
-                        MessageModel(
-                            type="bot", response=complete_message, date=now
-                        ),
+                        MessageModel(type="user", response=request.message, date=now),
+                        MessageModel(type="bot", response=complete_message, date=now),
                     ],
                 )
                 await update_messages(update_req, user)
             except Exception as e:
                 logger.error(f"Failed to save bot stream messages: {e}")
 
-    return StreamingResponse(
-        event_generator(), media_type="text/event-stream"
-    )
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.get(
@@ -312,9 +260,7 @@ async def check_auth_status(
     platform_user_id: str,
     _: None = Depends(verify_bot_api_key),
 ) -> BotAuthStatusResponse:
-    user = await PlatformLinkService.get_user_by_platform_id(
-        platform, platform_user_id
-    )
+    user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
     return BotAuthStatusResponse(
         authenticated=user is not None,
         platform=platform,

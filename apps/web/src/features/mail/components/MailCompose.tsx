@@ -150,9 +150,7 @@ export default function MailCompose({ open, onOpenChange }: MailComposeProps) {
                       >
                         <div className="flex flex-row gap-1">
                           <BrushIcon width={20} height={20} />
-                          <span className="font-medium">
-                            Writing Style:
-                          </span>{" "}
+                          <span className="font-medium">Writing Style:</span>{" "}
                           <span>
                             {
                               writingStyles.find((s) => s.id === writingStyle)
@@ -196,9 +194,7 @@ export default function MailCompose({ open, onOpenChange }: MailComposeProps) {
                       >
                         <div className="flex flex-row gap-1">
                           <BrushIcon width={20} height={20} />
-                          <span className="font-medium">
-                            Content Length:
-                          </span>{" "}
+                          <span className="font-medium">Content Length:</span>{" "}
                           <span>
                             {contentLengthOptions.find(
                               (opt) => opt.id === contentLength,

@@ -106,9 +106,7 @@ class PlatformLinkService:
 
         if existing:
             existing_id = (
-                str(existing.get("_id"))
-                if use_object_id
-                else existing.get("user_id")
+                str(existing.get("_id")) if use_object_id else existing.get("user_id")
             )
             if existing_id != user_id:
                 raise ValueError(

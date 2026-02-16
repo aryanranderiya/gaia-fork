@@ -157,42 +157,26 @@ run_vulture() {
     echo -e "  ${YELLOW}Found $count unused items across $file_count files${RESET}"
     TOTAL_DEAD_CODE=$((TOTAL_DEAD_CODE + count))
   else
-    # Summary only - just count by file
-    local file_counts=()
-    local current_file="" count_in_file=0
+    # Summary only - just count totals
+    local total=0
+    local file_count=0
+    local current_file=""
 
     while IFS= read -r line; do
       local file
       file=$(echo "$line" | cut -d: -f1)
 
       if [[ "$file" != "$current_file" ]]; then
-        if [[ -n "$current_file" ]]; then
-          file_counts+=("$current_file:$count_in_file")
-        fi
+        [[ -n "$current_file" ]] && file_count=$((file_count + 1))
         current_file="$file"
-        count_in_file=1
-      else
-        count_in_file=$((count_in_file + 1))
       fi
+      total=$((total + 1))
     done <<< "$raw_output"
 
-    # Add last file
-    if [[ -n "$current_file" ]]; then
-      file_counts+=("$current_file:$count_in_file")
-    fi
+    # Count last file
+    [[ -n "$current_file" ]] && file_count=$((file_count + 1))
 
-    # Print summary
-    local total=0
-    for entry in "${file_counts[@]}"; do
-      local file count
-      file=$(echo "$entry" | cut -d: -f1)
-      count=$(echo "$entry" | cut -d: -f2)
-      total=$((total + count))
-      echo -e "  ${DIM}$file${RESET}  ${YELLOW}($count items)${RESET}"
-    done
-
-    echo ""
-    echo -e "  ${YELLOW}Found $total unused items across ${#file_counts[@]} files${RESET}"
+    echo -e "  ${YELLOW}Found $total unused items across $file_count files${RESET}"
     echo -e "  ${DIM}Run with --verbose to see details${RESET}"
     TOTAL_DEAD_CODE=$((TOTAL_DEAD_CODE + total))
   fi

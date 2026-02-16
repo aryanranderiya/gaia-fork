@@ -13,7 +13,8 @@ import { TrackToggle } from "@/features/chat/components/voice-agent/track-toggle
 import { cn } from "@/lib/utils";
 
 export interface AgentControlBarProps
-  extends React.HTMLAttributes<HTMLDivElement>, UseAgentControlBarProps {
+  extends React.HTMLAttributes<HTMLDivElement>,
+    UseAgentControlBarProps {
   onChatOpenChange?: (open: boolean) => void;
   onDisconnect?: () => void;
   _onDeviceError?: (error: { source: Track.Source; error: Error }) => void;

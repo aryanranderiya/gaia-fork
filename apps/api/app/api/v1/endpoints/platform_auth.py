@@ -49,17 +49,18 @@ class PlatformOAuthConfig:
 PLATFORM_CONFIGS = {
     "discord": PlatformOAuthConfig(
         platform="discord",
-        token_url="https://discord.com/api/oauth2/token",
+        token_url="https://discord.com/api/oauth2/token",  # nosec B106 - OAuth token URL, not a password
         get_client_id=lambda: settings.DISCORD_OAUTH_CLIENT_ID,
         get_client_secret=lambda: settings.DISCORD_OAUTH_CLIENT_SECRET,
         get_redirect_uri=lambda: settings.DISCORD_OAUTH_REDIRECT_URI,
         user_info_url="https://discord.com/api/users/@me",
-        extract_user_id=lambda token_data, access_token: None,
+        extract_user_id=lambda token_data,
+        access_token: "",  # Discord uses user_info_url instead
         extra_token_headers={"Content-Type": "application/x-www-form-urlencoded"},
     ),
     "slack": PlatformOAuthConfig(
         platform="slack",
-        token_url="https://slack.com/api/oauth.v2.access",
+        token_url="https://slack.com/api/oauth.v2.access",  # nosec B106 - OAuth token URL, not a password
         get_client_id=lambda: settings.SLACK_OAUTH_CLIENT_ID,
         get_client_secret=lambda: settings.SLACK_OAUTH_CLIENT_SECRET,
         get_redirect_uri=lambda: settings.SLACK_OAUTH_REDIRECT_URI,
@@ -81,6 +82,8 @@ async def get_platform_links(
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = current_user.get("user_id")
+    if not isinstance(user_id, str):
+        raise ValueError("user_id must be a string")
     platform_links = await PlatformLinkService.get_linked_platforms(user_id)
 
     return GetPlatformLinksResponse(platform_links=platform_links)
@@ -100,6 +103,8 @@ async def link_platform(
         raise HTTPException(status_code=400, detail="Invalid platform")
 
     user_id = current_user.get("user_id")
+    if not isinstance(user_id, str):
+        raise ValueError("user_id must be a string")
     platform_user_id = body.platform_user_id
 
     try:
@@ -129,6 +134,8 @@ async def initiate_platform_connect(
         raise HTTPException(status_code=400, detail="Invalid platform")
 
     user_id = current_user.get("user_id")
+    if not isinstance(user_id, str):
+        raise ValueError("user_id must be a string")
 
     # Discord OAuth flow
     if platform == "discord" and settings.DISCORD_OAUTH_CLIENT_ID:
@@ -220,6 +227,8 @@ async def disconnect_platform(
         raise HTTPException(status_code=400, detail="Invalid platform")
 
     user_id = current_user.get("user_id")
+    if not isinstance(user_id, str):
+        raise ValueError("user_id must be a string")
 
     try:
         result = await PlatformLinkService.unlink_account(user_id, platform)

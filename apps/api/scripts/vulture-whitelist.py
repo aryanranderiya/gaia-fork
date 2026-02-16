@@ -1,6 +1,7 @@
 # Vulture whitelist — suppress known false positives
 # Add entries as: `variable_name  # noqa`
 # See: https://github.com/jendrikseipp/vulture#whitelisting
+# type: ignore  # mypy: vulture uses _ as a placeholder
 
 # FastAPI/Pydantic
 from pydantic import BaseModel  # noqa

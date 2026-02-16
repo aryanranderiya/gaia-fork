@@ -47,8 +47,9 @@ export default function UseCaseSection({
   );
 
   // Fetch user workflows if needed
-  const { workflows, isLoading: isLoadingWorkflows } =
-    useWorkflows(!hideUserWorkflows);
+  const { workflows, isLoading: isLoadingWorkflows } = useWorkflows(
+    !hideUserWorkflows,
+  );
 
   // Fetch explore workflows from centralized store (skip if provided via props)
   const { workflows: storeExploreWorkflows } = useExploreWorkflows(

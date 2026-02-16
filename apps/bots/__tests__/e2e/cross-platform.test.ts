@@ -1,20 +1,19 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import { MockApiServer } from "../setup/mock-api-server";
+import type { CommandContext, GaiaClient } from "@gaia/shared";
 import {
-  createTestClient,
-  TEST_USER_ID,
-  TEST_CHANNEL_ID,
-  TEST_FRONTEND_URL,
-} from "../setup/test-helpers";
-import type { GaiaClient, CommandContext } from "@gaia/shared";
-import {
-  truncateResponse,
-  formatBotError,
+  handleConversationList,
   handleSearch,
   handleTodoList,
   handleWorkflowList,
-  handleConversationList,
+  truncateResponse,
 } from "@gaia/shared";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { MockApiServer } from "../setup/mock-api-server";
+import {
+  createTestClient,
+  TEST_CHANNEL_ID,
+  TEST_FRONTEND_URL,
+  TEST_USER_ID,
+} from "../setup/test-helpers";
 
 describe("Cross-Platform Consistency Tests", () => {
   let server: MockApiServer;

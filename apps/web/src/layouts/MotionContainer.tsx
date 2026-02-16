@@ -5,8 +5,7 @@ import { useIntersectionObserver } from "@/hooks/ui/useIntersectionObserver";
 import { cn } from "@/lib/utils";
 
 interface AnimatedSectionProps
-  extends
-    MotionProps,
+  extends MotionProps,
     Omit<React.HTMLAttributes<HTMLDivElement>, keyof MotionProps> {
   children: React.ReactNode;
   staggerDelay?: number;

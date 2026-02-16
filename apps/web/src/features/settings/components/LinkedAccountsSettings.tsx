@@ -3,15 +3,14 @@
 import { Button } from "@heroui/button";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
-import { SettingsCard } from "@/features/settings/components/SettingsCard";
-import { SettingsOption } from "@/features/settings/components/SettingsOption";
 import {
   DiscordIcon,
   SlackIcon,
   TelegramIcon,
   WhatsappIcon,
 } from "@/components/shared/icons";
+import { SettingsCard } from "@/features/settings/components/SettingsCard";
+import { SettingsOption } from "@/features/settings/components/SettingsOption";
 import { api } from "@/lib/api";
 
 interface PlatformLink {

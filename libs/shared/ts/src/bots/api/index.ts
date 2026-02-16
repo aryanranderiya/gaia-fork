@@ -5,6 +5,7 @@ import type {
   BotUserContext,
   ChatRequest,
   ChatResponse,
+  CommandContext,
   Conversation,
   ConversationListResponse,
   CreateTodoRequest,
@@ -66,15 +67,18 @@ export class GaiaClient {
     const sessionKey = this.getSessionKey(ctx);
     const sessionToken = this.sessionTokens.get(sessionKey);
 
+    const headers: Record<string, string> = {
+      "X-Bot-Platform": ctx.platform,
+      "X-Bot-Platform-User-Id": ctx.platformUserId,
+    };
+
     if (sessionToken) {
-      return {
-        Authorization: `Bearer ${sessionToken}`,
-      };
+      headers.Authorization = `Bearer ${sessionToken}`;
+    } else {
+      headers["X-Bot-API-Key"] = this.apiKey;
     }
 
-    return {
-      "X-Bot-API-Key": this.apiKey,
-    };
+    return headers;
   }
 
   /**
@@ -170,30 +174,6 @@ export class GaiaClient {
         authenticated: data.authenticated,
       };
     }, ctx);
-  }
-
-  /**
-   * Sends a public (unauthenticated) chat message to the GAIA agent.
-   * This is used for public mentions where user identity is not strictly linked.
-   *
-   * @param request - The chat request containing message and platform details.
-   * @returns The agent's response.
-   * @throws Error if the API request fails.
-   */
-  async chatPublic(request: ChatRequest): Promise<ChatResponse> {
-    return this.request(async () => {
-      const { data } = await this.client.post("/api/v1/bot/chat/public", {
-        message: request.message,
-        platform: request.platform,
-        platform_user_id: request.platformUserId,
-      });
-
-      return {
-        response: data.response,
-        conversationId: data.conversation_id,
-        authenticated: false,
-      };
-    });
   }
 
   /**
@@ -388,6 +368,11 @@ export class GaiaClient {
 
       const { data } = await this.client.get(
         `/api/v1/bot/session/${platform}/${platformUserId}?${params.toString()}`,
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+          },
+        },
       );
       return {
         conversationId: data.conversation_id ?? data.conversationId,
@@ -412,6 +397,11 @@ export class GaiaClient {
     return this.request(async () => {
       const { data } = await this.client.get<AuthStatus>(
         `/api/v1/bot/auth-status/${platform}/${platformUserId}`,
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+          },
+        },
       );
       return data;
     });
@@ -638,15 +628,14 @@ export class GaiaClient {
    * Gets weather information for a location.
    * This uses the agent's weather tool via a chat request.
    */
-  async getWeather(location: string, ctx: BotUserContext): Promise<string> {
-    return this.request(async () => {
-      const response = await this.chatPublic({
-        message: `What's the weather in ${location}?`,
-        platform: ctx.platform,
-        platformUserId: ctx.platformUserId,
-      });
-      return response.response;
+  async getWeather(location: string, ctx: CommandContext): Promise<string> {
+    const response = await this.chat({
+      message: `What's the weather in ${location}?`,
+      platform: ctx.platform,
+      platformUserId: ctx.platformUserId,
+      channelId: ctx.channelId,
     });
+    return response.response;
   }
 
   /**
@@ -695,11 +684,19 @@ export class GaiaClient {
     channelId?: string,
   ): Promise<SessionInfo> {
     return this.request(async () => {
-      const { data } = await this.client.post("/api/v1/bot/session/new", {
-        platform,
-        platform_user_id: platformUserId,
-        channel_id: channelId,
-      });
+      const { data } = await this.client.post(
+        "/api/v1/bot/session/new",
+        {
+          platform,
+          platform_user_id: platformUserId,
+          channel_id: channelId,
+        },
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+          },
+        },
+      );
       return {
         conversationId: data.conversation_id ?? data.conversationId,
         platform: data.platform,

@@ -261,8 +261,9 @@ async function getPersonaPages(
   baseUrl: string,
 ): Promise<MetadataRoute.Sitemap> {
   try {
-    const { getAllPersonaSlugs } =
-      await import("@/features/personas/data/personasData");
+    const { getAllPersonaSlugs } = await import(
+      "@/features/personas/data/personasData"
+    );
     const slugs = getAllPersonaSlugs();
     return slugs.map((slug) => ({
       url: `${baseUrl}/for/${slug}`,

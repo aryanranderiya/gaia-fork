@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
+from app.config.loggers import chat_logger as logger
 from app.db.mongodb.collections import bot_sessions_collection, conversations_collection
 from app.db.redis import redis_cache
 from app.models.chat_models import ConversationModel
@@ -46,8 +47,15 @@ class BotService:
                     )
         except HTTPException:
             raise
-        except Exception:
-            pass  # Fail open if Redis is unavailable
+        except Exception as e:
+            # Intentional fail-open behavior: if Redis is unavailable, allow the request
+            # to proceed without rate limiting to maintain service availability. This is
+            # acceptable because bot rate limiting is a nice-to-have feature that should
+            # not block legitimate users when infrastructure is degraded.
+            logger.warning(
+                f"Rate limit check failed for {platform}:{platform_user_id}, "
+                f"failing open: {e!r}"
+            )
 
     @staticmethod
     def build_session_key(

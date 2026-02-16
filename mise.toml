@@ -42,16 +42,16 @@ experimental_monorepo_root = true
 #   - Local tasks (cd apps/api && mise dev) = when working in one app
 #
 
-[monorepo]
-config_roots = [
-    "apps/api",
-    "apps/web",
-    "apps/desktop",
-    "apps/mobile",
-    "apps/docs",
-    "apps/voice-agent",
-    "apps/bots/*",
-]
+# [monorepo]
+# config_roots = [
+#     "apps/api",
+#     "apps/web",
+#     "apps/desktop",
+#     "apps/mobile",
+#     "apps/docs",
+#     "apps/voice-agent",
+#     "apps/bots/*",
+# ]
 
 # ─────────────────────────────────────────────────────────────────────────────
 # TOOLS & ENVIRONMENT

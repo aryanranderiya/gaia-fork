@@ -11,9 +11,7 @@ from pydantic import BaseModel, Field
 class LinkPlatformRequest(BaseModel):
     """Request model for linking a platform account."""
 
-    platform_user_id: str = Field(
-        ..., description="User's ID on the platform to link"
-    )
+    platform_user_id: str = Field(..., description="User's ID on the platform to link")
 
 
 class PlatformLinkInfo(BaseModel):
@@ -71,9 +69,7 @@ class InitiatePlatformConnectResponse(BaseModel):
     auth_url: Optional[str] = Field(
         None, description="OAuth authorization URL (if OAuth configured)"
     )
-    auth_type: str = Field(
-        ..., description="Authentication type ('oauth' or 'manual')"
-    )
+    auth_type: str = Field(..., description="Authentication type ('oauth' or 'manual')")
     instructions: Optional[str] = Field(
         None, description="Manual linking instructions (if manual auth)"
     )

@@ -1,33 +1,33 @@
+import type { GaiaClient } from "@gaia/shared";
 import {
-  describe,
-  it,
-  expect,
-  beforeAll,
   afterAll,
+  beforeAll,
   beforeEach,
+  describe,
+  expect,
+  it,
   vi,
 } from "vitest";
-import { MockApiServer } from "../setup/mock-api-server";
-import {
-  createTestClient,
-  createMockDiscordInteraction,
-  createMockDiscordMessage,
-  TEST_USER_ID,
-  TEST_CHANNEL_ID,
-  TEST_FRONTEND_URL,
-} from "../setup/test-helpers";
-import type { GaiaClient } from "@gaia/shared";
+import { execute as executeAuth } from "../../discord/src/commands/auth";
+import { execute as executeConversation } from "../../discord/src/commands/conversation";
 
 // Import the actual command handlers and event handlers
 import { execute as executeGaia } from "../../discord/src/commands/gaia";
-import { execute as executeTodo } from "../../discord/src/commands/todo";
 import { execute as executeNew } from "../../discord/src/commands/new";
-import { execute as executeAuth } from "../../discord/src/commands/auth";
 import { execute as executeSearch } from "../../discord/src/commands/search";
+import { execute as executeTodo } from "../../discord/src/commands/todo";
 import { execute as executeWeather } from "../../discord/src/commands/weather";
-import { execute as executeConversation } from "../../discord/src/commands/conversation";
 import { execute as executeWorkflow } from "../../discord/src/commands/workflow";
 import { handleMention } from "../../discord/src/events/mention";
+import { MockApiServer } from "../setup/mock-api-server";
+import {
+  createMockDiscordInteraction,
+  createMockDiscordMessage,
+  createTestClient,
+  TEST_CHANNEL_ID,
+  TEST_FRONTEND_URL,
+  TEST_USER_ID,
+} from "../setup/test-helpers";
 
 describe("Discord Bot E2E Tests", () => {
   let server: MockApiServer;
@@ -459,6 +459,7 @@ describe("Discord Bot E2E Tests", () => {
       const lastEdit = interaction._edits[interaction._edits.length - 1] as {
         content: string;
       };
+      // Weather now uses authenticated chat endpoint, will return normal response
       expect(lastEdit.content).toContain("Hello from GAIA!");
     });
   });

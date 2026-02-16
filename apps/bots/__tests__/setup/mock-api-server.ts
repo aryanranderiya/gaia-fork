@@ -131,7 +131,7 @@ function defaultState(): MockApiState {
     errorStatus: null,
     errorMessage: null,
     streamDelayMs: 0,
-    apiKey: "test-api-key",
+    apiKey: "test-api-key", // pragma: allowlist secret
   };
 }
 
@@ -199,12 +199,21 @@ export class MockApiServer {
     };
     this.state.requests.push(recorded);
 
-    // Check API key
-    const apiKey = req.headers["x-bot-api-key"];
-    if (apiKey !== this.state.apiKey) {
-      res.writeHead(401, { "Content-Type": "application/json" });
-      res.end(JSON.stringify({ detail: "Invalid API key" }));
-      return;
+    // Check API key (skip for public endpoints)
+    const publicEndpoints = [
+      "/api/v1/bot/session/",
+      "/api/v1/bot/auth-status/",
+      "/api/v1/bot/session/new",
+    ];
+    const isPublicEndpoint = publicEndpoints.some((path) => url.includes(path));
+
+    if (!isPublicEndpoint) {
+      const apiKey = req.headers["x-bot-api-key"];
+      if (apiKey !== this.state.apiKey) {
+        res.writeHead(401, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ detail: "Invalid API key" }));
+        return;
+      }
     }
 
     // Check if error should be returned
@@ -222,8 +231,6 @@ export class MockApiServer {
     try {
       if (method === "POST" && url === "/api/v1/bot/chat") {
         this.handleChat(res);
-      } else if (method === "POST" && url === "/api/v1/bot/chat/public") {
-        this.handleChatPublic(res);
       } else if (method === "POST" && url === "/api/v1/bot/chat-stream") {
         await this.handleChatStream(res);
       } else if (method === "GET" && url.startsWith("/api/v1/bot/session/")) {
@@ -282,13 +289,6 @@ export class MockApiServer {
   private handleChat(res: http.ServerResponse): void {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(this.state.chatResponse));
-  }
-
-  private handleChatPublic(res: http.ServerResponse): void {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({ ...this.state.chatResponse, authenticated: false }),
-    );
   }
 
   private async handleChatStream(res: http.ServerResponse): Promise<void> {
@@ -469,6 +469,7 @@ export class MockApiServer {
     return new Promise((resolve) => {
       const chunks: Buffer[] = [];
       req.on("data", (chunk: Buffer) => chunks.push(chunk));
+      req.on("error", async (_err: Error) => {}); // Added error handler
       req.on("end", () => {
         const raw = Buffer.concat(chunks).toString();
         if (!raw) {

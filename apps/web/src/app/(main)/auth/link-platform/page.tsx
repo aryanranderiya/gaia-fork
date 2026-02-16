@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 

@@ -1,9 +1,8 @@
-import { MockApiServer } from "./mock-api-server";
+import type { BotUserContext, CommandContext } from "@gaia/shared";
 import { GaiaClient } from "@gaia/shared";
-import type { BotUserContext } from "@gaia/shared";
-import type { CommandContext } from "@gaia/shared";
+import type { MockApiServer } from "./mock-api-server";
 
-export const TEST_API_KEY = "test-api-key";
+export const TEST_API_KEY = "test-api-key"; // pragma: allowlist secret
 export const TEST_FRONTEND_URL = "http://localhost:3000";
 export const TEST_USER_ID = "user-123";
 export const TEST_CHANNEL_ID = "channel-456";

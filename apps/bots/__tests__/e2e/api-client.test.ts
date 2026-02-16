@@ -1,14 +1,14 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
-import { MockApiServer } from "../setup/mock-api-server";
-import { GaiaClient, GaiaApiError } from "@gaia/shared";
 import type { BotUserContext } from "@gaia/shared";
+import { GaiaApiError, GaiaClient } from "@gaia/shared";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { MockApiServer } from "../setup/mock-api-server";
 import {
+  createTestClient,
   TEST_API_KEY,
-  TEST_FRONTEND_URL,
-  TEST_USER_ID,
   TEST_CHANNEL_ID,
   TEST_CTX,
-  createTestClient,
+  TEST_FRONTEND_URL,
+  TEST_USER_ID,
 } from "../setup/test-helpers";
 
 describe("GaiaClient E2E", () => {
@@ -161,49 +161,6 @@ describe("GaiaClient E2E", () => {
       const req = server.getLastRequest();
       const body = req?.body as Record<string, unknown>;
       expect(body.channel_id).toBeUndefined();
-    });
-  });
-
-  describe("chatPublic()", () => {
-    it("should call the public endpoint", async () => {
-      await client.chatPublic({
-        message: "Hello",
-        platform: "discord",
-        platformUserId: TEST_USER_ID,
-      });
-
-      const req = server.getLastRequest();
-      expect(req?.url).toBe("/api/v1/bot/chat/public");
-    });
-
-    it("should always return authenticated: false regardless of server response", async () => {
-      server.state.chatResponse = {
-        response: "Hi",
-        conversation_id: "conv-1",
-        authenticated: true,
-      };
-
-      const result = await client.chatPublic({
-        message: "Hello",
-        platform: "discord",
-        platformUserId: TEST_USER_ID,
-      });
-
-      // chatPublic hardcodes authenticated: false - intentional for public endpoints
-      expect(result.authenticated).toBe(false);
-    });
-
-    it("should not send channel_id in public chat request", async () => {
-      await client.chatPublic({
-        message: "Hello",
-        platform: "discord",
-        platformUserId: TEST_USER_ID,
-        channelId: TEST_CHANNEL_ID,
-      });
-
-      const req = server.getLastRequest();
-      const body = req?.body as Record<string, unknown>;
-      expect(body).not.toHaveProperty("channel_id");
     });
   });
 
@@ -497,7 +454,7 @@ describe("GaiaClient E2E", () => {
   });
 
   describe("Weather", () => {
-    it("should delegate to chatPublic() with weather message", async () => {
+    it("should delegate to chat() with weather message", async () => {
       const result = await client.getWeather("London", TEST_CTX);
 
       const req = server.getLastRequest();
@@ -508,14 +465,14 @@ describe("GaiaClient E2E", () => {
       expect(result).toBe("Hello from GAIA!");
     });
 
-    it("should use the /chat/public endpoint for weather", async () => {
+    it("should use the /chat endpoint for weather", async () => {
       await client.getWeather("London", TEST_CTX);
 
       const req = server.getLastRequest();
-      expect(req?.url).toBe("/api/v1/bot/chat/public");
+      expect(req?.url).toBe("/api/v1/bot/chat");
     });
 
-    it("should preserve GaiaApiError from chatPublic() without re-wrapping", async () => {
+    it("should preserve GaiaApiError from chat() without re-wrapping", async () => {
       server.state.errorStatus = 500;
 
       try {
