@@ -102,6 +102,7 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
         return StreamingResponse(auth_required(), media_type="text/event-stream")
 
     user_id = user.get("user_id") or str(user.get("_id", ""))
+    user["user_id"] = user_id  # Ensure user_id is always set in the dict
 
     conversation_id = await BotService.get_or_create_session(
         body.platform, body.platform_user_id, body.channel_id, user
@@ -231,6 +232,7 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
 
     if user:
         user_id = user.get("user_id") or str(user.get("_id", ""))
+        user["user_id"] = user_id  # Ensure user_id is always set in the dict
         conversation_id = await BotService.get_or_create_session(
             body.platform, body.platform_user_id, body.channel_id, user
         )
@@ -356,6 +358,9 @@ async def reset_session(request: Request, body: ResetSessionRequest) -> dict:
     if not user:
         raise HTTPException(status_code=401, detail="User not authenticated")
 
+    user_id = user.get("user_id") or str(user.get("_id", ""))
+    user["user_id"] = user_id  # Ensure user_id is always set in the dict
+
     new_conversation_id = await BotService.reset_session(
         body.platform, body.platform_user_id, body.channel_id, user
     )
@@ -410,6 +415,7 @@ async def get_settings(
         )
 
     user_id = user.get("user_id") or str(user.get("_id", ""))
+    user["user_id"] = user_id  # Ensure user_id is always set in the dict
 
     connected_integrations_list = []
     try:
