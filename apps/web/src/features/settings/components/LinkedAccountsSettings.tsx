@@ -6,7 +6,12 @@ import { toast } from "sonner";
 
 import { SettingsCard } from "@/features/settings/components/SettingsCard";
 import { SettingsOption } from "@/features/settings/components/SettingsOption";
-import { DiscordIcon, SlackIcon, TelegramIcon, WhatsappIcon } from "@/icons";
+import {
+  DiscordIcon,
+  SlackIcon,
+  TelegramIcon,
+  WhatsappIcon,
+} from "@/components/shared/icons";
 import { api } from "@/lib/api";
 
 interface PlatformLink {
@@ -111,6 +116,9 @@ export default function LinkedAccountsSettings() {
             setConnectingPlatform(null);
           }
         }, 500);
+      } else if (response.instructions) {
+        toast.info(response.instructions, { duration: 8000 });
+        setConnectingPlatform(null);
       }
     } catch (error) {
       console.error(`Failed to connect ${platformId}:`, error);
