@@ -4,198 +4,368 @@ Platform Authentication Endpoints
 Simple endpoints for managing user platform account links (Discord, Slack, Telegram, WhatsApp).
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from typing import Callable, Optional
 
+import httpx
 from app.api.v1.middleware.auth import get_current_user
+from app.config.loggers import app_logger as logger
 from app.config.settings import settings
-from app.db.mongodb.collections import users_collection
+from app.models.platform_models import (
+    DisconnectPlatformResponse,
+    GetPlatformLinksResponse,
+    InitiatePlatformConnectResponse,
+    LinkPlatformRequest,
+    LinkPlatformResponse,
+)
+from app.services.platform_link_service import Platform, PlatformLinkService
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi.responses import RedirectResponse
+
+
+class PlatformOAuthConfig:
+    """Configuration for platform-specific OAuth flows."""
+
+    def __init__(
+        self,
+        platform: str,
+        token_url: str,
+        get_client_id: Callable[[], Optional[str]],
+        get_client_secret: Callable[[], Optional[str]],
+        get_redirect_uri: Callable[[], str],
+        extract_user_id: Callable[[dict, Optional[str]], str],
+        user_info_url: Optional[str] = None,
+        extra_token_headers: Optional[dict] = None,
+    ):
+        self.platform = platform
+        self.token_url = token_url
+        self.get_client_id = get_client_id
+        self.get_client_secret = get_client_secret
+        self.get_redirect_uri = get_redirect_uri
+        self.extract_user_id = extract_user_id
+        self.user_info_url = user_info_url
+        self.extra_token_headers = extra_token_headers or {}
+
+
+PLATFORM_CONFIGS = {
+    "discord": PlatformOAuthConfig(
+        platform="discord",
+        token_url="https://discord.com/api/oauth2/token",
+        get_client_id=lambda: settings.DISCORD_OAUTH_CLIENT_ID,
+        get_client_secret=lambda: settings.DISCORD_OAUTH_CLIENT_SECRET,
+        get_redirect_uri=lambda: settings.DISCORD_OAUTH_REDIRECT_URI,
+        user_info_url="https://discord.com/api/users/@me",
+        extract_user_id=lambda token_data, access_token: None,
+        extra_token_headers={"Content-Type": "application/x-www-form-urlencoded"},
+    ),
+    "slack": PlatformOAuthConfig(
+        platform="slack",
+        token_url="https://slack.com/api/oauth.v2.access",
+        get_client_id=lambda: settings.SLACK_OAUTH_CLIENT_ID,
+        get_client_secret=lambda: settings.SLACK_OAUTH_CLIENT_SECRET,
+        get_redirect_uri=lambda: settings.SLACK_OAUTH_REDIRECT_URI,
+        extract_user_id=lambda token_data, access_token: token_data["authed_user"][
+            "id"
+        ],
+    ),
+}
 
 router = APIRouter()
 
 
-class LinkPlatformRequest(BaseModel):
-    platform_user_id: str
-
-
-@router.get("/user/platform-links")
+@router.get("/user/platform-links", response_model=GetPlatformLinksResponse)
 async def get_platform_links(
     current_user: Optional[dict] = Depends(get_current_user),
-):
+) -> GetPlatformLinksResponse:
     """Get user's connected platform accounts."""
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     user_id = current_user.get("user_id")
-    user = await users_collection.find_one({"user_id": user_id})
+    platform_links = await PlatformLinkService.get_linked_platforms(user_id)
 
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    platform_links = user.get("platform_links", {})
-
-    return {
-        "platform_links": {
-            "discord": {
-                "platform": "discord",
-                "platformUserId": platform_links.get("discord"),
-                "connectedAt": user.get("platform_links_connected_at", {}).get(
-                    "discord"
-                ),
-            }
-            if platform_links.get("discord")
-            else None,
-            "slack": {
-                "platform": "slack",
-                "platformUserId": platform_links.get("slack"),
-                "connectedAt": user.get("platform_links_connected_at", {}).get("slack"),
-            }
-            if platform_links.get("slack")
-            else None,
-            "telegram": {
-                "platform": "telegram",
-                "platformUserId": platform_links.get("telegram"),
-                "connectedAt": user.get("platform_links_connected_at", {}).get(
-                    "telegram"
-                ),
-            }
-            if platform_links.get("telegram")
-            else None,
-            "whatsapp": {
-                "platform": "whatsapp",
-                "platformUserId": platform_links.get("whatsapp"),
-                "connectedAt": user.get("platform_links_connected_at", {}).get(
-                    "whatsapp"
-                ),
-            }
-            if platform_links.get("whatsapp")
-            else None,
-        }
-    }
+    return GetPlatformLinksResponse(platform_links=platform_links)
 
 
-@router.post("/{platform}/link")
+@router.post("/{platform}/link", response_model=LinkPlatformResponse)
 async def link_platform(
     platform: str,
     body: LinkPlatformRequest,
     current_user: Optional[dict] = Depends(get_current_user),
-):
+) -> LinkPlatformResponse:
     """Link a platform account to the authenticated GAIA user."""
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    if platform not in ["discord", "slack", "telegram", "whatsapp"]:
+    if not Platform.is_valid(platform):
         raise HTTPException(status_code=400, detail="Invalid platform")
 
     user_id = current_user.get("user_id")
     platform_user_id = body.platform_user_id
 
-    # Check if this platform ID is already linked to another user
-    existing = await users_collection.find_one(
-        {f"platform_links.{platform}": platform_user_id}
-    )
-    if existing and existing.get("user_id") != user_id:
-        raise HTTPException(
-            status_code=409,
-            detail=f"This {platform} account is already linked to another GAIA user",
+    try:
+        result = await PlatformLinkService.link_account(
+            user_id, platform, platform_user_id
         )
-
-    # Check if this user already has a different ID linked for this platform
-    user = await users_collection.find_one({"user_id": user_id})
-    if user:
-        current_link = user.get("platform_links", {}).get(platform)
-        if current_link and current_link != platform_user_id:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Your account already has a different {platform} account linked",
-            )
-
-    now = datetime.now(timezone.utc).isoformat()
-    await users_collection.update_one(
-        {"user_id": user_id},
-        {
-            "$set": {
-                f"platform_links.{platform}": platform_user_id,
-                f"platform_links_connected_at.{platform}": now,
-            }
-        },
-    )
-
-    return {"status": "linked", "platform": platform}
+        return LinkPlatformResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
 
 
-@router.post("/{platform}/connect")
+@router.post("/{platform}/connect", response_model=InitiatePlatformConnectResponse)
 async def initiate_platform_connect(
     platform: str,
     current_user: Optional[dict] = Depends(get_current_user),
-):
-    """Initiate connection for a platform."""
+) -> InitiatePlatformConnectResponse:
+    """Initiate platform connection via OAuth or manual instructions.
+
+    Returns:
+        - OAuth URL if credentials configured
+        - Manual instructions if OAuth not configured
+    """
     if not current_user:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
-    if platform not in ["discord", "slack", "telegram", "whatsapp"]:
-        raise HTTPException(status_code=400, detail="Invalid platform")
-
-    # For now, return instructions for manual setup
-    # TODO: Implement proper OAuth flows when bot credentials are configured
-    if platform == "telegram":
-        return {
-            "auth_url": None,
-            "auth_type": "manual",
-            "instructions": f"Open Telegram and message @{getattr(settings, 'TELEGRAM_BOT_USERNAME', 'gaia_bot')} with /start to link your account.",
-        }
-
-    if platform == "discord":
-        return {
-            "auth_url": None,
-            "auth_type": "manual",
-            "instructions": "Add the GAIA bot to your Discord server and use /gaia to link your account.",
-        }
-
-    if platform == "slack":
-        return {
-            "auth_url": None,
-            "auth_type": "manual",
-            "instructions": "Add the GAIA app to your Slack workspace and use /gaia to link your account.",
-        }
-
-    if platform == "whatsapp":
-        return {
-            "auth_url": None,
-            "auth_type": "manual",
-            "instructions": "WhatsApp integration coming soon.",
-        }
-
-    raise HTTPException(status_code=501, detail=f"{platform} not yet implemented")
-
-
-@router.delete("/{platform}/disconnect")
-async def disconnect_platform(
-    platform: str,
-    current_user: Optional[dict] = Depends(get_current_user),
-):
-    """Disconnect a platform from user account."""
-    if not current_user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-
-    if platform not in ["discord", "slack", "telegram", "whatsapp"]:
+    if not Platform.is_valid(platform):
         raise HTTPException(status_code=400, detail="Invalid platform")
 
     user_id = current_user.get("user_id")
 
-    result = await users_collection.update_one(
-        {"user_id": user_id},
-        {
-            "$unset": {
-                f"platform_links.{platform}": "",
-                f"platform_links_connected_at.{platform}": "",
-            }
-        },
+    # Discord OAuth flow
+    if platform == "discord" and settings.DISCORD_OAUTH_CLIENT_ID:
+        from urllib.parse import quote
+
+        from app.services.oauth.oauth_state_service import create_oauth_state
+
+        state = await create_oauth_state(
+            user_id=user_id,
+            redirect_path="/settings/linked-accounts",
+            integration_id="discord",
+        )
+
+        auth_url = (
+            f"https://discord.com/api/oauth2/authorize"
+            f"?client_id={settings.DISCORD_OAUTH_CLIENT_ID}"
+            f"&redirect_uri={quote(settings.DISCORD_OAUTH_REDIRECT_URI)}"
+            f"&response_type=code"
+            f"&scope=identify"
+            f"&state={state}"
+        )
+        return InitiatePlatformConnectResponse(auth_url=auth_url, auth_type="oauth")
+
+    # Slack OAuth flow
+    if platform == "slack" and settings.SLACK_OAUTH_CLIENT_ID:
+        from urllib.parse import quote
+
+        from app.services.oauth.oauth_state_service import create_oauth_state
+
+        state = await create_oauth_state(
+            user_id=user_id,
+            redirect_path="/settings/linked-accounts",
+            integration_id="slack",
+        )
+
+        auth_url = (
+            f"https://slack.com/oauth/v2/authorize"
+            f"?client_id={settings.SLACK_OAUTH_CLIENT_ID}"
+            f"&redirect_uri={quote(settings.SLACK_OAUTH_REDIRECT_URI)}"
+            f"&scope=users:read"
+            f"&state={state}"
+        )
+        return InitiatePlatformConnectResponse(auth_url=auth_url, auth_type="oauth")
+
+    # Telegram manual flow (no OAuth)
+    if platform == "telegram":
+        bot_username = settings.TELEGRAM_BOT_USERNAME or "gaia_bot"
+        return InitiatePlatformConnectResponse(
+            auth_url=None,
+            auth_type="manual",
+            instructions=f"Open Telegram and message @{bot_username} with /start to link your account.",
+        )
+
+    # Fallback: manual instructions for Discord/Slack without OAuth
+    if platform == "discord":
+        return InitiatePlatformConnectResponse(
+            auth_url=None,
+            auth_type="manual",
+            instructions="Add the GAIA bot to your Discord server and use /auth to link your account.",
+        )
+
+    if platform == "slack":
+        return InitiatePlatformConnectResponse(
+            auth_url=None,
+            auth_type="manual",
+            instructions="Add the GAIA app to your Slack workspace and use /auth to link your account.",
+        )
+
+    if platform == "whatsapp":
+        return InitiatePlatformConnectResponse(
+            auth_url=None,
+            auth_type="manual",
+            instructions="WhatsApp integration coming soon.",
+        )
+
+    raise HTTPException(status_code=501, detail=f"{platform} not yet implemented")
+
+
+@router.delete("/{platform}/disconnect", response_model=DisconnectPlatformResponse)
+async def disconnect_platform(
+    platform: str,
+    current_user: Optional[dict] = Depends(get_current_user),
+) -> DisconnectPlatformResponse:
+    """Disconnect a platform from user account."""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    if not Platform.is_valid(platform):
+        raise HTTPException(status_code=400, detail="Invalid platform")
+
+    user_id = current_user.get("user_id")
+
+    try:
+        result = await PlatformLinkService.unlink_account(user_id, platform)
+        return DisconnectPlatformResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+async def _handle_platform_oauth_callback(
+    code: Optional[str],
+    state: Optional[str],
+    error: Optional[str],
+    config: PlatformOAuthConfig,
+) -> RedirectResponse:
+    """Generic OAuth callback handler for all platforms."""
+    from app.services.oauth.oauth_state_service import validate_and_consume_oauth_state
+
+    # Handle OAuth denial
+    if error:
+        error_type = "cancelled" if error == "access_denied" else "failed"
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/settings/linked-accounts?oauth_error={error_type}"
+        )
+
+    # Validate required params
+    if not code or not state:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/settings/linked-accounts?oauth_error=missing_params"
+        )
+
+    # Validate state token
+    state_data = await validate_and_consume_oauth_state(state)
+    if not state_data:
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}/settings/linked-accounts?oauth_error=invalid_state"
+        )
+
+    user_id = state_data["user_id"]
+    redirect_path = state_data["redirect_path"]
+
+    try:
+        # Exchange authorization code for access token
+        async with httpx.AsyncClient() as client:
+            token_response = await client.post(
+                config.token_url,
+                data={
+                    "client_id": config.get_client_id(),
+                    "client_secret": config.get_client_secret(),
+                    "code": code,
+                    "redirect_uri": config.get_redirect_uri(),
+                    "grant_type": "authorization_code",
+                },
+                headers=config.extra_token_headers,
+            )
+
+            if token_response.status_code != 200:
+                logger.error(
+                    f"{config.platform} token exchange failed: {token_response.text}"
+                )
+                return RedirectResponse(
+                    url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_error=token_failed"
+                )
+
+            token_data = token_response.json()
+
+            # Slack-specific error handling
+            if config.platform == "slack" and not token_data.get("ok"):
+                logger.error(f"Slack OAuth failed: {token_data.get('error')}")
+                return RedirectResponse(
+                    url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_error=token_failed"
+                )
+
+            access_token = token_data.get("access_token")
+
+        # Get platform user ID (either from token response or separate API call)
+        if config.user_info_url and access_token:
+            async with httpx.AsyncClient() as client:
+                user_response = await client.get(
+                    config.user_info_url,
+                    headers={"Authorization": f"Bearer {access_token}"},
+                )
+
+                if user_response.status_code != 200:
+                    logger.error(
+                        f"{config.platform} user fetch failed: {user_response.text}"
+                    )
+                    return RedirectResponse(
+                        url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_error=user_fetch_failed"
+                    )
+
+                user_data = user_response.json()
+                platform_user_id = user_data["id"]
+        else:
+            platform_user_id = config.extract_user_id(token_data, access_token)
+
+        # Link platform account to current user (using ObjectId)
+        try:
+            await PlatformLinkService.link_account(
+                user_id, config.platform, platform_user_id, use_object_id=True
+            )
+            logger.info(
+                f"{config.platform} account {platform_user_id} linked to user {user_id} via OAuth"
+            )
+        except ValueError as e:
+            error_msg = str(e)
+            if "already linked" in error_msg:
+                return RedirectResponse(
+                    url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_error=already_linked"
+                )
+            else:
+                logger.error(f"Failed to link account: {error_msg}")
+                return RedirectResponse(
+                    url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_error=failed"
+                )
+
+        # Redirect to settings with success message
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_success=true&platform={config.platform}"
+        )
+
+    except Exception as e:
+        logger.error(f"{config.platform} OAuth callback error: {str(e)}", exc_info=True)
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_URL}{redirect_path}?oauth_error=failed"
+        )
+
+
+@router.get("/discord/callback")
+async def discord_oauth_callback(
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+):
+    """Handle Discord OAuth callback."""
+    return await _handle_platform_oauth_callback(
+        code, state, error, PLATFORM_CONFIGS["discord"]
     )
 
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
 
-    return {"status": "disconnected", "platform": platform}
+@router.get("/slack/callback")
+async def slack_oauth_callback(
+    code: Optional[str] = None,
+    state: Optional[str] = None,
+    error: Optional[str] = None,
+):
+    """Handle Slack OAuth callback."""
+    return await _handle_platform_oauth_callback(
+        code, state, error, PLATFORM_CONFIGS["slack"]
+    )

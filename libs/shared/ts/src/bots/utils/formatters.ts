@@ -36,9 +36,7 @@ export function formatWorkflowList(workflows: Workflow[]): string {
  */
 export function formatTodo(todo: Todo): string {
   const checkbox = todo.completed ? "☑️" : "⬜";
-  const priority = todo.priority
-    ? ` [${todo.priority.toUpperCase()}]`
-    : "";
+  const priority = todo.priority ? ` [${todo.priority.toUpperCase()}]` : "";
   const dueDate = todo.due_date
     ? ` | Due: ${new Date(todo.due_date).toLocaleDateString()}`
     : "";
@@ -87,8 +85,47 @@ export function formatConversationList(
   return conversations.map((c) => formatConversation(c, baseUrl)).join("\n\n");
 }
 
+/**
+ * Formats authentication required message with clear onboarding steps.
+ */
+export function formatAuthRequiredMessage(
+  platform: string,
+  authUrl: string,
+  context?: string,
+): string {
+  const platformName = platform.charAt(0).toUpperCase() + platform.slice(1);
+
+  return (
+    `🔐 **Authentication Required**\n\n` +
+    `To ${context || "use this feature"}, link your ${platformName} account to GAIA.\n\n` +
+    `**Steps:**\n` +
+    `1. Click: ${authUrl}\n` +
+    `2. Sign in to GAIA (or create account)\n` +
+    `3. Confirm connection\n` +
+    `4. Return and try again!\n\n` +
+    `Need help? Use /help`
+  );
+}
+
 /** Shared help text and usage strings for text-based command platforms. */
 export const COMMAND_HELP = {
+  general: `🤖 **Welcome to GAIA**
+
+**First Time? Start Here:**
+1. /auth - Link your account
+2. /status - Check if linked
+3. /gaia <message> - Start chatting!
+
+**Quick Commands:**
+• /help - This message
+• /new - Fresh conversation
+• /todo - Manage todos
+• /workflow - Run workflows
+• /search - Search data
+• /weather <location> - Weather info
+• /conversations - Chat history
+
+Type /help <command> for details.`,
   todo:
     "Available commands:\n" +
     "/todo list - List your todos\n" +

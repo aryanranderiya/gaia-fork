@@ -257,6 +257,19 @@ export async function dispatchWorkflowSubcommand(
   }
 }
 
+/**
+ * Starts a new conversation for the user.
+ *
+ * Resets the bot session, creating a fresh conversation context while
+ * preserving the previous conversation (accessible from web app).
+ *
+ * **Use case**: Users can start fresh when conversation context becomes too
+ * long or when switching to a completely different topic.
+ *
+ * @param gaia - GaiaClient instance
+ * @param ctx - Command context (platform, user ID, channel)
+ * @returns Success message explaining that previous conversation is saved
+ */
 export async function handleNewConversation(
   gaia: GaiaClient,
   ctx: CommandContext,

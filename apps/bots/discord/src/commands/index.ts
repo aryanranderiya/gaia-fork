@@ -8,6 +8,7 @@ import {
 import type { GaiaClient } from "@gaia/shared";
 import * as gaia from "./gaia";
 import * as auth from "./auth";
+import * as status from "./status";
 import * as workflow from "./workflow";
 import * as todo from "./todo";
 import * as conversation from "./conversation";
@@ -30,6 +31,7 @@ export function registerCommands(): Collection<string, Command> {
   const commands = new Collection<string, Command>();
   commands.set(gaia.data.name, gaia);
   commands.set(auth.data.name, auth);
+  commands.set(status.data.name, status);
   commands.set(workflow.data.name, workflow);
   commands.set(todo.data.name, todo);
   commands.set(conversation.data.name, conversation);

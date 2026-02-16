@@ -1,0 +1,79 @@
+"""Platform Models
+
+Pydantic models for platform account linking and authentication.
+"""
+
+from typing import Optional
+
+from pydantic import BaseModel, Field
+
+
+class LinkPlatformRequest(BaseModel):
+    """Request model for linking a platform account."""
+
+    platform_user_id: str = Field(
+        ..., description="User's ID on the platform to link"
+    )
+
+
+class PlatformLinkInfo(BaseModel):
+    """Information about a linked platform account."""
+
+    platform: str = Field(..., description="Platform name (discord, slack, etc.)")
+    platform_user_id: str = Field(..., description="User's ID on the platform")
+    connected_at: Optional[str] = Field(
+        None, description="ISO timestamp when account was linked"
+    )
+
+
+class PlatformLinksResponse(BaseModel):
+    """Response model for user's linked platforms."""
+
+    discord: Optional[PlatformLinkInfo] = None
+    slack: Optional[PlatformLinkInfo] = None
+    telegram: Optional[PlatformLinkInfo] = None
+    whatsapp: Optional[PlatformLinkInfo] = None
+
+
+class PlatformAuthStatusResponse(BaseModel):
+    """Response model for platform authentication status check."""
+
+    authenticated: bool = Field(..., description="Whether user is linked")
+    platform: str = Field(..., description="Platform name")
+    platform_user_id: str = Field(..., description="User's platform ID")
+
+
+class GetPlatformLinksResponse(BaseModel):
+    """Response wrapper for user's linked platforms."""
+
+    platform_links: dict = Field(..., description="Dictionary of linked platforms")
+
+
+class LinkPlatformResponse(BaseModel):
+    """Response model for linking a platform account."""
+
+    status: str = Field(..., description="Link status (e.g., 'linked')")
+    platform: str = Field(..., description="Platform name")
+    platform_user_id: Optional[str] = Field(None, description="Platform user ID")
+    connected_at: Optional[str] = Field(None, description="Connection timestamp")
+
+
+class DisconnectPlatformResponse(BaseModel):
+    """Response model for disconnecting a platform account."""
+
+    status: str = Field(..., description="Disconnect status (e.g., 'disconnected')")
+    platform: str = Field(..., description="Platform name")
+
+
+class InitiatePlatformConnectResponse(BaseModel):
+    """Response model for initiating platform connection."""
+
+    auth_url: Optional[str] = Field(
+        None, description="OAuth authorization URL (if OAuth configured)"
+    )
+    auth_type: str = Field(
+        ..., description="Authentication type ('oauth' or 'manual')"
+    )
+    instructions: Optional[str] = Field(
+        None, description="Manual linking instructions (if manual auth)"
+    )

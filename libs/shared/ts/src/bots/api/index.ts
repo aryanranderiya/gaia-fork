@@ -36,6 +36,8 @@ export class GaiaClient {
   private client: AxiosInstance;
   private baseUrl: string;
   private frontendUrl: string;
+  private apiKey: string;
+  private sessionTokens: Map<string, string> = new Map();
 
   /**
    * Creates a new GaiaClient instance.
@@ -47,20 +49,43 @@ export class GaiaClient {
   constructor(baseUrl: string, apiKey: string, frontendUrl: string) {
     this.baseUrl = baseUrl;
     this.frontendUrl = frontendUrl;
+    this.apiKey = apiKey;
     this.client = axios.create({
       baseURL: baseUrl,
       headers: {
         "Content-Type": "application/json",
-        "X-Bot-API-Key": apiKey,
       },
     });
   }
 
+  private getSessionKey(ctx: BotUserContext): string {
+    return `${ctx.platform}:${ctx.platformUserId}`;
+  }
+
   private userHeaders(ctx: BotUserContext) {
+    const sessionKey = this.getSessionKey(ctx);
+    const sessionToken = this.sessionTokens.get(sessionKey);
+
+    if (sessionToken) {
+      return {
+        Authorization: `Bearer ${sessionToken}`,
+      };
+    }
+
     return {
+      "X-Bot-API-Key": this.apiKey,
       "X-Bot-Platform": ctx.platform,
       "X-Bot-Platform-User-Id": ctx.platformUserId,
     };
+  }
+
+  /**
+   * Clears the session token for a user, forcing re-authentication.
+   * This is called automatically when a 401 error is encountered.
+   */
+  private clearSessionToken(ctx: BotUserContext): void {
+    const sessionKey = this.getSessionKey(ctx);
+    this.sessionTokens.delete(sessionKey);
   }
 
   /**
@@ -82,6 +107,33 @@ export class GaiaClient {
   }
 
   /**
+   * Wraps API calls that require user authentication with automatic token refresh.
+   * If a 401 error is encountered, clears the cached token and retries once.
+   * This allows the bot to get a fresh JWT token via the fallback API key auth.
+   */
+  private async requestWithAuth<T>(
+    fn: () => Promise<T>,
+    ctx: BotUserContext,
+    retried = false,
+  ): Promise<T> {
+    try {
+      return await fn();
+    } catch (error: unknown) {
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+
+      if (status === 401 && !retried) {
+        this.clearSessionToken(ctx);
+        return this.requestWithAuth(fn, ctx, true);
+      }
+
+      if (error instanceof GaiaApiError) throw error;
+      const message = error instanceof Error ? error.message : "Unknown error";
+      throw new GaiaApiError(`API error: ${status || message}`, status);
+    }
+  }
+
+  /**
    * Sends a chat message to the GAIA agent on behalf of an authenticated user.
    *
    * @param request - The chat request containing message, platform, and user ID.
@@ -89,6 +141,12 @@ export class GaiaClient {
    * @throws Error if the API request fails.
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
+    const ctx = {
+      platform: request.platform,
+      platformUserId: request.platformUserId,
+      channelId: request.channelId,
+    };
+
     return this.request(async () => {
       const { data } = await this.client.post(
         "/api/v1/bot/chat",
@@ -98,7 +156,15 @@ export class GaiaClient {
           platform_user_id: request.platformUserId,
           channel_id: request.channelId,
         },
+        {
+          headers: this.userHeaders(ctx),
+        },
       );
+
+      if (data.session_token) {
+        const sessionKey = this.getSessionKey(ctx);
+        this.sessionTokens.set(sessionKey, data.session_token);
+      }
 
       return {
         response: data.response,
@@ -156,6 +222,12 @@ export class GaiaClient {
 
     const STREAM_TIMEOUT_MS = 120_000;
 
+    const ctx = {
+      platform: request.platform,
+      platformUserId: request.platformUserId,
+      channelId: request.channelId,
+    };
+
     try {
       const response = await this.client.post(
         "/api/v1/bot/chat-stream",
@@ -168,7 +240,10 @@ export class GaiaClient {
         {
           responseType: "stream",
           timeout: STREAM_TIMEOUT_MS,
-          headers: { Accept: "text/event-stream" },
+          headers: {
+            Accept: "text/event-stream",
+            ...this.userHeaders(ctx),
+          },
         },
       );
 
@@ -227,6 +302,10 @@ export class GaiaClient {
                 await onError(new Error(data.error));
                 resolve();
                 return;
+              }
+              if (data.session_token) {
+                const sessionKey = this.getSessionKey(ctx);
+                this.sessionTokens.set(sessionKey, data.session_token);
               }
               if (data.text) {
                 fullText += data.text;
@@ -328,13 +407,13 @@ export class GaiaClient {
    * Lists all workflows for the authenticated user.
    */
   async listWorkflows(ctx: BotUserContext): Promise<WorkflowListResponse> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.get<WorkflowListResponse>(
         "/api/v1/bot/workflows",
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -348,14 +427,14 @@ export class GaiaClient {
     },
     ctx: BotUserContext,
   ): Promise<Workflow> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.post<{ workflow: Workflow }>(
         "/api/v1/bot/workflows",
         request,
         { headers: this.userHeaders(ctx) },
       );
       return data.workflow;
-    });
+    }, ctx);
   }
 
   /**
@@ -365,13 +444,13 @@ export class GaiaClient {
     workflowId: string,
     ctx: BotUserContext,
   ): Promise<Workflow> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.get<{ workflow: Workflow }>(
         `/api/v1/bot/workflows/${workflowId}`,
         { headers: this.userHeaders(ctx) },
       );
       return data.workflow;
-    });
+    }, ctx);
   }
 
   /**
@@ -381,14 +460,14 @@ export class GaiaClient {
     request: WorkflowExecutionRequest,
     ctx: BotUserContext,
   ): Promise<WorkflowExecutionResponse> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.post<WorkflowExecutionResponse>(
         `/api/v1/bot/workflows/${request.workflow_id}/execute`,
         { inputs: request.inputs },
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -398,11 +477,11 @@ export class GaiaClient {
     workflowId: string,
     ctx: BotUserContext,
   ): Promise<void> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       await this.client.delete(`/api/v1/bot/workflows/${workflowId}`, {
         headers: this.userHeaders(ctx),
       });
-    });
+    }, ctx);
   }
 
   /**
@@ -415,7 +494,7 @@ export class GaiaClient {
       project_id?: string;
     },
   ): Promise<TodoListResponse> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const queryParams = new URLSearchParams();
       if (params?.completed !== undefined) {
         queryParams.set("completed", String(params.completed));
@@ -429,7 +508,7 @@ export class GaiaClient {
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -439,27 +518,27 @@ export class GaiaClient {
     request: CreateTodoRequest,
     ctx: BotUserContext,
   ): Promise<Todo> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.post<Todo>(
         "/api/v1/bot/todos",
         request,
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
    * Gets a specific todo by ID.
    */
   async getTodo(todoId: string, ctx: BotUserContext): Promise<Todo> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.get<Todo>(
         `/api/v1/bot/todos/${todoId}`,
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -470,14 +549,14 @@ export class GaiaClient {
     updates: Partial<CreateTodoRequest>,
     ctx: BotUserContext,
   ): Promise<Todo> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.patch<Todo>(
         `/api/v1/bot/todos/${todoId}`,
         updates,
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -491,11 +570,11 @@ export class GaiaClient {
    * Deletes a todo.
    */
   async deleteTodo(todoId: string, ctx: BotUserContext): Promise<void> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       await this.client.delete(`/api/v1/bot/todos/${todoId}`, {
         headers: this.userHeaders(ctx),
       });
-    });
+    }, ctx);
   }
 
   /**
@@ -508,7 +587,7 @@ export class GaiaClient {
       limit?: number;
     },
   ): Promise<ConversationListResponse> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const queryParams = new URLSearchParams();
       queryParams.set("page", String(params?.page || 1));
       queryParams.set("limit", String(params?.limit || 10));
@@ -518,7 +597,7 @@ export class GaiaClient {
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -528,13 +607,13 @@ export class GaiaClient {
     conversationId: string,
     ctx: BotUserContext,
   ): Promise<Conversation> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.get<Conversation>(
         `/api/v1/bot/conversations/${conversationId}`,
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**
@@ -569,13 +648,13 @@ export class GaiaClient {
     query: string,
     ctx: BotUserContext,
   ): Promise<SearchResponse> {
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.get<SearchResponse>(
         `/api/v1/bot/search?query=${encodeURIComponent(query)}`,
         { headers: this.userHeaders(ctx) },
       );
       return data;
-    });
+    }, ctx);
   }
 
   /**

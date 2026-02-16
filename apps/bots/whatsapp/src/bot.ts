@@ -18,7 +18,11 @@ export async function createBot() {
     },
   });
 
-  const gaia = new GaiaClient(config.gaiaApiUrl, config.gaiaApiKey);
+  const gaia = new GaiaClient(
+    config.gaiaApiUrl,
+    config.gaiaApiKey,
+    config.gaiaFrontendUrl,
+  );
   const commands = registerCommands(gaia);
 
   client.on("qr", (qr) => {

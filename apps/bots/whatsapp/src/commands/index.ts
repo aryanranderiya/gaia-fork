@@ -1,13 +1,13 @@
 import type { Message } from "whatsapp-web.js";
-import type { GaiaClient } from "@gaia/shared";
+import type { GaiaClient, CommandContext } from "@gaia/shared";
 import {
-  formatWorkflowList,
-  formatWorkflow,
-  formatTodoList,
-  formatTodo,
-  formatConversationList,
-  formatBotError,
   truncateMessage,
+  dispatchTodoSubcommand,
+  dispatchWorkflowSubcommand,
+  handleConversationList,
+  handleWeather,
+  handleSearch,
+  handleNewConversation,
 } from "@gaia/shared";
 
 type CommandHandler = (
@@ -16,18 +16,26 @@ type CommandHandler = (
   args: string[],
 ) => Promise<void>;
 
+function getContext(message: Message): CommandContext {
+  return {
+    platform: "whatsapp",
+    platformUserId: message.from,
+  };
+}
+
 export function registerCommands(
   gaia: GaiaClient,
 ): Map<string, CommandHandler> {
   const commands = new Map<string, CommandHandler>();
 
-  // Help command
   commands.set("help", async (message) => {
     const helpText =
       "🤖 *GAIA WhatsApp Bot Commands*\n\n" +
       "*General:*\n" +
       "• /help - Show this help message\n" +
-      "• /auth - Link your GAIA account\n\n" +
+      "• /auth - Link your GAIA account\n" +
+      "• /gaia <message> - Chat with GAIA\n" +
+      "• /new - Start a new conversation\n\n" +
       "*Workflows:*\n" +
       "• /workflow list - List workflows\n" +
       "• /workflow get <id> - Get workflow details\n" +
@@ -45,7 +53,6 @@ export function registerCommands(
     await message.reply(helpText);
   });
 
-  // Auth command
   commands.set("auth", async (message, gaia) => {
     const userId = message.from;
     const authUrl = gaia.getAuthUrl("whatsapp", userId);
@@ -54,149 +61,96 @@ export function registerCommands(
     );
   });
 
-  // Workflow commands
-  commands.set("workflow", async (message, gaia, args) => {
-    const subcommand = args[0] || "list";
+  commands.set("new", async (message, gaia) => {
+    const ctx = getContext(message);
+    const response = await handleNewConversation(gaia, ctx);
+    await message.reply(response);
+  });
 
-    switch (subcommand) {
-      case "list": {
-        const workflows = await gaia.listWorkflows();
-        const response = formatWorkflowList(workflows.workflows);
-        await message.reply(truncateMessage(response, "whatsapp"));
-        break;
-      }
+  commands.set("gaia", async (message, gaia, args) => {
+    const userMessage = args.join(" ");
+    if (!userMessage) {
+      await message.reply("Usage: /gaia <your message>");
+      return;
+    }
 
-      case "get": {
-        const id = args[1];
-        if (!id) {
-          await message.reply("Usage: /workflow get <workflow-id>");
-          return;
-        }
-        const workflow = await gaia.getWorkflow(id);
-        await message.reply(truncateMessage(formatWorkflow(workflow), "whatsapp"));
-        break;
-      }
+    const ctx = getContext(message);
 
-      case "execute": {
-        const id = args[1];
-        if (!id) {
-          await message.reply("Usage: /workflow execute <workflow-id>");
-          return;
-        }
-        const result = await gaia.executeWorkflow({ workflow_id: id });
+    try {
+      const response = await gaia.chat({
+        message: userMessage,
+        platform: ctx.platform,
+        platformUserId: ctx.platformUserId,
+      });
+
+      if (!response.authenticated) {
+        const authUrl = gaia.getAuthUrl(ctx.platform, ctx.platformUserId);
         await message.reply(
-          `✅ Workflow execution started!\nExecution ID: ${result.execution_id}\nStatus: ${result.status}`,
+          `🔗 Please link your GAIA account first:\n${authUrl}\n\nAfter linking, you can chat with GAIA!`,
         );
-        break;
+        return;
       }
 
-      default:
-        await message.reply("Usage: /workflow [list|get|execute]");
+      await message.reply(truncateMessage(response.response, "whatsapp"));
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      await message.reply(`Error: ${errorMessage}`);
     }
   });
 
-  // Todo commands
-  commands.set("todo", async (message, gaia, args) => {
+  commands.set("workflow", async (message, gaia, args) => {
+    const ctx = getContext(message);
     const subcommand = args[0] || "list";
-
-    switch (subcommand) {
-      case "list": {
-        const todos = await gaia.listTodos({ completed: false });
-        const response = formatTodoList(todos.todos);
-        await message.reply(truncateMessage(response, "whatsapp"));
-        break;
-      }
-
-      case "add": {
-        const title = args.slice(1).join(" ");
-        if (!title) {
-          await message.reply("Usage: /todo add <title>");
-          return;
-        }
-        const todo = await gaia.createTodo({ title });
-        await message.reply(`✅ Todo created!\n\n${formatTodo(todo)}`);
-        break;
-      }
-
-      case "complete": {
-        const id = args[1];
-        if (!id) {
-          await message.reply("Usage: /todo complete <todo-id>");
-          return;
-        }
-        const todo = await gaia.completeTodo(id);
-        await message.reply(`✅ Todo marked as complete: ${todo.title}`);
-        break;
-      }
-
-      case "delete": {
-        const id = args[1];
-        if (!id) {
-          await message.reply("Usage: /todo delete <todo-id>");
-          return;
-        }
-        await gaia.deleteTodo(id);
-        await message.reply("✅ Todo deleted successfully");
-        break;
-      }
-
-      default:
-        await message.reply("Usage: /todo [list|add|complete|delete]");
-    }
-  });
-
-  // Conversations command
-  commands.set("conversations", async (message, gaia) => {
-    const conversations = await gaia.listConversations({ page: 1, limit: 5 });
-    const response = formatConversationList(
-      conversations.conversations,
-      gaia.getBaseUrl(),
+    const remainingArgs = args.slice(1);
+    const response = await dispatchWorkflowSubcommand(
+      gaia,
+      ctx,
+      subcommand,
+      remainingArgs,
     );
     await message.reply(truncateMessage(response, "whatsapp"));
   });
 
-  // Weather command
+  commands.set("todo", async (message, gaia, args) => {
+    const ctx = getContext(message);
+    const subcommand = args[0] || "list";
+    const remainingArgs = args.slice(1);
+    const response = await dispatchTodoSubcommand(
+      gaia,
+      ctx,
+      subcommand,
+      remainingArgs,
+    );
+    await message.reply(truncateMessage(response, "whatsapp"));
+  });
+
+  commands.set("conversations", async (message, gaia) => {
+    const ctx = getContext(message);
+    const response = await handleConversationList(gaia, ctx);
+    await message.reply(truncateMessage(response, "whatsapp"));
+  });
+
   commands.set("weather", async (message, gaia, args) => {
+    const ctx = getContext(message);
     const location = args.join(" ");
     if (!location) {
       await message.reply("Usage: /weather <location>");
       return;
     }
-
-    const response = await gaia.getWeather(location, "whatsapp", message.from);
+    const response = await handleWeather(gaia, location, ctx);
     await message.reply(truncateMessage(response, "whatsapp"));
   });
 
-  // Search command
   commands.set("search", async (message, gaia, args) => {
+    const ctx = getContext(message);
     const query = args.join(" ");
     if (!query) {
       await message.reply("Usage: /search <query>");
       return;
     }
-
-    const response = await gaia.search(query);
-    const totalResults =
-      response.messages.length +
-      response.conversations.length +
-      response.notes.length;
-
-    let result = `🔍 Search results for: "${query}"\n\n`;
-    if (totalResults === 0) {
-      result = `No results found for: "${query}"`;
-    } else {
-      if (response.messages.length > 0) {
-        result += `📨 Messages: ${response.messages.length}\n`;
-      }
-      if (response.conversations.length > 0) {
-        result += `💬 Conversations: ${response.conversations.length}\n`;
-      }
-      if (response.notes.length > 0) {
-        result += `📝 Notes: ${response.notes.length}\n`;
-      }
-    }
-
-    await message.reply(truncateMessage(result, "whatsapp"));
+    const response = await handleSearch(gaia, query, ctx);
+    await message.reply(truncateMessage(response, "whatsapp"));
   });
 
   return commands;
