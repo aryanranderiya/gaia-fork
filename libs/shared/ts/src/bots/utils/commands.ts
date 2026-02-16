@@ -17,13 +17,13 @@
 import type { GaiaClient } from "../api";
 import type { CommandContext } from "../types";
 import {
-  formatWorkflow,
-  formatWorkflowList,
+  COMMAND_HELP,
+  formatBotError,
+  formatConversationList,
   formatTodo,
   formatTodoList,
-  formatConversationList,
-  formatBotError,
-  COMMAND_HELP,
+  formatWorkflow,
+  formatWorkflowList,
 } from "./formatters";
 
 export async function handleWorkflowList(
@@ -118,51 +118,6 @@ export async function handleConversationList(
   }
 }
 
-export async function handleWeather(
-  gaia: GaiaClient,
-  location: string,
-  ctx: CommandContext,
-): Promise<string> {
-  try {
-    return await gaia.getWeather(location, ctx);
-  } catch (error: unknown) {
-    return formatBotError(error);
-  }
-}
-
-export async function handleSearch(
-  gaia: GaiaClient,
-  query: string,
-  ctx: CommandContext,
-): Promise<string> {
-  try {
-    const response = await gaia.search(query, ctx);
-    const totalResults =
-      response.messages.length +
-      response.conversations.length +
-      response.notes.length;
-
-    if (totalResults === 0) {
-      return `No results found for: "${query}"`;
-    }
-
-    let result = `Search results for: "${query}"\n\n`;
-    if (response.messages.length > 0) {
-      result += `Messages: ${response.messages.length}\n`;
-    }
-    if (response.conversations.length > 0) {
-      result += `Conversations: ${response.conversations.length}\n`;
-    }
-    if (response.notes.length > 0) {
-      result += `Notes: ${response.notes.length}\n`;
-    }
-
-    return result;
-  } catch (error: unknown) {
-    return formatBotError(error);
-  }
-}
-
 export async function handleWorkflowGet(
   gaia: GaiaClient,
   workflowId: string,
@@ -228,7 +183,6 @@ export async function dispatchTodoSubcommand(
       if (!args[0]) return COMMAND_HELP.todoUsage.delete;
       return handleTodoDelete(gaia, args[0], ctx);
     }
-    case "help":
     default:
       return COMMAND_HELP.todo;
   }
@@ -251,7 +205,6 @@ export async function dispatchWorkflowSubcommand(
       if (!args[0]) return COMMAND_HELP.workflowUsage.execute;
       return handleWorkflowExecute(gaia, args[0], ctx);
     }
-    case "help":
     default:
       return COMMAND_HELP.workflow;
   }
@@ -277,7 +230,7 @@ export async function handleNewConversation(
   try {
     await gaia.resetSession(ctx.platform, ctx.platformUserId, ctx.channelId);
     return "Started a new conversation. Your previous conversation is saved and accessible from the GAIA web app.";
-  } catch (error: unknown) {
+  } catch (_error: unknown) {
     return "Failed to start a new conversation. Please try again.";
   }
 }

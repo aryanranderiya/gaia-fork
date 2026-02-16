@@ -1,11 +1,14 @@
+import asyncio
 import json
 import secrets
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from app.agents.core.agent import call_agent
 from app.config.loggers import chat_logger as logger
 from app.config.settings import settings
 from app.constants.cache import PLATFORM_LINK_TOKEN_PREFIX, PLATFORM_LINK_TOKEN_TTL
+from app.core.stream_manager import stream_manager
 from app.db.redis import redis_cache
 from app.models.bot_models import (
     BotAuthStatusResponse,
@@ -15,11 +18,10 @@ from app.models.bot_models import (
     CreateLinkTokenResponse,
     IntegrationInfo,
 )
-from app.models.chat_models import MessageModel, UpdateMessagesRequest
 from app.models.message_models import MessageRequestWithHistory
 from app.services.bot_service import BotService
 from app.services.bot_token_service import create_bot_session_token
-from app.services.conversation_service import update_messages
+from app.services.chat_service import run_chat_stream_background
 from app.services.integrations.marketplace import get_integration_details
 from app.services.integrations.user_integrations import get_user_connected_integrations
 from app.services.model_service import get_user_selected_model
@@ -28,6 +30,8 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 router = APIRouter()
+
+_background_tasks: set[asyncio.Task] = set()
 
 
 async def require_bot_api_key(request: Request) -> None:
@@ -92,7 +96,6 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
 
         async def auth_required():
             yield f"data: {json.dumps({'error': 'not_authenticated'})}\n\n"
-            yield "data: [DONE]\n\n"
 
         return StreamingResponse(auth_required(), media_type="text/event-stream")
 
@@ -119,58 +122,74 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
         expires_minutes=15,
     )
 
-    async def event_generator():
+    # Generate stream ID and start background streaming
+    stream_id = str(uuid4())
+    await stream_manager.start_stream(stream_id, conversation_id, user_id)
+
+    # Launch background task
+    task = asyncio.create_task(
+        run_chat_stream_background(
+            stream_id=stream_id,
+            body=message_request,
+            user=user,
+            user_time=datetime.now(timezone.utc),
+            conversation_id=conversation_id,
+        )
+    )
+
+    def task_done_callback(t: asyncio.Task):
+        _background_tasks.discard(t)
+        if t.exception():
+            logger.error(f"Background stream task failed: {t.exception()}")
+
+    task.add_done_callback(task_done_callback)
+    _background_tasks.add(task)
+
+    async def stream_from_redis():
+        """Subscribe to Redis stream and translate chunks for bot clients."""
         # Send session token as first event
         yield f"data: {json.dumps({'session_token': session_token})}\n\n"
 
-        complete_message = ""
         try:
-            stream = await call_agent(
-                request=message_request,
-                conversation_id=conversation_id,
-                user=user,
-                user_time=datetime.now(timezone.utc),
-            )
-
-            async for chunk in stream:
-                if chunk.startswith("nostream:"):
-                    payload = json.loads(chunk[len("nostream: ") :])
-                    complete_message = payload.get("complete_message", complete_message)
-                    continue
-
+            async for chunk in stream_manager.subscribe_stream(stream_id):
+                # Filter out web-only metadata chunks
                 if chunk.startswith("data: "):
                     raw = chunk[len("data: ") :].strip()
                     if raw == "[DONE]":
+                        yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
                         break
 
                     try:
                         data = json.loads(raw)
+
+                        # Skip web-only fields
+                        if any(
+                            key in data
+                            for key in [
+                                "conversation_description",
+                                "user_message_id",
+                                "bot_message_id",
+                                "stream_id",
+                                "tool_data",
+                                "tool_output",
+                                "follow_up_actions",
+                            ]
+                        ):
+                            continue
+
+                        # Translate {"response": "..."} → {"text": "..."}
                         if "response" in data:
-                            complete_message += data["response"]
                             yield f"data: {json.dumps({'text': data['response']})}\n\n"
+                        elif "error" in data:
+                            yield f"data: {json.dumps({'error': data['error']})}\n\n"
+                            break
                     except json.JSONDecodeError:
                         continue
         except Exception as e:
-            logger.error(f"Bot stream error: {e}")
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            logger.error(f"Bot stream subscription error: {e}")
+            yield f"data: {json.dumps({'error': 'Stream error occurred'})}\n\n"
 
-        yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
-
-        now = datetime.now(timezone.utc).isoformat()
-        if complete_message:
-            try:
-                update_req = UpdateMessagesRequest(
-                    conversation_id=conversation_id,
-                    messages=[
-                        MessageModel(type="user", response=body.message, date=now),
-                        MessageModel(type="bot", response=complete_message, date=now),
-                    ],
-                )
-                await update_messages(update_req, user)
-            except Exception as e:
-                logger.error(f"Failed to save bot stream messages: {e}")
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    return StreamingResponse(stream_from_redis(), media_type="text/event-stream")
 
 
 @router.post(

@@ -15,8 +15,9 @@
  *
  * Platform character limits and truncation are also exported here.
  */
-export * from "./formatters";
+
 export * from "./commands";
+export * from "./formatters";
 export * from "./streaming";
 
 /**

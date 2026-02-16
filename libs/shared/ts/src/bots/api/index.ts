@@ -635,7 +635,6 @@ export class GaiaClient {
       };
     });
   }
-
 }
 
 /**
@@ -656,17 +655,13 @@ function mapTodoResponse(data: Record<string, unknown>): Todo {
 /**
  * Maps a conversation response from the regular API format to the bot-expected format.
  */
-function mapConversationResponse(
-  data: Record<string, unknown>,
-): Conversation {
+function mapConversationResponse(data: Record<string, unknown>): Conversation {
   return {
     conversation_id:
       (data.conversation_id as string) || (data.id as string) || "",
     title: (data.description as string) || (data.title as string) || undefined,
-    created_at:
-      (data.createdAt as string) || (data.created_at as string) || "",
-    updated_at:
-      (data.updatedAt as string) || (data.updated_at as string) || "",
+    created_at: (data.createdAt as string) || (data.created_at as string) || "",
+    updated_at: (data.updatedAt as string) || (data.updated_at as string) || "",
     message_count: data.message_count as number | undefined,
   };
 }
