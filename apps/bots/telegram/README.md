@@ -8,8 +8,8 @@ The official Telegram bot for GAIA - your proactive personal AI assistant.
 - 📋 Manage todos directly from Telegram
 - 🔄 Execute and monitor workflows
 - 💬 Access your conversation history
-- 🌤️ Get weather information
-- 🔍 Search across your GAIA data
+
+
 
 ## Setup
 
@@ -43,8 +43,8 @@ auth - Link your Telegram account
 workflow - Manage workflows
 todo - Manage todos
 conversations - View conversations
-weather - Get weather info
-search - Search GAIA data
+
+
 help - Show help message
 ```
 
@@ -96,8 +96,7 @@ nx start bot-telegram
 
 ### Utilities
 
-- `/weather <location>` - Get weather information
-- `/search <query>` - Search your GAIA data
+
 - `/help` - Show all available commands
 
 ## Authentication

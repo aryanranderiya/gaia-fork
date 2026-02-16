@@ -4,8 +4,6 @@ import {
   dispatchWorkflowSubcommand,
   handleConversationList,
   handleNewConversation,
-  handleSearch,
-  handleWeather,
   truncateResponse,
 } from "@gaia/shared";
 import type { Message } from "whatsapp-web.js";
@@ -46,9 +44,8 @@ export function registerCommands(
       "• /todo complete <id> - Mark as complete\n" +
       "• /todo delete <id> - Delete a todo\n\n" +
       "*Other:*\n" +
-      "• /conversations - List recent chats\n" +
-      "• /weather <location> - Get weather\n" +
-      "• /search <query> - Search your data";
+      "• /conversations - List recent chats";
+
 
     await message.reply(helpText);
   });
@@ -144,27 +141,9 @@ export function registerCommands(
     await message.reply(truncateResponse(response, "whatsapp"));
   });
 
-  commands.set("weather", async (message, gaia, args) => {
-    const ctx = getContext(message);
-    const location = args.join(" ");
-    if (!location) {
-      await message.reply("Usage: /weather <location>");
-      return;
-    }
-    const response = await handleWeather(gaia, location, ctx);
-    await message.reply(truncateResponse(response, "whatsapp"));
-  });
 
-  commands.set("search", async (message, gaia, args) => {
-    const ctx = getContext(message);
-    const query = args.join(" ");
-    if (!query) {
-      await message.reply("Usage: /search <query>");
-      return;
-    }
-    const response = await handleSearch(gaia, query, ctx);
-    await message.reply(truncateResponse(response, "whatsapp"));
-  });
+
+
 
   return commands;
 }

@@ -8,8 +8,8 @@ The official WhatsApp bot for GAIA - your proactive personal AI assistant.
 - 📋 Manage todos directly from WhatsApp
 - 🔄 Execute and monitor workflows
 - 💬 Access your conversation history
-- 🌤️ Get weather information
-- 🔍 Search across your GAIA data
+
+
 
 ## Setup
 
@@ -86,8 +86,7 @@ All commands start with `/`:
 
 ### Utilities
 
-- `/weather <location>` - Get weather information
-- `/search <query>` - Search your GAIA data
+
 
 ## Authentication
 

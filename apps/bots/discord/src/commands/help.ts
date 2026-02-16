@@ -1,5 +1,9 @@
-import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
+import {
+  type ChatInputCommandInteraction,
+  EmbedBuilder,
+  SlashCommandBuilder,
+} from "discord.js";
 
 export const data = new SlashCommandBuilder()
   .setName("help")
@@ -36,8 +40,6 @@ export async function execute(
           "`/new` - Start a new conversation",
           "`/todo` - Manage your tasks",
           "`/workflow` - Manage workflows",
-          "`/weather` - Get weather information",
-          "`/search` - Search across your data",
         ].join("\n"),
         inline: false,
       },

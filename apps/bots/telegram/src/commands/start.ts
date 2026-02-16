@@ -23,9 +23,7 @@ export function registerStartCommand(bot: Bot) {
         "/todo complete <id> - Mark as done\n" +
         "/todo delete <id> - Delete a todo\n\n" +
         "Other:\n" +
-        "/conversations - Recent chats\n" +
-        "/weather <location> - Weather info\n" +
-        "/search <query> - Search your data\n\n" +
+        "/conversations - Recent chats\n\n" +
         "You can also send messages directly in private chats.",
     );
   });

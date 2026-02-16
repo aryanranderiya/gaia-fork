@@ -8,8 +8,8 @@ The official Slack bot for GAIA - your proactive personal AI assistant.
 - 📋 Manage todos directly from Slack
 - 🔄 Execute and monitor workflows
 - 💬 Access your conversation history
-- 🌤️ Get weather information
-- 🔍 Search across your GAIA data
+
+
 
 ## Setup
 
@@ -55,8 +55,8 @@ Go to "Slash Commands" and create these commands:
 - `/workflow` - Manage workflows
 - `/todo` - Manage todos
 - `/conversations` - View conversations
-- `/weather` - Get weather info
-- `/search` - Search GAIA data
+
+
 
 ### 3. Environment Configuration
 
@@ -107,8 +107,7 @@ nx start bot-slack
 
 ### Utilities
 
-- `/weather <location>` - Get weather information
-- `/search <query>` - Search your GAIA data
+
 
 ## Authentication
 

@@ -8,8 +8,8 @@ The official Discord bot for GAIA - your proactive personal AI assistant.
 - 📋 Manage todos directly from Discord
 - 🔄 Execute and monitor workflows
 - 💬 Access your conversation history
-- 🌤️ Get weather information
-- 🔍 Search across your GAIA data
+
+
 
 ## Setup
 
@@ -97,15 +97,14 @@ nx start bot-discord
 
 ### Utilities
 
-- `/weather <location>` - Get weather information
-- `/search <query>` - Search your GAIA data
+
 
 ### Mentions
 
 You can also mention the bot in any channel to chat with GAIA:
 
 ```
-@GAIA What's the weather today?
+@GAIA How do I get started?
 ```
 
 ## Authentication

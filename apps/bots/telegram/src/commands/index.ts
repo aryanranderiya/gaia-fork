@@ -1,15 +1,14 @@
-import type { Bot } from "grammy";
 import type { GaiaClient } from "@gaia/shared";
-import { registerStartCommand } from "./start";
-import { registerGaiaCommand } from "./gaia";
+import type { Bot } from "grammy";
 import { registerAuthCommand } from "./auth";
-import { registerStatusCommand } from "./status";
-import { registerWorkflowCommand } from "./workflow";
-import { registerTodoCommand } from "./todo";
 import { registerConversationCommand } from "./conversation";
-import { registerWeatherCommand } from "./weather";
+import { registerGaiaCommand } from "./gaia";
 import { registerNewCommand } from "./new";
-import { registerSearchCommand } from "./search";
+
+import { registerStartCommand } from "./start";
+import { registerStatusCommand } from "./status";
+import { registerTodoCommand } from "./todo";
+import { registerWorkflowCommand } from "./workflow";
 
 export function registerCommands(bot: Bot, gaia: GaiaClient) {
   registerStartCommand(bot);
@@ -19,7 +18,7 @@ export function registerCommands(bot: Bot, gaia: GaiaClient) {
   registerWorkflowCommand(bot, gaia);
   registerTodoCommand(bot, gaia);
   registerConversationCommand(bot, gaia);
-  registerWeatherCommand(bot, gaia);
-  registerSearchCommand(bot, gaia);
+
+
   registerNewCommand(bot, gaia);
 }
