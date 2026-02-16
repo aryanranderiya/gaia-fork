@@ -136,7 +136,22 @@ async function _handleStream(
           editTimer = null;
         }
         fullText = finalText;
-        await updateDisplay(finalText);
+
+        // Handle NEW_MESSAGE_BREAK for non-streaming platforms (e.g. Discord)
+        if (sendNewMessage && fullText.includes("<NEW_MESSAGE_BREAK>")) {
+          const parts = fullText
+            .split("<NEW_MESSAGE_BREAK>")
+            .map((p) => p.trim())
+            .filter(Boolean);
+          if (parts.length > 0) {
+            await updateDisplay(parts[0]);
+            for (let i = 1; i < parts.length; i++) {
+              currentEditor = await sendNewMessage(parts[i]);
+            }
+          }
+        } else {
+          await updateDisplay(finalText);
+        }
       },
       async (error) => {
         streamDone = true;

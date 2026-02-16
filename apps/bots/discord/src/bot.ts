@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, Events } from "discord.js";
+import { Client, GatewayIntentBits, Events, Partials } from "discord.js";
 import { GaiaClient, loadConfig } from "@gaia/shared";
 import { registerCommands } from "./commands";
 import { handleMention } from "./events/mention";
@@ -24,7 +24,9 @@ export async function createBot() {
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
+      GatewayIntentBits.DirectMessages,
     ],
+    partials: [Partials.Channel, Partials.Message],
   });
 
   const gaia = new GaiaClient(
@@ -43,9 +45,25 @@ export async function createBot() {
   });
 
   client.on(Events.MessageCreate, async (message) => {
+    // Fetch partial messages
+    if (message.partial) {
+      try {
+        await message.fetch();
+      } catch (error) {
+        console.error("Failed to fetch partial message:", error);
+        return;
+      }
+    }
+
     if (message.author.bot) return;
     if (!client.user) return;
-    if (!message.mentions.has(client.user)) return;
+
+    // Handle DMs - all messages in DMs should be processed
+    const isDM = !message.guild;
+
+    // In guilds, only respond to mentions; in DMs, respond to all messages
+    if (!isDM && !message.mentions.has(client.user)) return;
+
     await handleMention(message, gaia);
   });
 

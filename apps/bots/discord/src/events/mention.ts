@@ -7,12 +7,19 @@ import {
 } from "@gaia/shared";
 
 export async function handleMention(message: Message, gaia: GaiaClient) {
-  const content = message.content.replace(/<@!?\d+>/g, "").trim();
+  const content = message.content.trim();
 
   if (!content) {
     await message.reply("How can I help you?");
     return;
   }
+
+  const isDM = !message.guild;
+
+  // In DMs, send normal messages; in guilds, reply to the mention
+  const send = isDM
+    ? (text: string) => message.channel.send(text)
+    : (text: string) => message.reply(text);
 
   try {
     const hasTyping = "sendTyping" in message.channel;
@@ -20,8 +27,6 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
       await message.channel.sendTyping();
     }
 
-    // Discord's typing indicator only lasts 10 seconds - keep refreshing it
-    // until the first response arrives so the user knows we're still working.
     let typingInterval: ReturnType<typeof setInterval> | null = hasTyping
       ? setInterval(async () => {
           try {
@@ -39,14 +44,14 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
       }
     };
 
-    let currentReply: Awaited<ReturnType<typeof message.reply>> | null = null;
+    let currentMsg: Message | null = null;
 
     const sendOrEdit = async (text: string) => {
       clearTyping();
-      if (!currentReply) {
-        currentReply = await message.reply(text);
+      if (!currentMsg) {
+        currentMsg = await send(text);
       } else {
-        await currentReply.edit(text);
+        await currentMsg.edit(text);
       }
     };
 
@@ -61,9 +66,9 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
       sendOrEdit,
       async (text) => {
         clearTyping();
-        currentReply = await message.reply(text);
+        currentMsg = await send(text);
         return async (updatedText) => {
-          await currentReply?.edit(updatedText);
+          await currentMsg?.edit(updatedText);
         };
       },
       async (errMsg) => {
@@ -75,6 +80,6 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
 
     clearTyping();
   } catch (error) {
-    await message.reply(formatBotError(error));
+    await send(formatBotError(error));
   }
 }
