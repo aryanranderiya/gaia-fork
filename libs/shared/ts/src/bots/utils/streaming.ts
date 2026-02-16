@@ -25,7 +25,7 @@ import { truncateResponse } from "./index";
 
 export interface StreamingOptions {
   editIntervalMs: number;
-  cursorIndicator: string;
+  streaming: boolean;
   platform: "discord" | "slack" | "telegram" | "whatsapp";
 }
 
@@ -35,17 +35,17 @@ export type NewMessageSender = (text: string) => Promise<MessageEditor>;
 export const STREAMING_DEFAULTS: Record<string, StreamingOptions> = {
   discord: {
     editIntervalMs: 1200,
-    cursorIndicator: " ▌",
+    streaming: false,
     platform: "discord",
   },
   slack: {
     editIntervalMs: 1500,
-    cursorIndicator: " ...",
+    streaming: true,
     platform: "slack",
   },
   telegram: {
     editIntervalMs: 1000,
-    cursorIndicator: " ▌",
+    streaming: true,
     platform: "telegram",
   },
 };
@@ -67,7 +67,7 @@ async function _handleStream(
   onGenericError: (formattedError: string) => Promise<void>,
   options: StreamingOptions,
 ): Promise<void> {
-  const { editIntervalMs, cursorIndicator, platform } = options;
+  const { editIntervalMs, streaming, platform } = options;
 
   let lastEditTime = 0;
   let editTimer: ReturnType<typeof setTimeout> | null = null;
@@ -76,9 +76,8 @@ async function _handleStream(
   let currentEditor = editMessage;
   let sentText = "";
 
-  const updateDisplay = async (text: string, cursor = true) => {
-    const display = cursor ? `${text}${cursorIndicator}` : text;
-    const truncated = truncateResponse(display, platform);
+  const updateDisplay = async (text: string) => {
+    const truncated = truncateResponse(text, platform);
     try {
       await currentEditor(truncated);
     } catch {
@@ -96,7 +95,7 @@ async function _handleStream(
     const afterBreak = fullText.slice(breakIndex + 19);
 
     if (beforeBreak && beforeBreak !== sentText) {
-      await updateDisplay(beforeBreak, false);
+      await updateDisplay(beforeBreak);
       sentText = beforeBreak;
     }
 
@@ -109,7 +108,7 @@ async function _handleStream(
     await streamFn(
       async (chunk) => {
         fullText += chunk;
-        if (streamDone) return;
+        if (streamDone || !streaming) return;
 
         await handleNewMessageBreak();
 
@@ -137,7 +136,7 @@ async function _handleStream(
           editTimer = null;
         }
         fullText = finalText;
-        await updateDisplay(finalText, false);
+        await updateDisplay(finalText);
       },
       async (error) => {
         streamDone = true;
