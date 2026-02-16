@@ -1,6 +1,6 @@
-import type { Bot } from "grammy";
 import type { GaiaClient } from "@gaia/shared";
 import { handleStreamingChat, STREAMING_DEFAULTS } from "@gaia/shared";
+import type { Bot } from "grammy";
 
 export function registerGaiaCommand(bot: Bot, gaia: GaiaClient) {
   bot.command("gaia", async (ctx) => {
@@ -32,7 +32,8 @@ export function registerGaiaCommand(bot: Bot, gaia: GaiaClient) {
         await ctx.api.editMessageText(
           ctx.chat.id,
           loading.message_id,
-          `Please authenticate first: ${authUrl}`,
+          `Please authenticate first: <a href="${authUrl}">Click here to authenticate</a>\n\nOr copy and paste this URL in your browser:\n${authUrl}`,
+          { parse_mode: "HTML" },
         );
       },
       async (errMsg) => {

@@ -58,6 +58,7 @@ class WorkOSAuthMiddleware(BaseHTTPMiddleware):
             "/oauth/google/callback",
             "/user/logout",
             "/health",
+            "/api/v1/bot",  # Bot endpoints use separate auth middleware
         ]
         # agent only paths
         self.agent_only_paths = ["/api/v1/chat-stream"]
