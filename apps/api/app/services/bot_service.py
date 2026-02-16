@@ -148,6 +148,11 @@ class BotService:
         Returns:
             Conversation ID for the session
         """
+        # Normalize user dict: support both raw MongoDB docs (_id) and
+        # pre-formatted dicts (user_id) so create_conversation_service works
+        if not user.get("user_id") and user.get("_id"):
+            user = {**user, "user_id": str(user["_id"])}
+
         session_key = BotService.build_session_key(
             platform, platform_user_id, channel_id
         )
