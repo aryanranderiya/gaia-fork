@@ -68,7 +68,6 @@ export default function IntegrationsSidebar() {
     closeRightSidebar,
     setRightSidebarContent,
   ]);
-  console.log(integrations.find((i) => i.id === selectedIntegrationId));
 
   // Update sidebar content when integrations change (e.g., after publish/unpublish)
   useEffect(() => {
