@@ -32,8 +32,7 @@ export function registerGaiaCommand(bot: Bot, gaia: GaiaClient) {
         await ctx.api.editMessageText(
           ctx.chat.id,
           loading.message_id,
-          `Please authenticate first: <a href="${authUrl}">Click here to authenticate</a>\n\nOr copy and paste this URL in your browser:\n${authUrl}`,
-          { parse_mode: "HTML" },
+          `Please authenticate first.\n\nOpen this link to sign in:\n${authUrl}`,
         );
       },
       async (errMsg) => {

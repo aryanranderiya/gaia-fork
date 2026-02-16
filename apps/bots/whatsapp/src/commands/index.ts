@@ -1,14 +1,14 @@
-import type { Message } from "whatsapp-web.js";
-import type { GaiaClient, CommandContext } from "@gaia/shared";
+import type { CommandContext, GaiaClient } from "@gaia/shared";
 import {
-  truncateResponse,
   dispatchTodoSubcommand,
   dispatchWorkflowSubcommand,
   handleConversationList,
-  handleWeather,
-  handleSearch,
   handleNewConversation,
+  handleSearch,
+  handleWeather,
+  truncateResponse,
 } from "@gaia/shared";
+import type { Message } from "whatsapp-web.js";
 
 type CommandHandler = (
   message: Message,
@@ -55,10 +55,14 @@ export function registerCommands(
 
   commands.set("auth", async (message, gaia) => {
     const userId = message.from;
-    const authUrl = gaia.getAuthUrl("whatsapp", userId);
-    await message.reply(
-      `🔗 Link your GAIA account:\n${authUrl}\n\nAfter linking, you can use all bot commands!`,
-    );
+    try {
+      const { authUrl } = await gaia.createLinkToken("whatsapp", userId);
+      await message.reply(
+        `🔗 Link your GAIA account:\n${authUrl}\n\nAfter linking, you can use all bot commands!`,
+      );
+    } catch {
+      await message.reply("❌ Failed to generate auth link. Please try again.");
+    }
   });
 
   commands.set("new", async (message, gaia) => {
@@ -84,10 +88,19 @@ export function registerCommands(
       });
 
       if (!response.authenticated) {
-        const authUrl = gaia.getAuthUrl(ctx.platform, ctx.platformUserId);
-        await message.reply(
-          `🔗 Please link your GAIA account first:\n${authUrl}\n\nAfter linking, you can chat with GAIA!`,
-        );
+        try {
+          const { authUrl } = await gaia.createLinkToken(
+            ctx.platform,
+            ctx.platformUserId,
+          );
+          await message.reply(
+            `🔗 Please link your GAIA account first:\n${authUrl}\n\nAfter linking, you can chat with GAIA!`,
+          );
+        } catch {
+          await message.reply(
+            "🔗 Please link your GAIA account first. Use /auth to get a link.",
+          );
+        }
         return;
       }
 

@@ -515,10 +515,7 @@ export class GaiaClient {
   /**
    * Deletes a workflow.
    */
-  async deleteWorkflow(
-    workflowId: string,
-    ctx: BotUserContext,
-  ): Promise<void> {
+  async deleteWorkflow(workflowId: string, ctx: BotUserContext): Promise<void> {
     return this.requestWithAuth(async () => {
       await this.client.delete(`/api/v1/workflows/${workflowId}`, {
         headers: this.userHeaders(ctx),
@@ -711,8 +708,32 @@ export class GaiaClient {
     return this.frontendUrl;
   }
 
-  getAuthUrl(platform: string, platformUserId: string): string {
-    return `${this.frontendUrl}/auth/link-platform?platform=${encodeURIComponent(platform)}&pid=${encodeURIComponent(platformUserId)}`;
+  /**
+   * Creates a secure, time-limited link token for platform account linking.
+   * The token is stored in Redis and expires after 10 minutes.
+   */
+  async createLinkToken(
+    platform: string,
+    platformUserId: string,
+  ): Promise<{ token: string; authUrl: string }> {
+    return this.request(async () => {
+      const { data } = await this.client.post(
+        "/api/v1/bot/create-link-token",
+        {
+          platform,
+          platform_user_id: platformUserId,
+        },
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+          },
+        },
+      );
+      return {
+        token: data.token,
+        authUrl: data.auth_url,
+      };
+    });
   }
 
   /**

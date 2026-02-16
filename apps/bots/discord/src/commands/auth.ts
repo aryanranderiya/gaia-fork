@@ -27,9 +27,15 @@ export async function execute(
     return;
   }
 
-  const authUrl = gaia.getAuthUrl("discord", userId);
+  try {
+    const { authUrl } = await gaia.createLinkToken("discord", userId);
 
-  await interaction.editReply(
-    `🔗 **Link your Discord to GAIA**\n\nClick the link below to sign in with GAIA and link your Discord account:\n${authUrl}\n\n*After linking, you'll be able to use all GAIA commands directly from Discord!*`,
-  );
+    await interaction.editReply(
+      `🔗 **Link your Discord to GAIA**\n\nClick the link below to sign in with GAIA and link your Discord account:\n${authUrl}\n\n*After linking, you'll be able to use all GAIA commands directly from Discord!*`,
+    );
+  } catch {
+    await interaction.editReply(
+      "❌ Failed to generate auth link. Please try again.",
+    );
+  }
 }

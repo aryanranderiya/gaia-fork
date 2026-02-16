@@ -37,10 +37,19 @@ export async function execute(
     const settings = await gaia.getSettings("discord", interaction.user.id);
 
     if (!settings.authenticated) {
-      const authUrl = gaia.getAuthUrl("discord", interaction.user.id);
-      await interaction.editReply(
-        `❌ Not linked yet.\n\n🔗 Link your Discord account to GAIA to view settings:\n${authUrl}\n\nSign in to GAIA and connect Discord in Settings → Linked Accounts.`,
-      );
+      try {
+        const { authUrl } = await gaia.createLinkToken(
+          "discord",
+          interaction.user.id,
+        );
+        await interaction.editReply(
+          `❌ Not linked yet.\n\n🔗 Link your Discord account to GAIA to view settings:\n${authUrl}\n\nSign in to GAIA and connect Discord in Settings → Linked Accounts.`,
+        );
+      } catch {
+        await interaction.editReply(
+          "❌ Not linked yet. Use /auth to link your account.",
+        );
+      }
       return;
     }
 

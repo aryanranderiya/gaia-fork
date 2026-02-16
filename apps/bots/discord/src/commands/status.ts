@@ -1,9 +1,9 @@
-import {
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  MessageFlags,
-} from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
+import {
+  type ChatInputCommandInteraction,
+  MessageFlags,
+  SlashCommandBuilder,
+} from "discord.js";
 
 export const data = new SlashCommandBuilder()
   .setName("status")
@@ -23,12 +23,21 @@ export async function execute(
         "✅ Your Discord account is linked to GAIA!\n\nYou can use all commands.",
       );
     } else {
-      const authUrl = gaia.getAuthUrl("discord", interaction.user.id);
-      await interaction.editReply(
-        `❌ Not linked yet.\n\n🔗 Link your account: ${authUrl}`,
-      );
+      try {
+        const { authUrl } = await gaia.createLinkToken(
+          "discord",
+          interaction.user.id,
+        );
+        await interaction.editReply(
+          `❌ Not linked yet.\n\n🔗 Link your account: ${authUrl}`,
+        );
+      } catch {
+        await interaction.editReply(
+          "❌ Not linked yet. Use /auth to link your account.",
+        );
+      }
     }
-  } catch (error) {
+  } catch {
     await interaction.editReply("Error checking status. Please try again.");
   }
 }

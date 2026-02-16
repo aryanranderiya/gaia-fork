@@ -1,5 +1,5 @@
-import type { App } from "@slack/bolt";
 import type { GaiaClient } from "@gaia/shared";
+import type { App } from "@slack/bolt";
 
 export function registerStatusCommand(app: App, gaia: GaiaClient) {
   app.command("/status", async ({ command, ack, respond }) => {
@@ -14,13 +14,23 @@ export function registerStatusCommand(app: App, gaia: GaiaClient) {
           response_type: "ephemeral",
         });
       } else {
-        const authUrl = gaia.getAuthUrl("slack", command.user_id);
-        await respond({
-          text: `❌ Not linked yet.\n\n🔗 Link your account: ${authUrl}`,
-          response_type: "ephemeral",
-        });
+        try {
+          const { authUrl } = await gaia.createLinkToken(
+            "slack",
+            command.user_id,
+          );
+          await respond({
+            text: `❌ Not linked yet.\n\n🔗 Link your account: ${authUrl}`,
+            response_type: "ephemeral",
+          });
+        } catch {
+          await respond({
+            text: "❌ Not linked yet. Use /auth to link your account.",
+            response_type: "ephemeral",
+          });
+        }
       }
-    } catch (error) {
+    } catch {
       await respond({
         text: "Error checking status. Please try again.",
         response_type: "ephemeral",

@@ -20,8 +20,8 @@
  */
 import type { GaiaClient } from "../api";
 import type { ChatRequest } from "../types";
-import { truncateResponse } from "./index";
 import { formatBotError } from "./formatters";
+import { truncateResponse } from "./index";
 
 export interface StreamingOptions {
   editIntervalMs: number;
@@ -120,11 +120,17 @@ async function _handleStream(
           editTimer = null;
         }
         if (error.message === "not_authenticated" && onAuthError) {
-          const authUrl = gaia.getAuthUrl(
-            request.platform,
-            request.platformUserId,
-          );
-          await onAuthError(authUrl);
+          try {
+            const { authUrl } = await gaia.createLinkToken(
+              request.platform,
+              request.platformUserId,
+            );
+            await onAuthError(authUrl);
+          } catch {
+            await onGenericError(
+              "Failed to generate auth link. Please try /auth again.",
+            );
+          }
         } else {
           await onGenericError(formatBotError(error));
         }

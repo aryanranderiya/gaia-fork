@@ -56,6 +56,20 @@ class BotAuthStatusResponse(BaseModel):
     platform_user_id: str = Field(..., description="User's platform ID")
 
 
+class CreateLinkTokenRequest(BaseModel):
+    """Request model for creating a secure platform link token."""
+
+    platform: str = Field(..., description="Platform name (discord, telegram, etc.)")
+    platform_user_id: str = Field(..., description="User's ID on the platform")
+
+
+class CreateLinkTokenResponse(BaseModel):
+    """Response model for the created link token."""
+
+    token: str = Field(..., description="Secure link token")
+    auth_url: str = Field(..., description="Full auth URL for the user to visit")
+
+
 class BotWorkflowsListResponse(BaseModel):
     """Response model for listing bot workflows."""
 

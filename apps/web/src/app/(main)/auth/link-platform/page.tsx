@@ -33,18 +33,21 @@ export default function LinkPlatformPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuth();
   const platform = searchParams.get("platform");
-  const pid = searchParams.get("pid");
+  const token = searchParams.get("token");
 
   const [isLinking, setIsLinking] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!platform || !pid || !PLATFORM_CONFIG[platform]) {
+  const config = platform ? PLATFORM_CONFIG[platform] : null;
+
+  if (!token || !platform || !config) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
           <p className="text-zinc-400">
-            Invalid link. Please try again from your bot.
+            Invalid or expired link. Please request a new link from your bot
+            using <span className="font-mono text-zinc-300">/auth</span>.
           </p>
         </div>
       </div>
@@ -52,7 +55,7 @@ export default function LinkPlatformPage() {
   }
 
   if (!isAuthenticated) {
-    const returnUrl = `/auth/link-platform?platform=${encodeURIComponent(platform)}&pid=${encodeURIComponent(pid)}`;
+    const returnUrl = `/auth/link-platform?platform=${encodeURIComponent(platform)}&token=${encodeURIComponent(token)}`;
     return (
       <div className="flex h-full items-center justify-center">
         <div className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
@@ -61,7 +64,7 @@ export default function LinkPlatformPage() {
           </h2>
           <p className="mb-6 text-sm text-zinc-400">
             You need to sign in to your GAIA account before linking your{" "}
-            {PLATFORM_CONFIG[platform].name} account.
+            {config.name} account.
           </p>
           <Button
             color="primary"
@@ -77,7 +80,6 @@ export default function LinkPlatformPage() {
     );
   }
 
-  const config = PLATFORM_CONFIG[platform];
   const Icon = config.icon;
 
   const handleLink = async () => {
@@ -85,8 +87,8 @@ export default function LinkPlatformPage() {
     setError(null);
     try {
       await apiService.post(
-        `/platform-auth/${platform}/link`,
-        { platform_user_id: pid },
+        `/platform-links/${platform}`,
+        { token },
         { silent: true },
       );
       setIsLinked(true);
@@ -99,6 +101,11 @@ export default function LinkPlatformPage() {
 
       if (status === 409) {
         setError(detail || "This account is already linked.");
+      } else if (status === 400) {
+        setError(
+          detail ||
+            "Invalid or expired link. Please request a new one from the bot.",
+        );
       } else {
         setError("Failed to link account. Please try again.");
       }

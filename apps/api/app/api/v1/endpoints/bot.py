@@ -1,14 +1,20 @@
 import json
+import secrets
 from datetime import datetime, timezone
 from typing import Optional
 
 from app.agents.core.agent import call_agent, call_agent_silent
 from app.config.loggers import chat_logger as logger
+from app.config.settings import settings
+from app.constants.cache import PLATFORM_LINK_TOKEN_PREFIX, PLATFORM_LINK_TOKEN_TTL
+from app.db.redis import redis_cache
 from app.models.bot_models import (
     BotAuthStatusResponse,
     BotChatRequest,
     BotChatResponse,
     BotSettingsResponse,
+    CreateLinkTokenRequest,
+    CreateLinkTokenResponse,
     IntegrationInfo,
     ResetSessionRequest,
     SessionResponse,
@@ -32,6 +38,41 @@ async def require_bot_api_key(request: Request) -> None:
     """Verify that the request has a valid bot API key (set by BotAuthMiddleware)."""
     if not getattr(request.state, "bot_api_key_valid", False):
         raise HTTPException(status_code=401, detail="Invalid or missing bot API key")
+
+
+@router.post(
+    "/create-link-token",
+    response_model=CreateLinkTokenResponse,
+    status_code=200,
+    summary="Create Platform Link Token",
+    description="Generate a secure, time-limited token for platform account linking.",
+)
+async def create_link_token(
+    request: Request, body: CreateLinkTokenRequest
+) -> CreateLinkTokenResponse:
+    """Create a secure token that bots include in auth URLs.
+
+    This prevents CSRF attacks where an attacker crafts a link with someone
+    else's platform user ID to hijack their account linking.
+    """
+    await require_bot_api_key(request)
+
+    token = secrets.token_urlsafe(32)
+    redis_client = redis_cache.client
+    token_key = f"{PLATFORM_LINK_TOKEN_PREFIX}:{token}"
+
+    await redis_client.hset(
+        token_key,
+        mapping={
+            "platform": body.platform,
+            "platform_user_id": body.platform_user_id,
+        },
+    )
+    await redis_client.expire(token_key, PLATFORM_LINK_TOKEN_TTL)
+
+    auth_url = f"{settings.FRONTEND_URL}/auth/link-platform?platform={body.platform}&token={token}"
+
+    return CreateLinkTokenResponse(token=token, auth_url=auth_url)
 
 
 @router.post(

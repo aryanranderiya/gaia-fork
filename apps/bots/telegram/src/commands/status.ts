@@ -1,5 +1,5 @@
-import type { Bot } from "grammy";
 import type { GaiaClient } from "@gaia/shared";
+import type { Bot } from "grammy";
 
 export function registerStatusCommand(bot: Bot, gaia: GaiaClient) {
   bot.command("status", async (ctx) => {
@@ -14,12 +14,16 @@ export function registerStatusCommand(bot: Bot, gaia: GaiaClient) {
           "✅ Your Telegram account is linked to GAIA!\n\nYou can use all commands.",
         );
       } else {
-        const authUrl = gaia.getAuthUrl("telegram", userId);
-        await ctx.reply(
-          `❌ Not linked yet.\n\n🔗 Link your account: ${authUrl}`,
-        );
+        try {
+          const { authUrl } = await gaia.createLinkToken("telegram", userId);
+          await ctx.reply(
+            `❌ Not linked yet.\n\n🔗 Link your account: ${authUrl}`,
+          );
+        } catch {
+          await ctx.reply("❌ Not linked yet. Use /auth to get a link.");
+        }
       }
-    } catch (error) {
+    } catch {
       await ctx.reply("Error checking status. Please try again.");
     }
   });

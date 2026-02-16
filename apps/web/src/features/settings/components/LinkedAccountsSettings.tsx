@@ -74,8 +74,8 @@ export default function LinkedAccountsSettings() {
   const fetchPlatformLinks = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get("/user/platform-links");
-      setPlatformLinks(response.platform_links || {});
+      const response = await api.get("/platform-links");
+      setPlatformLinks(response.data.platform_links || {});
     } catch (error) {
       console.error("Failed to fetch platform links:", error);
       toast.error("Failed to load connected accounts");
@@ -90,11 +90,11 @@ export default function LinkedAccountsSettings() {
 
       // Get OAuth URL from backend
       const response = await api.post(
-        `/platform-auth/${platformId}/connect`,
+        `/platform-links/${platformId}/connect`,
         {},
       );
 
-      if (response.auth_url) {
+      if (response.data.auth_url) {
         // Open OAuth in popup
         const width = 600;
         const height = 700;
@@ -102,7 +102,7 @@ export default function LinkedAccountsSettings() {
         const top = window.screen.height / 2 - height / 2;
 
         const popup = window.open(
-          response.auth_url,
+          response.data.auth_url,
           `Connect ${platformId}`,
           `width=${width},height=${height},left=${left},top=${top}`,
         );
@@ -115,8 +115,8 @@ export default function LinkedAccountsSettings() {
             setConnectingPlatform(null);
           }
         }, 500);
-      } else if (response.instructions) {
-        toast.info(response.instructions, { duration: 8000 });
+      } else if (response.data.instructions) {
+        toast.info(response.data.instructions, { duration: 8000 });
         setConnectingPlatform(null);
       }
     } catch (error) {
@@ -128,7 +128,7 @@ export default function LinkedAccountsSettings() {
 
   const handleDisconnect = async (platformId: string) => {
     try {
-      await api.delete(`/platform-auth/${platformId}/disconnect`);
+      await api.delete(`/platform-links/${platformId}`);
       toast.success(`Disconnected from ${platformId}`);
       await fetchPlatformLinks();
     } catch (error) {
