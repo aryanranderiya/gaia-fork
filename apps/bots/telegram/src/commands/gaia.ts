@@ -16,6 +16,7 @@ export function registerGaiaCommand(bot: Bot, gaia: GaiaClient) {
     }
 
     const loading = await ctx.reply("Thinking...");
+    let currentMessageId = loading.message_id;
 
     await handleStreamingChat(
       gaia,
@@ -26,17 +27,28 @@ export function registerGaiaCommand(bot: Bot, gaia: GaiaClient) {
         channelId: chatId,
       },
       async (text) => {
-        await ctx.api.editMessageText(ctx.chat.id, loading.message_id, text);
+        await ctx.api.editMessageText(ctx.chat.id, currentMessageId, text);
+      },
+      async (text) => {
+        const newMessage = await ctx.reply(text);
+        currentMessageId = newMessage.message_id;
+        return async (updatedText) => {
+          await ctx.api.editMessageText(
+            ctx.chat.id,
+            newMessage.message_id,
+            updatedText,
+          );
+        };
       },
       async (authUrl) => {
         await ctx.api.editMessageText(
           ctx.chat.id,
-          loading.message_id,
+          currentMessageId,
           `Please authenticate first.\n\nOpen this link to sign in:\n${authUrl}`,
         );
       },
       async (errMsg) => {
-        await ctx.api.editMessageText(ctx.chat.id, loading.message_id, errMsg);
+        await ctx.api.editMessageText(ctx.chat.id, currentMessageId, errMsg);
       },
       STREAMING_DEFAULTS.telegram,
     );

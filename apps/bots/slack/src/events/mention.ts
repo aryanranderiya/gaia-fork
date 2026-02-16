@@ -26,6 +26,8 @@ export function registerMentionEvent(app: App, gaia: GaiaClient) {
     const ts = result.ts;
     if (!ts) return;
 
+    let currentTs = ts;
+
     await handleStreamingChat(
       gaia,
       {
@@ -35,19 +37,35 @@ export function registerMentionEvent(app: App, gaia: GaiaClient) {
         channelId,
       },
       async (text) => {
-        await client.chat.update({ channel: channelId, ts, text });
+        await client.chat.update({ channel: channelId, ts: currentTs, text });
+      },
+      async (text) => {
+        const newMessage = await client.chat.postMessage({
+          channel: channelId,
+          text,
+        });
+        if (newMessage.ts) {
+          currentTs = newMessage.ts;
+        }
+        return async (updatedText) => {
+          await client.chat.update({
+            channel: channelId,
+            ts: currentTs,
+            text: updatedText,
+          });
+        };
       },
       async (authUrl) => {
         await client.chat.update({
           channel: channelId,
-          ts,
+          ts: currentTs,
           text: `Please link your account first: ${authUrl}`,
         });
       },
       async (errMsg) => {
         await client.chat.update({
           channel: channelId,
-          ts,
+          ts: currentTs,
           text: errMsg,
         });
       },

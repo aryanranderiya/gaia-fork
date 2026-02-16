@@ -20,6 +20,7 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
     }
 
     const reply = await message.reply("Thinking...");
+    let currentReply = reply;
 
     await handleMentionChat(
       gaia,
@@ -30,10 +31,16 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
         channelId: message.guildId || message.channelId,
       },
       async (text) => {
-        await reply.edit(text);
+        await currentReply.edit(text);
+      },
+      async (text) => {
+        currentReply = await message.reply(text);
+        return async (updatedText) => {
+          await currentReply.edit(updatedText);
+        };
       },
       async (errMsg) => {
-        await reply.edit(errMsg);
+        await currentReply.edit(errMsg);
       },
       STREAMING_DEFAULTS.discord,
     );

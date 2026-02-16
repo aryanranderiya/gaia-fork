@@ -25,20 +25,51 @@ export async function execute(
   const channelId = interaction.channelId;
 
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  let isFirstMessage = true;
+  let lastFollowUp: Awaited<ReturnType<typeof interaction.followUp>> | null =
+    null;
 
   await handleStreamingChat(
     gaia,
     { message, platform: "discord", platformUserId: userId, channelId },
     async (text) => {
-      await interaction.editReply({ content: text });
+      if (isFirstMessage) {
+        await interaction.editReply({ content: text });
+      } else if (lastFollowUp) {
+        await lastFollowUp.edit({ content: text });
+      }
+    },
+    async (text) => {
+      if (isFirstMessage) {
+        isFirstMessage = false;
+      }
+      lastFollowUp = await interaction.followUp({
+        content: text,
+        flags: MessageFlags.Ephemeral,
+      });
+      return async (updatedText) => {
+        if (lastFollowUp) {
+          await lastFollowUp.edit({ content: updatedText });
+        }
+      };
     },
     async (authUrl) => {
-      await interaction.editReply({
-        content: `Please authenticate first: ${authUrl}`,
-      });
+      if (isFirstMessage) {
+        await interaction.editReply({
+          content: `Please authenticate first: ${authUrl}`,
+        });
+      } else if (lastFollowUp) {
+        await lastFollowUp.edit({
+          content: `Please authenticate first: ${authUrl}`,
+        });
+      }
     },
     async (errMsg) => {
-      await interaction.editReply({ content: errMsg });
+      if (isFirstMessage) {
+        await interaction.editReply({ content: errMsg });
+      } else if (lastFollowUp) {
+        await lastFollowUp.edit({ content: errMsg });
+      }
     },
     STREAMING_DEFAULTS.discord,
   );

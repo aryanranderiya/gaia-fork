@@ -30,6 +30,7 @@ export interface StreamingOptions {
 }
 
 export type MessageEditor = (text: string) => Promise<void>;
+export type NewMessageSender = (text: string) => Promise<MessageEditor>;
 
 export const STREAMING_DEFAULTS: Record<string, StreamingOptions> = {
   discord: {
@@ -61,6 +62,7 @@ async function _handleStream(
   request: ChatRequest,
   gaia: GaiaClient,
   editMessage: MessageEditor,
+  sendNewMessage: NewMessageSender | null,
   onAuthError: ((authUrl: string) => Promise<void>) | null,
   onGenericError: (formattedError: string) => Promise<void>,
   options: StreamingOptions,
@@ -71,15 +73,36 @@ async function _handleStream(
   let editTimer: ReturnType<typeof setTimeout> | null = null;
   let fullText = "";
   let streamDone = false;
+  let currentEditor = editMessage;
+  let sentText = "";
 
   const updateDisplay = async (text: string, cursor = true) => {
     const display = cursor ? `${text}${cursorIndicator}` : text;
     const truncated = truncateResponse(display, platform);
     try {
-      await editMessage(truncated);
+      await currentEditor(truncated);
     } catch {
       // Message may have been deleted or interaction expired
     }
+  };
+
+  const handleNewMessageBreak = async () => {
+    if (!sendNewMessage) return;
+
+    const breakIndex = fullText.indexOf("<NEW_MESSAGE_BREAK>");
+    if (breakIndex === -1) return;
+
+    const beforeBreak = fullText.slice(0, breakIndex).trim();
+    const afterBreak = fullText.slice(breakIndex + 19);
+
+    if (beforeBreak && beforeBreak !== sentText) {
+      await updateDisplay(beforeBreak, false);
+      sentText = beforeBreak;
+    }
+
+    currentEditor = await sendNewMessage("Thinking...");
+    fullText = afterBreak;
+    sentText = "";
   };
 
   try {
@@ -87,6 +110,9 @@ async function _handleStream(
       async (chunk) => {
         fullText += chunk;
         if (streamDone) return;
+
+        await handleNewMessageBreak();
+
         const now = Date.now();
         if (now - lastEditTime >= editIntervalMs) {
           lastEditTime = now;
@@ -148,6 +174,7 @@ export async function handleStreamingChat(
   gaia: GaiaClient,
   request: ChatRequest,
   editMessage: MessageEditor,
+  sendNewMessage: NewMessageSender | null,
   onAuthError: (authUrl: string) => Promise<void>,
   onGenericError: (formattedError: string) => Promise<void>,
   options: StreamingOptions,
@@ -158,6 +185,7 @@ export async function handleStreamingChat(
     request,
     gaia,
     editMessage,
+    sendNewMessage,
     onAuthError,
     onGenericError,
     options,
@@ -173,6 +201,7 @@ export async function handleMentionChat(
   gaia: GaiaClient,
   request: ChatRequest,
   editMessage: MessageEditor,
+  sendNewMessage: NewMessageSender | null,
   onGenericError: (formattedError: string) => Promise<void>,
   options: StreamingOptions,
 ): Promise<void> {
@@ -182,6 +211,7 @@ export async function handleMentionChat(
     request,
     gaia,
     editMessage,
+    sendNewMessage,
     null,
     onGenericError,
     options,
