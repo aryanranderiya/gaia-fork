@@ -153,3 +153,38 @@ export interface BotUserContext {
 export type CommandContext = BotUserContext & {
   channelId?: string;
 };
+
+/**
+ * Integration information for settings.
+ */
+export interface IntegrationInfo {
+  name: string;
+  logoUrl: string | null;
+}
+
+/**
+ * User settings response when not authenticated.
+ */
+export interface UnauthenticatedSettingsResponse {
+  authenticated: false;
+}
+
+/**
+ * User settings response when authenticated.
+ */
+export interface AuthenticatedSettingsResponse {
+  authenticated: true;
+  userName: string | null;
+  accountCreatedAt: string | null;
+  profileImageUrl: string | null;
+  selectedModelName: string | null;
+  selectedModelIconUrl: string | null;
+  connectedIntegrations: IntegrationInfo[];
+}
+
+/**
+ * User settings response (discriminated union).
+ */
+export type SettingsResponse =
+  | UnauthenticatedSettingsResponse
+  | AuthenticatedSettingsResponse;

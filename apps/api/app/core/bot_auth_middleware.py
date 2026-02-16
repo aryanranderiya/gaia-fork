@@ -1,13 +1,18 @@
 """
 Bot Authentication Middleware
 
-Handles JWT-based authentication for bot platforms (Discord, Slack, Telegram).
-JWT tokens are issued by the /bot/chat endpoint after successful API key verification.
+Handles authentication for bot platforms (Discord, Slack, Telegram).
+Supports two authentication methods:
+1. JWT Bearer token (fast path, cached) - issued after initial API key auth
+2. API key + platform headers (initial auth) - looks up user by platform ID
+
+This middleware sets request.state.user and request.state.authenticated,
+allowing bot requests to use the same endpoints as normal web auth.
 """
 
 from typing import Any, Awaitable, Callable, Dict, Optional
 
-from app.config.loggers import auth_logger as logger
+from app.config.settings import settings
 from app.constants.cache import TEN_MINUTES_TTL
 from app.db.redis import get_cache, set_cache
 from app.services.bot_token_service import verify_bot_session_token
@@ -20,10 +25,13 @@ from starlette.types import ASGIApp
 
 class BotAuthMiddleware(BaseHTTPMiddleware):
     """
-    Middleware for handling bot platform JWT authentication.
+    Middleware for handling bot platform authentication.
 
-    This middleware validates JWT Bearer tokens in the Authorization header.
-    If authentication succeeds, it sets request.state.user and request.state.authenticated.
+    Authentication flow:
+    1. Try JWT Bearer token (fast, cached user lookup)
+    2. Fall back to X-Bot-API-Key + platform headers (DB lookup)
+
+    On success, sets request.state.user and request.state.authenticated.
     """
 
     def __init__(
@@ -32,7 +40,6 @@ class BotAuthMiddleware(BaseHTTPMiddleware):
         exclude_paths: Optional[list[str]] = None,
     ):
         super().__init__(app)
-        # Paths that don't need authentication
         self.exclude_paths = exclude_paths or [
             "/docs",
             "/redoc",
@@ -43,58 +50,92 @@ class BotAuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        """
-        Process the request through the bot authentication middleware.
-
-        Authentication flow:
-        - Validates JWT token from Authorization: Bearer <token> header
-        - Sets request.state.user and request.state.authenticated on success
-
-        Args:
-            request: The incoming request
-            call_next: Callable to process the request through the next middleware/route
-
-        Returns:
-            Response: The response from the route handler
-        """
-        # Skip authentication for excluded paths
         if any(request.url.path.startswith(path) for path in self.exclude_paths):
             return await call_next(request)
 
-        # Authenticate using JWT Bearer token
+        # Skip if already authenticated by WorkOS middleware
+        if getattr(request.state, "authenticated", False):
+            return await call_next(request)
+
+        authenticated = False
+
+        # 1. Try JWT Bearer token (fast path)
         auth_header = request.headers.get("Authorization")
         if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header[7:]  # Remove "Bearer " prefix
+            token = auth_header[7:]
             try:
                 user_info = await self._authenticate_jwt(token)
                 if user_info:
                     request.state.user = user_info
                     request.state.authenticated = True
-                    logger.info(
-                        f"JWT authentication successful for user {user_info.get('user_id')}"
-                    )
-            except Exception as e:
-                logger.error(f"JWT authentication error: {e}")
+                    authenticated = True
+            except (JWTError, Exception):
+                # JWT failed - will try API key below
+                pass
 
-        # Process the request through the next middleware/route
+        # 2. Fall back to API key + platform headers
+        if not authenticated:
+            api_key = request.headers.get("X-Bot-API-Key")
+            platform = request.headers.get("X-Bot-Platform")
+            platform_user_id = request.headers.get("X-Bot-Platform-User-Id")
+
+            if api_key and self._verify_api_key(api_key):
+                if platform and platform_user_id:
+                    user_info = await self._authenticate_platform(
+                        platform, platform_user_id
+                    )
+                    if user_info:
+                        request.state.user = user_info
+                        request.state.authenticated = True
+                        authenticated = True
+
+                # Mark as bot-api-key-authenticated even without user
+                # (for endpoints like /bot/chat that handle unlinked users)
+                request.state.bot_api_key_valid = True
+                request.state.bot_platform = platform
+                request.state.bot_platform_user_id = platform_user_id
+
         response = await call_next(request)
         return response
 
+    def _verify_api_key(self, api_key: str) -> bool:
+        bot_api_key = getattr(settings, "GAIA_BOT_API_KEY", None)
+        if not bot_api_key:
+            return False
+        return api_key == bot_api_key
+
+    async def _authenticate_platform(
+        self, platform: str, platform_user_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Authenticate via platform ID lookup with caching."""
+        cache_key = f"bot_user:{platform}:{platform_user_id}"
+        cached_user_info = await get_cache(cache_key)
+
+        if cached_user_info and cached_user_info.get("user_id"):
+            return cached_user_info
+
+        user_data = await PlatformLinkService.get_user_by_platform_id(
+            platform, platform_user_id
+        )
+
+        if not user_data:
+            return None
+
+        user_info = {
+            "user_id": str(user_data.get("_id")),
+            "email": user_data.get("email"),
+            "name": user_data.get("name"),
+            "picture": user_data.get("picture"),
+            "auth_provider": f"bot:{platform}",
+            "bot_authenticated": True,
+        }
+
+        await set_cache(cache_key, user_info, ttl=TEN_MINUTES_TTL)
+        return user_info
+
     async def _authenticate_jwt(self, token: str) -> Optional[Dict[str, Any]]:
-        """
-        Authenticate a bot request using JWT session token with user lookup caching (10 min TTL).
-
-        Args:
-            token: JWT token from Authorization header
-
-        Returns:
-            User info dict if authentication succeeds, None otherwise
-
-        Raises:
-            JWTError: If token is invalid or expired
-        """
+        """Authenticate via JWT session token with caching."""
         try:
-            # Verify and decode the JWT token
             payload = verify_bot_session_token(token)
 
             user_id = payload.get("user_id")
@@ -102,38 +143,24 @@ class BotAuthMiddleware(BaseHTTPMiddleware):
             platform_user_id = payload.get("platform_user_id")
 
             if not user_id or not platform or not platform_user_id:
-                logger.warning("Invalid JWT payload: missing required fields")
                 return None
 
-            # Try cache first
             cache_key = f"bot_user:{platform}:{platform_user_id}"
             cached_user_info = await get_cache(cache_key)
 
             if cached_user_info and cached_user_info.get("user_id") == user_id:
-                logger.debug(f"Cache hit for {cache_key}")
                 return cached_user_info
 
-            # Cache miss - lookup from DB
-            logger.debug(f"Cache miss for {cache_key}, looking up from database")
             user_data = await PlatformLinkService.get_user_by_platform_id(
                 platform, platform_user_id
             )
 
             if not user_data:
-                logger.warning(
-                    f"No user found for JWT token: {platform} user {platform_user_id}"
-                )
                 return None
 
-            # Verify the user_id matches
             if str(user_data.get("_id")) != user_id:
-                logger.warning(
-                    f"User ID mismatch in JWT token: expected {user_id}, "
-                    f"got {user_data.get('_id')}"
-                )
                 return None
 
-            # Construct user info in the same format as WorkOS auth
             user_info = {
                 "user_id": str(user_data.get("_id")),
                 "email": user_data.get("email"),
@@ -143,12 +170,8 @@ class BotAuthMiddleware(BaseHTTPMiddleware):
                 "bot_authenticated": True,
             }
 
-            # Cache for 10 minutes
             await set_cache(cache_key, user_info, ttl=TEN_MINUTES_TTL)
-            logger.debug(f"Cached user info for {cache_key}")
-
             return user_info
 
-        except JWTError as e:
-            logger.warning(f"JWT authentication failed: {e}")
+        except JWTError:
             raise

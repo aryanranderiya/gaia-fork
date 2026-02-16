@@ -80,3 +80,41 @@ class BotConversationResponse(BaseModel):
 
     class Config:
         extra = "allow"  # Allow additional fields from MongoDB
+
+
+class IntegrationInfo(BaseModel):
+    """Integration information for bot settings."""
+
+    name: str = Field(..., description="Integration name")
+    logo_url: Optional[str] = Field(None, description="Integration logo URL")
+
+
+class BotSettingsResponse(BaseModel):
+    """
+    Response model for user settings.
+
+    This is a union type:
+    - If authenticated=False: Only authenticated field is relevant
+    - If authenticated=True: All other fields contain user data (nullable where appropriate)
+    """
+
+    authenticated: bool = Field(..., description="Whether user is linked")
+    user_name: Optional[str] = Field(
+        None, description="User's display name (null if not set)"
+    )
+    account_created_at: Optional[str] = Field(
+        None, description="Account creation date ISO string (null if not available)"
+    )
+    profile_image_url: Optional[str] = Field(
+        None, description="User's profile image URL (null if not set)"
+    )
+    selected_model_name: Optional[str] = Field(
+        None, description="Selected AI model name (null if using default)"
+    )
+    selected_model_icon_url: Optional[str] = Field(
+        None, description="Model icon URL (null if using default)"
+    )
+    connected_integrations: list[IntegrationInfo] = Field(
+        default_factory=list,
+        description="List of connected integrations (empty if none)",
+    )

@@ -84,10 +84,10 @@ class PlatformLinkService:
         Link a platform account to a GAIA user.
 
         Args:
-            user_id: GAIA user ID (string or ObjectId format)
+            user_id: GAIA user ID (string representation of MongoDB _id)
             platform: Platform name
             platform_user_id: User's ID on the platform
-            use_object_id: If True, user_id is treated as ObjectId
+            use_object_id: Deprecated - no longer used
 
         Returns:
             Result dict with status and details
@@ -101,13 +101,13 @@ class PlatformLinkService:
             {f"platform_links.{platform}": platform_user_id}
         )
 
-        query_field = "_id" if use_object_id else "user_id"
-        query_value = ObjectId(user_id) if use_object_id else user_id
+        # user_id is always the string representation of MongoDB _id
+        # We always need to convert it to ObjectId for querying
+        query_field = "_id"
+        query_value = ObjectId(user_id)
 
         if existing:
-            existing_id = (
-                str(existing.get("_id")) if use_object_id else existing.get("user_id")
-            )
+            existing_id = str(existing.get("_id"))
             if existing_id != user_id:
                 raise ValueError(
                     f"This {platform} account is already linked to another GAIA user"
@@ -152,9 +152,9 @@ class PlatformLinkService:
         Unlink a platform account from a GAIA user.
 
         Args:
-            user_id: GAIA user ID
+            user_id: GAIA user ID (string representation of MongoDB _id)
             platform: Platform name
-            use_object_id: If True, user_id is treated as ObjectId
+            use_object_id: Deprecated - no longer used
 
         Returns:
             Result dict with status
@@ -162,8 +162,9 @@ class PlatformLinkService:
         Raises:
             ValueError: If user not found
         """
-        query_field = "_id" if use_object_id else "user_id"
-        query_value = ObjectId(user_id) if use_object_id else user_id
+        # user_id is always the string representation of MongoDB _id
+        query_field = "_id"
+        query_value = ObjectId(user_id)
 
         result = await users_collection.update_one(
             {query_field: query_value},
@@ -186,12 +187,12 @@ class PlatformLinkService:
         Get all linked platforms for a user.
 
         Args:
-            user_id: GAIA user ID
+            user_id: GAIA user ID (string representation of MongoDB _id)
 
         Returns:
             Dict mapping platform names to connection details
         """
-        user = await users_collection.find_one({"user_id": user_id})
+        user = await users_collection.find_one({"_id": ObjectId(user_id)})
 
         if not user:
             return {}

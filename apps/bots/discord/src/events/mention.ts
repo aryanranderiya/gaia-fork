@@ -1,7 +1,7 @@
 import type { Message } from "discord.js";
 import type { GaiaClient } from "@gaia/shared";
 import {
-  handleStreamingChat,
+  handleMentionChat,
   STREAMING_DEFAULTS,
   formatBotError,
 } from "@gaia/shared";
@@ -21,19 +21,16 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
 
     const reply = await message.reply("Thinking...");
 
-    await handleStreamingChat(
+    await handleMentionChat(
       gaia,
       {
         message: content,
         platform: "discord",
         platformUserId: message.author.id,
-        channelId: message.channelId,
+        channelId: message.guildId || message.channelId,
       },
       async (text) => {
         await reply.edit(text);
-      },
-      async (authUrl) => {
-        await reply.edit(`Please link your account first: ${authUrl}`);
       },
       async (errMsg) => {
         await reply.edit(errMsg);

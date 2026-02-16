@@ -11,6 +11,7 @@ import type {
   CreateTodoRequest,
   SearchResponse,
   SessionInfo,
+  SettingsResponse,
   Todo,
   TodoListResponse,
   Workflow,
@@ -30,8 +31,14 @@ export class GaiaApiError extends Error {
 }
 
 /**
- * Client for interacting with the GAIA Backend Bot API.
- * Handles authentication, chat interactions, sessions, and platform linking status.
+ * Client for interacting with the GAIA Backend API.
+ *
+ * Bot requests are authenticated via:
+ * 1. X-Bot-API-Key + X-Bot-Platform + X-Bot-Platform-User-Id headers
+ *    (handled by BotAuthMiddleware which sets request.state.user)
+ * 2. Optional Authorization: Bearer <jwt> for faster subsequent requests
+ *
+ * This allows bots to use the same endpoints as the web app.
  */
 export class GaiaClient {
   private client: AxiosInstance;
@@ -40,13 +47,6 @@ export class GaiaClient {
   private apiKey: string;
   private sessionTokens: Map<string, string> = new Map();
 
-  /**
-   * Creates a new GaiaClient instance.
-   *
-   * @param baseUrl - The base URL of the GAIA API (e.g., http://localhost:8000)
-   * @param apiKey - The secure bot API key for server-to-server communication
-   * @param frontendUrl - The base URL of the GAIA frontend app (e.g., http://localhost:3000)
-   */
   constructor(baseUrl: string, apiKey: string, frontendUrl: string) {
     this.baseUrl = baseUrl;
     this.frontendUrl = frontendUrl;
@@ -63,39 +63,33 @@ export class GaiaClient {
     return `${ctx.platform}:${ctx.platformUserId}`;
   }
 
+  /**
+   * Build headers for authenticated bot requests.
+   * Always includes X-Bot-API-Key and platform headers.
+   * Optionally includes JWT session token for faster auth.
+   */
   private userHeaders(ctx: BotUserContext) {
     const sessionKey = this.getSessionKey(ctx);
     const sessionToken = this.sessionTokens.get(sessionKey);
 
     const headers: Record<string, string> = {
+      "X-Bot-API-Key": this.apiKey,
       "X-Bot-Platform": ctx.platform,
       "X-Bot-Platform-User-Id": ctx.platformUserId,
     };
 
     if (sessionToken) {
       headers.Authorization = `Bearer ${sessionToken}`;
-    } else {
-      headers["X-Bot-API-Key"] = this.apiKey;
     }
 
     return headers;
   }
 
-  /**
-   * Clears the session token for a user, forcing re-authentication.
-   * This is called automatically when a 401 error is encountered.
-   */
   private clearSessionToken(ctx: BotUserContext): void {
     const sessionKey = this.getSessionKey(ctx);
     this.sessionTokens.delete(sessionKey);
   }
 
-  /**
-   * Wraps all API calls with consistent error handling.
-   * Catches axios errors, extracts HTTP status, and throws GaiaApiError.
-   * Passes through GaiaApiError unchanged (prevents double-wrapping
-   * when methods like getWeather call chatPublic internally).
-   */
   private async request<T>(fn: () => Promise<T>): Promise<T> {
     try {
       return await fn();
@@ -108,11 +102,6 @@ export class GaiaClient {
     }
   }
 
-  /**
-   * Wraps API calls that require user authentication with automatic token refresh.
-   * If a 401 error is encountered, clears the cached token and retries once.
-   * This allows the bot to get a fresh JWT token via the fallback API key auth.
-   */
   private async requestWithAuth<T>(
     fn: () => Promise<T>,
     ctx: BotUserContext,
@@ -136,11 +125,7 @@ export class GaiaClient {
   }
 
   /**
-   * Sends a chat message to the GAIA agent on behalf of an authenticated user.
-   *
-   * @param request - The chat request containing message, platform, and user ID.
-   * @returns The agent's response and session details.
-   * @throws Error if the API request fails.
+   * Sends a chat message to the GAIA agent (authenticated users only).
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const ctx = {
@@ -177,14 +162,7 @@ export class GaiaClient {
   }
 
   /**
-   * Sends a chat message and streams the response via SSE.
-   * Uses the streaming endpoint for real-time progressive updates.
-   *
-   * @param request - The chat request.
-   * @param onChunk - Called with each text chunk as it arrives.
-   * @param onDone - Called with the full accumulated text when streaming completes.
-   * @param onError - Called if an error occurs during streaming.
-   * @returns The conversation ID.
+   * Streams a chat response via SSE (authenticated users only).
    */
   async chatStream(
     request: ChatRequest,
@@ -192,7 +170,34 @@ export class GaiaClient {
     onDone: (fullText: string, conversationId: string) => void | Promise<void>,
     onError: (error: Error) => void | Promise<void>,
   ): Promise<string> {
-    return this._chatStreamInternal(request, onChunk, onDone, onError, false);
+    return this._chatStreamInternal(
+      request,
+      onChunk,
+      onDone,
+      onError,
+      false,
+      "/api/v1/bot/chat-stream",
+    );
+  }
+
+  /**
+   * Streams a chat response for unauthenticated @mentions.
+   * Uses guild-based rate limiting instead of user auth.
+   */
+  async chatMention(
+    request: ChatRequest,
+    onChunk: (text: string) => void | Promise<void>,
+    onDone: (fullText: string, conversationId: string) => void | Promise<void>,
+    onError: (error: Error) => void | Promise<void>,
+  ): Promise<string> {
+    return this._chatStreamInternal(
+      request,
+      onChunk,
+      onDone,
+      onError,
+      false,
+      "/api/v1/bot/chat-mention",
+    );
   }
 
   private async _chatStreamInternal(
@@ -201,6 +206,7 @@ export class GaiaClient {
     onDone: (fullText: string, conversationId: string) => void | Promise<void>,
     onError: (error: Error) => void | Promise<void>,
     retried: boolean,
+    endpoint: string,
   ): Promise<string> {
     let fullText = "";
     let conversationId = "";
@@ -215,7 +221,7 @@ export class GaiaClient {
 
     try {
       const response = await this.client.post(
-        "/api/v1/bot/chat-stream",
+        endpoint,
         {
           message: request.message,
           platform: request.platform,
@@ -336,6 +342,7 @@ export class GaiaClient {
           onDone,
           onError,
           true,
+          endpoint,
         );
       }
 
@@ -348,12 +355,6 @@ export class GaiaClient {
 
   /**
    * Retrieves or creates a session for a user on a specific platform.
-   *
-   * @param platform - The platform name (discord, slack, telegram).
-   * @param platformUserId - The user's ID on that platform.
-   * @param channelId - Optional channel ID to scope the session.
-   * @returns Session information including conversation ID.
-   * @throws Error if the API request fails.
    */
   async getSession(
     platform: string,
@@ -371,6 +372,8 @@ export class GaiaClient {
         {
           headers: {
             "X-Bot-API-Key": this.apiKey,
+            "X-Bot-Platform": platform,
+            "X-Bot-Platform-User-Id": platformUserId,
           },
         },
       );
@@ -384,11 +387,6 @@ export class GaiaClient {
 
   /**
    * Checks if a platform user is linked to a GAIA account.
-   *
-   * @param platform - The platform name.
-   * @param platformUserId - The platform user ID.
-   * @returns Authentication status.
-   * @throws Error if the API request fails.
    */
   async checkAuthStatus(
     platform: string,
@@ -400,6 +398,8 @@ export class GaiaClient {
         {
           headers: {
             "X-Bot-API-Key": this.apiKey,
+            "X-Bot-Platform": platform,
+            "X-Bot-Platform-User-Id": platformUserId,
           },
         },
       );
@@ -408,12 +408,49 @@ export class GaiaClient {
   }
 
   /**
+   * Gets user settings including account info, integrations, and selected model.
+   */
+  async getSettings(
+    platform: string,
+    platformUserId: string,
+  ): Promise<SettingsResponse> {
+    return this.request(async () => {
+      const { data } = await this.client.get(
+        `/api/v1/bot/settings/${platform}/${platformUserId}`,
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+            "X-Bot-Platform": platform,
+            "X-Bot-Platform-User-Id": platformUserId,
+          },
+        },
+      );
+      return {
+        authenticated: data.authenticated,
+        userName: data.user_name ?? null,
+        accountCreatedAt: data.account_created_at ?? null,
+        profileImageUrl: data.profile_image_url ?? null,
+        selectedModelName: data.selected_model_name ?? null,
+        selectedModelIconUrl: data.selected_model_icon_url ?? null,
+        connectedIntegrations:
+          data.connected_integrations?.map(
+            (i: { name: string; logo_url?: string }) => ({
+              name: i.name,
+              logoUrl: i.logo_url ?? null,
+            }),
+          ) ?? [],
+      };
+    });
+  }
+
+  /**
    * Lists all workflows for the authenticated user.
+   * Uses the regular /api/v1/workflows endpoint via bot middleware auth.
    */
   async listWorkflows(ctx: BotUserContext): Promise<WorkflowListResponse> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.get<WorkflowListResponse>(
-        "/api/v1/bot/workflows",
+        "/api/v1/workflows",
         { headers: this.userHeaders(ctx) },
       );
       return data;
@@ -433,7 +470,7 @@ export class GaiaClient {
   ): Promise<Workflow> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.post<{ workflow: Workflow }>(
-        "/api/v1/bot/workflows",
+        "/api/v1/workflows",
         request,
         { headers: this.userHeaders(ctx) },
       );
@@ -450,7 +487,7 @@ export class GaiaClient {
   ): Promise<Workflow> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.get<{ workflow: Workflow }>(
-        `/api/v1/bot/workflows/${workflowId}`,
+        `/api/v1/workflows/${workflowId}`,
         { headers: this.userHeaders(ctx) },
       );
       return data.workflow;
@@ -466,7 +503,7 @@ export class GaiaClient {
   ): Promise<WorkflowExecutionResponse> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.post<WorkflowExecutionResponse>(
-        `/api/v1/bot/workflows/${request.workflow_id}/execute`,
+        `/api/v1/workflows/${request.workflow_id}/execute`,
         { inputs: request.inputs },
         { headers: this.userHeaders(ctx) },
       );
@@ -477,9 +514,12 @@ export class GaiaClient {
   /**
    * Deletes a workflow.
    */
-  async deleteWorkflow(workflowId: string, ctx: BotUserContext): Promise<void> {
+  async deleteWorkflow(
+    workflowId: string,
+    ctx: BotUserContext,
+  ): Promise<void> {
     return this.requestWithAuth(async () => {
-      await this.client.delete(`/api/v1/bot/workflows/${workflowId}`, {
+      await this.client.delete(`/api/v1/workflows/${workflowId}`, {
         headers: this.userHeaders(ctx),
       });
     }, ctx);
@@ -487,6 +527,7 @@ export class GaiaClient {
 
   /**
    * Lists todos for the authenticated user.
+   * Uses the regular /api/v1/todos endpoint via bot middleware auth.
    */
   async listTodos(
     ctx: BotUserContext,
@@ -504,11 +545,16 @@ export class GaiaClient {
         queryParams.set("project_id", params.project_id);
       }
 
-      const { data } = await this.client.get<TodoListResponse>(
-        `/api/v1/bot/todos?${queryParams.toString()}`,
+      const { data } = await this.client.get(
+        `/api/v1/todos?${queryParams.toString()}`,
         { headers: this.userHeaders(ctx) },
       );
-      return data;
+
+      // Map from regular API format (data/meta) to bot format (todos/total)
+      const todos = (data.data || data.todos || []).map(mapTodoResponse);
+      const total = data.meta?.total ?? data.total ?? todos.length;
+
+      return { todos, total };
     }, ctx);
   }
 
@@ -520,12 +566,10 @@ export class GaiaClient {
     ctx: BotUserContext,
   ): Promise<Todo> {
     return this.requestWithAuth(async () => {
-      const { data } = await this.client.post<Todo>(
-        "/api/v1/bot/todos",
-        request,
-        { headers: this.userHeaders(ctx) },
-      );
-      return data;
+      const { data } = await this.client.post("/api/v1/todos", request, {
+        headers: this.userHeaders(ctx),
+      });
+      return mapTodoResponse(data);
     }, ctx);
   }
 
@@ -534,11 +578,10 @@ export class GaiaClient {
    */
   async getTodo(todoId: string, ctx: BotUserContext): Promise<Todo> {
     return this.requestWithAuth(async () => {
-      const { data } = await this.client.get<Todo>(
-        `/api/v1/bot/todos/${todoId}`,
-        { headers: this.userHeaders(ctx) },
-      );
-      return data;
+      const { data } = await this.client.get(`/api/v1/todos/${todoId}`, {
+        headers: this.userHeaders(ctx),
+      });
+      return mapTodoResponse(data);
     }, ctx);
   }
 
@@ -551,12 +594,12 @@ export class GaiaClient {
     ctx: BotUserContext,
   ): Promise<Todo> {
     return this.requestWithAuth(async () => {
-      const { data } = await this.client.patch<Todo>(
-        `/api/v1/bot/todos/${todoId}`,
+      const { data } = await this.client.put(
+        `/api/v1/todos/${todoId}`,
         updates,
         { headers: this.userHeaders(ctx) },
       );
-      return data;
+      return mapTodoResponse(data);
     }, ctx);
   }
 
@@ -572,7 +615,7 @@ export class GaiaClient {
    */
   async deleteTodo(todoId: string, ctx: BotUserContext): Promise<void> {
     return this.requestWithAuth(async () => {
-      await this.client.delete(`/api/v1/bot/todos/${todoId}`, {
+      await this.client.delete(`/api/v1/todos/${todoId}`, {
         headers: this.userHeaders(ctx),
       });
     }, ctx);
@@ -580,6 +623,7 @@ export class GaiaClient {
 
   /**
    * Lists conversations for the authenticated user.
+   * Uses the regular /api/v1/conversations endpoint via bot middleware auth.
    */
   async listConversations(
     ctx: BotUserContext,
@@ -593,11 +637,21 @@ export class GaiaClient {
       queryParams.set("page", String(params?.page || 1));
       queryParams.set("limit", String(params?.limit || 10));
 
-      const { data } = await this.client.get<ConversationListResponse>(
-        `/api/v1/bot/conversations?${queryParams.toString()}`,
+      const { data } = await this.client.get(
+        `/api/v1/conversations?${queryParams.toString()}`,
         { headers: this.userHeaders(ctx) },
       );
-      return data;
+
+      // Map from regular API format to bot format
+      const conversations = (data.conversations || []).map(
+        mapConversationResponse,
+      );
+
+      return {
+        conversations,
+        total: data.total ?? conversations.length,
+        page: data.page ?? 1,
+      };
     }, ctx);
   }
 
@@ -609,24 +663,20 @@ export class GaiaClient {
     ctx: BotUserContext,
   ): Promise<Conversation> {
     return this.requestWithAuth(async () => {
-      const { data } = await this.client.get<Conversation>(
-        `/api/v1/bot/conversations/${conversationId}`,
+      const { data } = await this.client.get(
+        `/api/v1/conversations/${conversationId}`,
         { headers: this.userHeaders(ctx) },
       );
-      return data;
+      return mapConversationResponse(data);
     }, ctx);
   }
 
-  /**
-   * Gets the web URL for a conversation.
-   */
   getConversationUrl(conversationId: string): string {
     return `${this.frontendUrl}/chat/${conversationId}`;
   }
 
   /**
-   * Gets weather information for a location.
-   * This uses the agent's weather tool via a chat request.
+   * Gets weather information via the agent.
    */
   async getWeather(location: string, ctx: CommandContext): Promise<string> {
     const response = await this.chat({
@@ -640,24 +690,18 @@ export class GaiaClient {
 
   /**
    * Searches messages, conversations, and notes.
+   * Uses the regular /api/v1/search endpoint via bot middleware auth.
    */
   async search(query: string, ctx: BotUserContext): Promise<SearchResponse> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.get<SearchResponse>(
-        `/api/v1/bot/search?query=${encodeURIComponent(query)}`,
+        `/api/v1/search?query=${encodeURIComponent(query)}`,
         { headers: this.userHeaders(ctx) },
       );
       return data;
     }, ctx);
   }
 
-  /**
-   * Generates a URL for the user to authenticate and link their account.
-   *
-   * @param platform - The platform name.
-   * @param platformUserId - The platform user ID.
-   * @returns The full URL for authentication.
-   */
   getBaseUrl(): string {
     return this.baseUrl;
   }
@@ -672,11 +716,6 @@ export class GaiaClient {
 
   /**
    * Resets the session for a user, creating a fresh conversation.
-   *
-   * @param platform - The platform name.
-   * @param platformUserId - The platform user ID.
-   * @param channelId - Optional channel ID.
-   * @returns The new session info.
    */
   async resetSession(
     platform: string,
@@ -694,6 +733,8 @@ export class GaiaClient {
         {
           headers: {
             "X-Bot-API-Key": this.apiKey,
+            "X-Bot-Platform": platform,
+            "X-Bot-Platform-User-Id": platformUserId,
           },
         },
       );
@@ -704,4 +745,37 @@ export class GaiaClient {
       } as SessionInfo;
     });
   }
+}
+
+/**
+ * Maps a todo response from the regular API format to the bot-expected format.
+ */
+function mapTodoResponse(data: Record<string, unknown>): Todo {
+  return {
+    id: (data.id as string) || "",
+    title: (data.title as string) || "",
+    description: data.description as string | undefined,
+    completed: (data.completed as boolean) || false,
+    priority: data.priority as "low" | "medium" | "high" | undefined,
+    due_date: data.due_date as string | undefined,
+    project_id: data.project_id as string | undefined,
+  };
+}
+
+/**
+ * Maps a conversation response from the regular API format to the bot-expected format.
+ */
+function mapConversationResponse(
+  data: Record<string, unknown>,
+): Conversation {
+  return {
+    conversation_id:
+      (data.conversation_id as string) || (data.id as string) || "",
+    title: (data.description as string) || (data.title as string) || undefined,
+    created_at:
+      (data.createdAt as string) || (data.created_at as string) || "",
+    updated_at:
+      (data.updatedAt as string) || (data.updated_at as string) || "",
+    message_count: data.message_count as number | undefined,
+  };
 }

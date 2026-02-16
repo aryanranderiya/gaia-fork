@@ -15,6 +15,8 @@ import * as conversation from "./conversation";
 import * as weather from "./weather";
 import * as newCmd from "./new";
 import * as search from "./search";
+import * as help from "./help";
+import * as settings from "./settings";
 
 export interface Command {
   data:
@@ -38,5 +40,7 @@ export function registerCommands(): Collection<string, Command> {
   commands.set(weather.data.name, weather);
   commands.set(search.data.name, search);
   commands.set(newCmd.data.name, newCmd);
+  commands.set(help.data.name, help);
+  commands.set(settings.data.name, settings);
   return commands;
 }
