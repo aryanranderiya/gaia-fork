@@ -254,7 +254,11 @@ describe("Truncation Utilities", () => {
 
     it("should append conversation URL when provided", () => {
       const text = "d".repeat(2500);
-      const result = truncateResponse(text, "discord", "http://example.com/chat/123");
+      const result = truncateResponse(
+        text,
+        "discord",
+        "http://example.com/chat/123",
+      );
       expect(result).toContain("View full response");
       expect(result).toContain("http://example.com/chat/123");
     });

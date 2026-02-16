@@ -58,8 +58,12 @@ describe("Slack Bot E2E Tests", () => {
           platformUserId: TEST_USER_ID,
           channelId: TEST_CHANNEL_ID,
         },
-        (chunk) => { chunks.push(chunk); },
-        (text) => { finalText = text; },
+        (chunk) => {
+          chunks.push(chunk);
+        },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
@@ -90,7 +94,9 @@ describe("Slack Bot E2E Tests", () => {
         },
         () => {},
         () => {},
-        (error) => { errorMsg = error.message; },
+        (error) => {
+          errorMsg = error.message;
+        },
       );
 
       expect(errorMsg).toBe("not_authenticated");
@@ -105,7 +111,12 @@ describe("Slack Bot E2E Tests", () => {
     it("should list todos through shared handler", async () => {
       server.state.todos = {
         todos: [
-          { id: "t1", title: "Slack todo", completed: false, priority: "medium" },
+          {
+            id: "t1",
+            title: "Slack todo",
+            completed: false,
+            priority: "medium",
+          },
         ],
         total: 1,
       };
@@ -116,10 +127,15 @@ describe("Slack Bot E2E Tests", () => {
     });
 
     it("should create todo through shared handler", async () => {
-      const result = await handleTodoCreate(client, "New Slack todo", slackCtx, {
-        priority: "high",
-        description: "Test description",
-      });
+      const result = await handleTodoCreate(
+        client,
+        "New Slack todo",
+        slackCtx,
+        {
+          priority: "high",
+          description: "Test description",
+        },
+      );
 
       const req = server.getRequestsByPath("/api/v1/bot/todos")[0];
       const body = req?.body as Record<string, unknown>;
@@ -200,7 +216,9 @@ describe("Slack Bot E2E Tests", () => {
         },
         () => {},
         () => {},
-        (error) => { errorMsg = error.message; },
+        (error) => {
+          errorMsg = error.message;
+        },
       );
 
       expect(errorMsg).toBe("not_authenticated");
@@ -274,7 +292,11 @@ describe("Slack Bot E2E Tests", () => {
     });
 
     it("should show no results message", async () => {
-      server.state.searchResponse = { messages: [], conversations: [], notes: [] };
+      server.state.searchResponse = {
+        messages: [],
+        conversations: [],
+        notes: [],
+      };
       const result = await handleSearch(client, "nothing", slackCtx);
       expect(result).toContain("No results found");
     });

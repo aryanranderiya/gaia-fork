@@ -10,10 +10,7 @@ export const data = new SlashCommandBuilder()
   .setName("search")
   .setDescription("Search your GAIA data")
   .addStringOption((option) =>
-    option
-      .setName("query")
-      .setDescription("Search query")
-      .setRequired(true),
+    option.setName("query").setDescription("Search query").setRequired(true),
   );
 
 export async function execute(

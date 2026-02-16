@@ -1,6 +1,6 @@
 ---
-title: 'Bot Commands Reference'
-description: 'Complete reference for all GAIA bot commands'
+title: "Bot Commands Reference"
+description: "Complete reference for all GAIA bot commands"
 ---
 
 # Bot Commands Reference
@@ -18,6 +18,7 @@ This page documents all available commands across GAIA bot platforms.
 Send a message to GAIA and get a response.
 
 **Example:**
+
 ```
 /gaia What's on my schedule today?
 ```
@@ -31,6 +32,7 @@ Send a message to GAIA and get a response.
 Generate a link to connect your messaging account to GAIA.
 
 **Example:**
+
 ```
 /auth
 ```
@@ -94,6 +96,7 @@ Show all active (incomplete) todos.
 Create a new todo. Priority is optional (low, medium, high).
 
 **Examples:**
+
 ```
 /todo add "Buy groceries"
 /todo add "Fix bug in login" high
@@ -129,6 +132,7 @@ Permanently delete a todo.
 View your recent GAIA conversations with links to the web interface.
 
 **Example:**
+
 ```
 /conversations
 /conversations 2
@@ -147,6 +151,7 @@ View your recent GAIA conversations with links to the web interface.
 Get current weather and forecast for a location.
 
 **Example:**
+
 ```
 /weather San Francisco
 /weather Tokyo, Japan
@@ -161,6 +166,7 @@ Get current weather and forecast for a location.
 Search across your messages, conversations, and notes in GAIA.
 
 **Example:**
+
 ```
 /search python tutorial
 ```
@@ -170,21 +176,25 @@ Search across your messages, conversations, and notes in GAIA.
 ## Platform-Specific Notes
 
 ### Discord
+
 - All commands are slash commands with autocomplete
 - Responses are ephemeral (only visible to you) by default
 - Can also mention the bot: `@GAIA what's the weather?`
 
 ### Slack
+
 - Commands use Slack's slash command syntax
 - All responses are ephemeral
 - Works in DMs and channels
 
 ### Telegram
+
 - Commands start with `/` as standard in Telegram
 - Use `/help` to see all commands
 - Supports Markdown formatting
 
 ### WhatsApp
+
 - All commands start with `/`
 - Use `/help` to see available commands
 - Rich formatting is limited
@@ -200,6 +210,7 @@ Can't find what you need? Use the help command:
 ```
 
 Or visit the platform-specific guides:
+
 - [Discord Setup](/bots/discord)
 - [Slack Setup](/bots/slack)
 - [Telegram Setup](/bots/telegram)

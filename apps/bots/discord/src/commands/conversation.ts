@@ -14,10 +14,7 @@ export const data = new SlashCommandBuilder()
       .setName("list")
       .setDescription("List your recent conversations")
       .addIntegerOption((option) =>
-        option
-          .setName("page")
-          .setDescription("Page number")
-          .setMinValue(1),
+        option.setName("page").setDescription("Page number").setMinValue(1),
       ),
   );
 

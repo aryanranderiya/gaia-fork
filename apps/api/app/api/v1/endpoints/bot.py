@@ -31,15 +31,6 @@ async def verify_bot_api_key(x_bot_api_key: str = Header(..., alias="X-Bot-API-K
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 
-# Deprecated: Use PlatformLinkService.get_user_by_platform_id instead
-async def get_user_by_platform_id(
-    platform: str, platform_user_id: str
-) -> Optional[dict]:
-    return await PlatformLinkService.get_user_by_platform_id(
-        platform, platform_user_id
-    )
-
-
 @router.post(
     "/chat",
     response_model=BotChatResponse,
@@ -51,7 +42,9 @@ async def bot_chat(
     request: BotChatRequest, _: None = Depends(verify_bot_api_key)
 ) -> BotChatResponse:
     await BotService.enforce_rate_limit(request.platform, request.platform_user_id)
-    user = await get_user_by_platform_id(request.platform, request.platform_user_id)
+    user = await PlatformLinkService.get_user_by_platform_id(
+        request.platform, request.platform_user_id
+    )
 
     if not user:
         return BotChatResponse(
@@ -168,7 +161,9 @@ async def get_session(
     channel_id: Optional[str] = None,
     _: None = Depends(verify_bot_api_key),
 ) -> SessionResponse:
-    user = await get_user_by_platform_id(platform, platform_user_id)
+    user = await PlatformLinkService.get_user_by_platform_id(
+        platform, platform_user_id
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not linked")
 
@@ -192,7 +187,9 @@ async def get_session(
 async def reset_session(
     request: ResetSessionRequest, _: None = Depends(verify_bot_api_key)
 ) -> SessionResponse:
-    user = await get_user_by_platform_id(request.platform, request.platform_user_id)
+    user = await PlatformLinkService.get_user_by_platform_id(
+        request.platform, request.platform_user_id
+    )
     if not user:
         raise HTTPException(status_code=404, detail="User not linked")
 
@@ -216,7 +213,9 @@ async def bot_chat_stream(
     request: BotChatRequest, _: None = Depends(verify_bot_api_key)
 ) -> StreamingResponse:
     await BotService.enforce_rate_limit(request.platform, request.platform_user_id)
-    user = await get_user_by_platform_id(request.platform, request.platform_user_id)
+    user = await PlatformLinkService.get_user_by_platform_id(
+        request.platform, request.platform_user_id
+    )
 
     if not user:
         async def auth_required():
@@ -313,7 +312,9 @@ async def check_auth_status(
     platform_user_id: str,
     _: None = Depends(verify_bot_api_key),
 ) -> BotAuthStatusResponse:
-    user = await get_user_by_platform_id(platform, platform_user_id)
+    user = await PlatformLinkService.get_user_by_platform_id(
+        platform, platform_user_id
+    )
     return BotAuthStatusResponse(
         authenticated=user is not None,
         platform=platform,

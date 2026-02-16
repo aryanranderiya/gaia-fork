@@ -73,30 +73,37 @@ nx start bot-discord
 ## Available Commands
 
 ### General
+
 - `/gaia <message>` - Chat with GAIA
 - `/auth` - Link your Discord account to GAIA
 
 ### Workflows
+
 - `/workflow list` - List all your workflows
 - `/workflow get <id>` - Get workflow details
 - `/workflow execute <id>` - Execute a workflow
 - `/workflow create <name> <description>` - Create a new workflow
 
 ### Todos
+
 - `/todo list` - List your active todos
 - `/todo add <title> [priority] [description]` - Create a new todo
 - `/todo complete <id>` - Mark a todo as complete
 - `/todo delete <id>` - Delete a todo
 
 ### Conversations
+
 - `/conversations list [page]` - List your recent GAIA conversations
 
 ### Utilities
+
 - `/weather <location>` - Get weather information
 - `/search <query>` - Search your GAIA data
 
 ### Mentions
+
 You can also mention the bot in any channel to chat with GAIA:
+
 ```
 @GAIA What's the weather today?
 ```
@@ -113,15 +120,18 @@ Before using most commands, you need to link your Discord account:
 ## Troubleshooting
 
 ### Bot doesn't respond to commands
+
 - Ensure slash commands are deployed (`nx run bot-discord:deploy-commands`)
 - Check bot permissions in your server
 - Verify the bot is online
 
 ### Authentication issues
+
 - Ensure `GAIA_BOT_API_KEY` matches the key configured in the GAIA API
 - Check that the API is running and accessible
 
 ### Message length errors
+
 - Responses are automatically truncated to Discord's 2000 character limit
 - Long lists may be paginated
 

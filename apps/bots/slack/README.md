@@ -28,12 +28,14 @@ The official Slack bot for GAIA - your proactive personal AI assistant.
 ### 2. Configure Bot Settings
 
 #### Enable Socket Mode
+
 1. Go to "Socket Mode" in the sidebar
 2. Toggle "Enable Socket Mode"
 3. Generate an app-level token with `connections:write` scope
 4. Copy the token (starts with `xapp-`)
 
 #### Add Bot User
+
 1. Go to "OAuth & Permissions"
 2. Add these Bot Token Scopes:
    - `chat:write`
@@ -45,6 +47,7 @@ The official Slack bot for GAIA - your proactive personal AI assistant.
 4. Copy the "Bot User OAuth Token" (starts with `xoxb-`)
 
 #### Configure Slash Commands
+
 Go to "Slash Commands" and create these commands:
 
 - `/gaia` - Chat with GAIA (Request URL can be blank in Socket Mode)
@@ -81,24 +84,29 @@ nx start bot-slack
 ## Available Commands
 
 ### General
+
 - `/gaia <message>` - Chat with GAIA
 - `/auth` - Link your Slack account to GAIA
 
 ### Workflows
+
 - `/workflow list` - List all workflows
 - `/workflow get <id>` - Get workflow details
 - `/workflow execute <id>` - Execute a workflow
 
 ### Todos
+
 - `/todo list` - List your todos
 - `/todo add <title>` - Create a new todo
 - `/todo complete <id>` - Mark as complete
 - `/todo delete <id>` - Delete a todo
 
 ### Conversations
+
 - `/conversations` - List your recent GAIA conversations
 
 ### Utilities
+
 - `/weather <location>` - Get weather information
 - `/search <query>` - Search your GAIA data
 
@@ -112,11 +120,13 @@ nx start bot-slack
 ## Troubleshooting
 
 ### Bot doesn't respond
+
 - Verify Socket Mode is enabled
 - Check that all tokens are correct
 - Ensure the bot is running
 
 ### Command not found errors
+
 - Verify slash commands are configured in Slack App settings
 - Re-install the app to your workspace
 

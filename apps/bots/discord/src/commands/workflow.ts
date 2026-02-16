@@ -23,10 +23,7 @@ export const data = new SlashCommandBuilder()
       .setName("get")
       .setDescription("Get details of a specific workflow")
       .addStringOption((option) =>
-        option
-          .setName("id")
-          .setDescription("Workflow ID")
-          .setRequired(true),
+        option.setName("id").setDescription("Workflow ID").setRequired(true),
       ),
   )
   .addSubcommand((subcommand) =>
@@ -34,10 +31,7 @@ export const data = new SlashCommandBuilder()
       .setName("execute")
       .setDescription("Execute a workflow")
       .addStringOption((option) =>
-        option
-          .setName("id")
-          .setDescription("Workflow ID")
-          .setRequired(true),
+        option.setName("id").setDescription("Workflow ID").setRequired(true),
       ),
   )
   .addSubcommand((subcommand) =>

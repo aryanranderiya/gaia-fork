@@ -1,8 +1,5 @@
 import type { GaiaClient } from "@gaia/shared";
-import {
-  handleStreamingChat,
-  STREAMING_DEFAULTS,
-} from "@gaia/shared";
+import { handleStreamingChat, STREAMING_DEFAULTS } from "@gaia/shared";
 import type { App } from "@slack/bolt";
 
 export function registerGaiaCommand(app: App, gaia: GaiaClient) {

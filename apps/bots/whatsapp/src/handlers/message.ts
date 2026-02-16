@@ -1,6 +1,6 @@
 import type { Message } from "whatsapp-web.js";
 import type { GaiaClient } from "@gaia/shared";
-import { truncateMessage, formatBotError } from "@gaia/shared";
+import { formatBotError } from "@gaia/shared";
 
 type CommandHandler = (
   message: Message,

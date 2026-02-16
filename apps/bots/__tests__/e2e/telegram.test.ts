@@ -54,7 +54,9 @@ describe("Telegram Bot E2E Tests", () => {
           channelId: "chat-456",
         },
         () => {},
-        (text) => { finalText = text; },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
@@ -78,7 +80,9 @@ describe("Telegram Bot E2E Tests", () => {
         },
         () => {},
         () => {},
-        (error) => { errorMsg = error.message; },
+        (error) => {
+          errorMsg = error.message;
+        },
       );
 
       expect(errorMsg).toBe("not_authenticated");
@@ -112,9 +116,7 @@ describe("Telegram Bot E2E Tests", () => {
 
     it("should list todos via shared handler", async () => {
       server.state.todos = {
-        todos: [
-          { id: "t1", title: "Telegram todo", completed: false },
-        ],
+        todos: [{ id: "t1", title: "Telegram todo", completed: false }],
         total: 1,
       };
 
@@ -175,7 +177,9 @@ describe("Telegram Bot E2E Tests", () => {
           channelId: "chat-789",
         },
         () => {},
-        (text) => { finalText = text; },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
@@ -194,7 +198,9 @@ describe("Telegram Bot E2E Tests", () => {
         },
         () => {},
         () => {},
-        (error) => { errorMsg = error.message; },
+        (error) => {
+          errorMsg = error.message;
+        },
       );
 
       expect(errorMsg).toBe("not_authenticated");

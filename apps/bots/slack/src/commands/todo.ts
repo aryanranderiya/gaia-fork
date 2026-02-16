@@ -17,12 +17,7 @@ export function registerTodoCommand(app: App, gaia: GaiaClient) {
     };
     const { subcommand, args } = parseTextArgs(command.text);
 
-    const response = await dispatchTodoSubcommand(
-      gaia,
-      ctx,
-      subcommand,
-      args,
-    );
+    const response = await dispatchTodoSubcommand(gaia, ctx, subcommand, args);
     const truncated = truncateResponse(response, "slack");
     await respond({ text: truncated, response_type: "ephemeral" });
   });

@@ -2,16 +2,59 @@ import http from "node:http";
 
 export interface MockApiState {
   requests: RecordedRequest[];
-  chatResponse: { response: string; conversation_id: string; authenticated: boolean };
+  chatResponse: {
+    response: string;
+    conversation_id: string;
+    authenticated: boolean;
+  };
   streamChunks: string[];
   streamError: string | null;
   streamConversationId: string;
-  sessionResponse: { conversation_id: string; platform: string; platform_user_id: string };
-  authStatus: { authenticated: boolean; platform: string; platform_user_id: string };
-  workflows: { workflows: Array<{ id: string; name: string; description: string; status: string }> };
-  todos: { todos: Array<{ id: string; title: string; completed: boolean; priority?: string; due_date?: string; description?: string }>; total: number };
-  conversations: { conversations: Array<{ conversation_id: string; title: string; created_at: string; updated_at: string; message_count: number }>; total: number; page: number };
-  searchResponse: { messages: Record<string, unknown>[]; conversations: Record<string, unknown>[]; notes: Record<string, unknown>[] };
+  sessionResponse: {
+    conversation_id: string;
+    platform: string;
+    platform_user_id: string;
+  };
+  authStatus: {
+    authenticated: boolean;
+    platform: string;
+    platform_user_id: string;
+  };
+  workflows: {
+    workflows: Array<{
+      id: string;
+      name: string;
+      description: string;
+      status: string;
+    }>;
+  };
+  todos: {
+    todos: Array<{
+      id: string;
+      title: string;
+      completed: boolean;
+      priority?: string;
+      due_date?: string;
+      description?: string;
+    }>;
+    total: number;
+  };
+  conversations: {
+    conversations: Array<{
+      conversation_id: string;
+      title: string;
+      created_at: string;
+      updated_at: string;
+      message_count: number;
+    }>;
+    total: number;
+    page: number;
+  };
+  searchResponse: {
+    messages: Record<string, unknown>[];
+    conversations: Record<string, unknown>[];
+    notes: Record<string, unknown>[];
+  };
   errorStatus: number | null;
   errorMessage: string | null;
   streamDelayMs: number;
@@ -48,12 +91,22 @@ function defaultState(): MockApiState {
     },
     workflows: {
       workflows: [
-        { id: "wf-1", name: "Test Workflow", description: "A test workflow", status: "active" },
+        {
+          id: "wf-1",
+          name: "Test Workflow",
+          description: "A test workflow",
+          status: "active",
+        },
       ],
     },
     todos: {
       todos: [
-        { id: "todo-1", title: "Test Todo", completed: false, priority: "high" },
+        {
+          id: "todo-1",
+          title: "Test Todo",
+          completed: false,
+          priority: "high",
+        },
       ],
       total: 1,
     },
@@ -133,7 +186,10 @@ export class MockApiServer {
     return this.state.requests.filter((r) => r.url?.startsWith(path));
   }
 
-  private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  private async handleRequest(
+    req: http.IncomingMessage,
+    res: http.ServerResponse,
+  ): Promise<void> {
     const body = await this.readBody(req);
     const recorded: RecordedRequest = {
       method: req.method || "GET",
@@ -153,7 +209,9 @@ export class MockApiServer {
 
     // Check if error should be returned
     if (this.state.errorStatus) {
-      res.writeHead(this.state.errorStatus, { "Content-Type": "application/json" });
+      res.writeHead(this.state.errorStatus, {
+        "Content-Type": "application/json",
+      });
       res.end(JSON.stringify({ detail: this.state.errorMessage || "Error" }));
       return;
     }
@@ -172,15 +230,29 @@ export class MockApiServer {
         this.handleGetSession(url, res);
       } else if (method === "POST" && url === "/api/v1/bot/session/new") {
         this.handleResetSession(res);
-      } else if (method === "GET" && url.startsWith("/api/v1/bot/auth-status/")) {
+      } else if (
+        method === "GET" &&
+        url.startsWith("/api/v1/bot/auth-status/")
+      ) {
         this.handleAuthStatus(url, res);
-      } else if (method === "GET" && url.startsWith("/api/v1/bot/workflows") && !url.includes("/execute")) {
+      } else if (
+        method === "GET" &&
+        url.startsWith("/api/v1/bot/workflows") &&
+        !url.includes("/execute")
+      ) {
         this.handleGetWorkflows(url, res);
-      } else if (method === "POST" && url.includes("/api/v1/bot/workflows") && url.includes("/execute")) {
+      } else if (
+        method === "POST" &&
+        url.includes("/api/v1/bot/workflows") &&
+        url.includes("/execute")
+      ) {
         this.handleExecuteWorkflow(res);
       } else if (method === "POST" && url === "/api/v1/bot/workflows") {
         this.handleCreateWorkflow(body, res);
-      } else if (method === "DELETE" && url.startsWith("/api/v1/bot/workflows/")) {
+      } else if (
+        method === "DELETE" &&
+        url.startsWith("/api/v1/bot/workflows/")
+      ) {
         this.handleDeleteWorkflow(res);
       } else if (method === "GET" && url.startsWith("/api/v1/bot/todos")) {
         this.handleGetTodos(res);
@@ -190,7 +262,10 @@ export class MockApiServer {
         this.handleUpdateTodo(url, body, res);
       } else if (method === "DELETE" && url.startsWith("/api/v1/bot/todos/")) {
         this.handleDeleteTodo(res);
-      } else if (method === "GET" && url.startsWith("/api/v1/bot/conversations")) {
+      } else if (
+        method === "GET" &&
+        url.startsWith("/api/v1/bot/conversations")
+      ) {
         this.handleGetConversations(url, res);
       } else if (method === "GET" && url.startsWith("/api/v1/bot/search")) {
         this.handleSearch(res);
@@ -211,7 +286,9 @@ export class MockApiServer {
 
   private handleChatPublic(res: http.ServerResponse): void {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ ...this.state.chatResponse, authenticated: false }));
+    res.end(
+      JSON.stringify({ ...this.state.chatResponse, authenticated: false }),
+    );
   }
 
   private async handleChatStream(res: http.ServerResponse): Promise<void> {
@@ -222,7 +299,9 @@ export class MockApiServer {
     });
 
     if (this.state.streamError) {
-      res.write(`data: ${JSON.stringify({ error: this.state.streamError })}\n\n`);
+      res.write(
+        `data: ${JSON.stringify({ error: this.state.streamError })}\n\n`,
+      );
       res.write("data: [DONE]\n\n");
       res.end();
       return;
@@ -235,7 +314,9 @@ export class MockApiServer {
       res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
     }
 
-    res.write(`data: ${JSON.stringify({ done: true, conversation_id: this.state.streamConversationId })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({ done: true, conversation_id: this.state.streamConversationId })}\n\n`,
+    );
     res.write("data: [DONE]\n\n");
     res.end();
   }
@@ -245,7 +326,8 @@ export class MockApiServer {
     const response = {
       ...this.state.sessionResponse,
       platform: parts[0] || this.state.sessionResponse.platform,
-      platform_user_id: parts[1]?.split("?")[0] || this.state.sessionResponse.platform_user_id,
+      platform_user_id:
+        parts[1]?.split("?")[0] || this.state.sessionResponse.platform_user_id,
     };
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(response));
@@ -287,23 +369,27 @@ export class MockApiServer {
 
   private handleExecuteWorkflow(res: http.ServerResponse): void {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      execution_id: "exec-123",
-      status: "running",
-    }));
+    res.end(
+      JSON.stringify({
+        execution_id: "exec-123",
+        status: "running",
+      }),
+    );
   }
 
   private handleCreateWorkflow(body: unknown, res: http.ServerResponse): void {
     const b = body as Record<string, unknown>;
     res.writeHead(201, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      workflow: {
-        id: "wf-new",
-        name: b?.name || "New Workflow",
-        description: b?.description || "",
-        status: "draft",
-      },
-    }));
+    res.end(
+      JSON.stringify({
+        workflow: {
+          id: "wf-new",
+          name: b?.name || "New Workflow",
+          description: b?.description || "",
+          status: "draft",
+        },
+      }),
+    );
   }
 
   private handleDeleteWorkflow(res: http.ServerResponse): void {
@@ -319,26 +405,34 @@ export class MockApiServer {
   private handleCreateTodo(body: unknown, res: http.ServerResponse): void {
     const b = body as Record<string, unknown>;
     res.writeHead(201, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      id: "todo-new",
-      title: b?.title || "New Todo",
-      completed: false,
-      priority: b?.priority || undefined,
-      description: b?.description || undefined,
-    }));
+    res.end(
+      JSON.stringify({
+        id: "todo-new",
+        title: b?.title || "New Todo",
+        completed: false,
+        priority: b?.priority || undefined,
+        description: b?.description || undefined,
+      }),
+    );
   }
 
-  private handleUpdateTodo(url: string, body: unknown, res: http.ServerResponse): void {
+  private handleUpdateTodo(
+    url: string,
+    body: unknown,
+    res: http.ServerResponse,
+  ): void {
     const todoId = url.replace("/api/v1/bot/todos/", "");
     const b = body as Record<string, unknown>;
     const existing = this.state.todos.todos.find((t) => t.id === todoId);
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({
-      id: todoId,
-      title: existing?.title || "Updated Todo",
-      completed: b?.completed ?? existing?.completed ?? false,
-      priority: existing?.priority,
-    }));
+    res.end(
+      JSON.stringify({
+        id: todoId,
+        title: existing?.title || "Updated Todo",
+        completed: b?.completed ?? existing?.completed ?? false,
+        priority: existing?.priority,
+      }),
+    );
   }
 
   private handleDeleteTodo(res: http.ServerResponse): void {
@@ -350,7 +444,9 @@ export class MockApiServer {
     const path = url.split("?")[0];
     if (path !== "/api/v1/bot/conversations") {
       const convId = path.replace("/api/v1/bot/conversations/", "");
-      const conv = this.state.conversations.conversations.find((c) => c.conversation_id === convId);
+      const conv = this.state.conversations.conversations.find(
+        (c) => c.conversation_id === convId,
+      );
       if (conv) {
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify(conv));

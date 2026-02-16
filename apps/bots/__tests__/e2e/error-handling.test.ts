@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { MockApiServer } from "../setup/mock-api-server";
-import { createTestClient, TEST_USER_ID, TEST_CTX } from "../setup/test-helpers";
+import {
+  createTestClient,
+  TEST_USER_ID,
+  TEST_CTX,
+} from "../setup/test-helpers";
 import type { GaiaClient } from "@gaia/shared";
 import { GaiaApiError, formatBotError } from "@gaia/shared";
 
@@ -124,7 +128,9 @@ describe("Error Handling Chain E2E Tests", () => {
           { message: "Hi", platform: "discord", platformUserId: TEST_USER_ID },
           () => {},
           () => {},
-          () => { errorCalled = true; },
+          () => {
+            errorCalled = true;
+          },
         );
       } catch {
         threwError = true;
@@ -146,7 +152,9 @@ describe("Error Handling Chain E2E Tests", () => {
           if (errorCalled) chunkCalledAfterError = true;
         },
         () => {},
-        () => { errorCalled = true; },
+        () => {
+          errorCalled = true;
+        },
       );
 
       expect(chunkCalledAfterError).toBe(false);
@@ -167,7 +175,9 @@ describe("Error Handling Chain E2E Tests", () => {
         { message: "Hi", platform: "discord", platformUserId: "u1" },
         () => {},
         () => {},
-        () => { errorCalled = true; },
+        () => {
+          errorCalled = true;
+        },
       );
 
       expect(errorCalled).toBe(true);
@@ -181,7 +191,11 @@ describe("Error Handling Chain E2E Tests", () => {
       );
 
       await expect(
-        badClient.chat({ message: "Hi", platform: "discord", platformUserId: "u1" }),
+        badClient.chat({
+          message: "Hi",
+          platform: "discord",
+          platformUserId: "u1",
+        }),
       ).rejects.toThrow();
     });
   });

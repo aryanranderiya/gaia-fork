@@ -25,10 +25,6 @@ export function registerWeatherCommand(bot: Bot, gaia: GaiaClient) {
 
     const response = await handleWeather(gaia, location, userCtx);
     const truncated = truncateResponse(response, "telegram");
-    await ctx.api.editMessageText(
-      ctx.chat.id,
-      loading.message_id,
-      truncated,
-    );
+    await ctx.api.editMessageText(ctx.chat.id, loading.message_id, truncated);
   });
 }

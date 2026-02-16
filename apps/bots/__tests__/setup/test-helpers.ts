@@ -23,7 +23,9 @@ export function createTestClient(server: MockApiServer): GaiaClient {
   return new GaiaClient(server.baseUrl, TEST_API_KEY, TEST_FRONTEND_URL);
 }
 
-export function createMockDiscordInteraction(overrides: Record<string, unknown> = {}) {
+export function createMockDiscordInteraction(
+  overrides: Record<string, unknown> = {},
+) {
   const replies: unknown[] = [];
   const edits: unknown[] = [];
 
@@ -57,7 +59,10 @@ export function createMockDiscordInteraction(overrides: Record<string, unknown> 
   };
 }
 
-export function createMockDiscordMessage(content: string, overrides: Record<string, unknown> = {}) {
+export function createMockDiscordMessage(
+  content: string,
+  overrides: Record<string, unknown> = {},
+) {
   const replies: unknown[] = [];
   const sentMessages: unknown[] = [];
 
@@ -84,7 +89,10 @@ export function createMockDiscordMessage(content: string, overrides: Record<stri
   };
 }
 
-export function createMockSlackCommand(text: string, overrides: Record<string, unknown> = {}) {
+export function createMockSlackCommand(
+  text: string,
+  overrides: Record<string, unknown> = {},
+) {
   const responses: unknown[] = [];
   const messages: unknown[] = [];
   const updates: unknown[] = [];
@@ -124,7 +132,10 @@ export function createMockSlackCommand(text: string, overrides: Record<string, u
   };
 }
 
-export function createMockSlackMentionEvent(text: string, overrides: Record<string, unknown> = {}) {
+export function createMockSlackMentionEvent(
+  text: string,
+  overrides: Record<string, unknown> = {},
+) {
   const messages: unknown[] = [];
   const updates: unknown[] = [];
 
@@ -152,7 +163,10 @@ export function createMockSlackMentionEvent(text: string, overrides: Record<stri
   };
 }
 
-export function createMockTelegramContext(text: string, overrides: Record<string, unknown> = {}) {
+export function createMockTelegramContext(
+  text: string,
+  overrides: Record<string, unknown> = {},
+) {
   const replies: unknown[] = [];
   const edits: unknown[] = [];
 

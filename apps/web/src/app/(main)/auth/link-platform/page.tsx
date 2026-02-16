@@ -67,9 +67,7 @@ export default function LinkPlatformPage() {
             color="primary"
             className="w-full"
             onPress={() =>
-              router.push(
-                `/login?return_url=${encodeURIComponent(returnUrl)}`,
-              )
+              router.push(`/login?return_url=${encodeURIComponent(returnUrl)}`)
             }
           >
             Sign in to GAIA

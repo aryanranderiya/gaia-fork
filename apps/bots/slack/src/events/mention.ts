@@ -1,9 +1,6 @@
 import type { App } from "@slack/bolt";
 import type { GaiaClient } from "@gaia/shared";
-import {
-  handleStreamingChat,
-  STREAMING_DEFAULTS,
-} from "@gaia/shared";
+import { handleStreamingChat, STREAMING_DEFAULTS } from "@gaia/shared";
 
 export function registerMentionEvent(app: App, gaia: GaiaClient) {
   app.event("app_mention", async ({ event, client }) => {

@@ -18,14 +18,16 @@ export async function createApp() {
   const appToken = process.env.SLACK_APP_TOKEN;
 
   if (!token || !signingSecret || !appToken) {
-    throw new Error("Missing SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, or SLACK_APP_TOKEN");
+    throw new Error(
+      "Missing SLACK_BOT_TOKEN, SLACK_SIGNING_SECRET, or SLACK_APP_TOKEN",
+    );
   }
 
   const app = new App({
     token,
     signingSecret,
     socketMode: true,
-    appToken
+    appToken,
   });
 
   const gaia = new GaiaClient(

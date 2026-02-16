@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import { MockApiServer } from "../setup/mock-api-server";
-import { createTestClient, TEST_USER_ID, TEST_CHANNEL_ID, TEST_FRONTEND_URL } from "../setup/test-helpers";
+import {
+  createTestClient,
+  TEST_USER_ID,
+  TEST_CHANNEL_ID,
+  TEST_FRONTEND_URL,
+} from "../setup/test-helpers";
 import type { GaiaClient, CommandContext } from "@gaia/shared";
 import {
   truncateResponse,
@@ -126,7 +131,9 @@ describe("Cross-Platform Consistency Tests", () => {
           { message: "Hi", platform, platformUserId: TEST_USER_ID },
           () => {},
           () => {},
-          (error) => { errorMsg = error.message; },
+          (error) => {
+            errorMsg = error.message;
+          },
         );
 
         expect(errorMsg).toBe("not_authenticated");

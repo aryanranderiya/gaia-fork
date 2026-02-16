@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  vi,
+} from "vitest";
 import { MockApiServer } from "../setup/mock-api-server";
 import {
   createTestClient,
@@ -65,7 +73,9 @@ describe("Discord Bot E2E Tests", () => {
       const deferCalls: unknown[] = [];
       const interaction = createMockDiscordInteraction({
         options: { message: "Hi" },
-        deferReply: async (opts: unknown) => { deferCalls.push(opts); },
+        deferReply: async (opts: unknown) => {
+          deferCalls.push(opts);
+        },
       });
 
       await executeGaia(interaction as any, client);
@@ -84,7 +94,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeGaia(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("authenticate");
       expect(lastEdit.content).toContain(TEST_FRONTEND_URL);
       expect(lastEdit.content).toContain("link-platform");
@@ -117,7 +129,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeGaia(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content.length).toBeLessThanOrEqual(2000);
     });
 
@@ -131,7 +145,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeGaia(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("error");
     });
   });
@@ -153,7 +169,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeTodo(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Buy milk");
       expect(lastEdit.content).toContain("Write tests");
     });
@@ -172,7 +190,9 @@ describe("Discord Bot E2E Tests", () => {
       expect(body.title).toBe("New task");
       expect(body.priority).toBe("high");
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Todo created");
     });
 
@@ -189,7 +209,9 @@ describe("Discord Bot E2E Tests", () => {
       expect(req?.method).toBe("PATCH");
       expect(req?.url).toBe("/api/v1/bot/todos/todo-1");
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("complete");
     });
 
@@ -205,7 +227,9 @@ describe("Discord Bot E2E Tests", () => {
       const req = server.getLastRequest();
       expect(req?.method).toBe("DELETE");
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("deleted");
     });
 
@@ -219,7 +243,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeTodo(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("error");
     });
 
@@ -233,7 +259,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeTodo(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       // GaiaApiError preserves status, formatBotError detects it
       expect(lastEdit.content).toContain("Authentication required");
     });
@@ -250,7 +278,9 @@ describe("Discord Bot E2E Tests", () => {
       expect(req).toBeDefined();
       expect((req?.body as Record<string, unknown>).platform).toBe("discord");
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("new conversation");
     });
 
@@ -262,7 +292,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeNew(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Failed");
     });
   });
@@ -278,7 +310,9 @@ describe("Discord Bot E2E Tests", () => {
 
       expect(message._replies.length).toBeGreaterThanOrEqual(1);
       expect(message._sentMessages.length).toBeGreaterThanOrEqual(1);
-      const lastMsg = message._sentMessages[message._sentMessages.length - 1] as string;
+      const lastMsg = message._sentMessages[
+        message._sentMessages.length - 1
+      ] as string;
       expect(lastMsg).toContain("Hello there!");
     });
 
@@ -286,7 +320,9 @@ describe("Discord Bot E2E Tests", () => {
       vi.useRealTimers();
       server.state.streamChunks = ["Response"];
 
-      const message = createMockDiscordMessage("<@12345> <@!67890> What is the weather?");
+      const message = createMockDiscordMessage(
+        "<@12345> <@!67890> What is the weather?",
+      );
 
       await handleMention(message as any, client);
 
@@ -322,7 +358,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await handleMention(message as any, client);
 
-      const lastMsg = message._sentMessages[message._sentMessages.length - 1] as string;
+      const lastMsg = message._sentMessages[
+        message._sentMessages.length - 1
+      ] as string;
       expect(lastMsg).toContain("link your account");
       expect(lastMsg).toContain("link-platform");
     });
@@ -349,7 +387,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await handleMention(message as any, client);
 
-      const lastMsg = message._sentMessages[message._sentMessages.length - 1] as string;
+      const lastMsg = message._sentMessages[
+        message._sentMessages.length - 1
+      ] as string;
       expect(lastMsg.length).toBeLessThanOrEqual(2000);
     });
   });
@@ -363,7 +403,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeWorkflow(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Test Workflow");
     });
 
@@ -393,7 +435,9 @@ describe("Discord Bot E2E Tests", () => {
       const req = server.getRequestsByPath("/api/v1/bot/search")[0];
       expect(req?.url).toContain("query=test%20query");
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Messages: 1");
     });
   });
@@ -412,7 +456,9 @@ describe("Discord Bot E2E Tests", () => {
       expect(body.message).toContain("weather");
       expect(body.message).toContain("London");
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Hello from GAIA!");
     });
   });
@@ -426,7 +472,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeConversation(interaction as any, client);
 
-      const lastEdit = interaction._edits[interaction._edits.length - 1] as { content: string };
+      const lastEdit = interaction._edits[interaction._edits.length - 1] as {
+        content: string;
+      };
       expect(lastEdit.content).toContain("Test Conversation");
     });
   });
@@ -438,7 +486,9 @@ describe("Discord Bot E2E Tests", () => {
 
       await executeAuth(interaction as any, client);
 
-      const lastReply = interaction._replies[interaction._replies.length - 1] as { content: string };
+      const lastReply = interaction._replies[
+        interaction._replies.length - 1
+      ] as { content: string };
       expect(lastReply.content).toContain("Link your Discord to GAIA");
       expect(lastReply.content).toContain(TEST_FRONTEND_URL);
       expect(lastReply.content).toContain("link-platform");

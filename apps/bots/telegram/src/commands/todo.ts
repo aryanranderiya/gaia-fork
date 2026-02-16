@@ -16,10 +16,7 @@ export function registerTodoCommand(bot: Bot, gaia: GaiaClient) {
       platformUserId: userId,
       channelId: ctx.chat.id.toString(),
     };
-    const { subcommand, args } = parseTextArgs(
-      ctx.message?.text || "",
-      true,
-    );
+    const { subcommand, args } = parseTextArgs(ctx.message?.text || "", true);
 
     const loading = await ctx.reply("Loading...");
 
@@ -30,10 +27,6 @@ export function registerTodoCommand(bot: Bot, gaia: GaiaClient) {
       args,
     );
     const truncated = truncateResponse(response, "telegram");
-    await ctx.api.editMessageText(
-      ctx.chat.id,
-      loading.message_id,
-      truncated,
-    );
+    await ctx.api.editMessageText(ctx.chat.id, loading.message_id, truncated);
   });
 }

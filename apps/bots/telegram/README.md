@@ -72,25 +72,30 @@ nx start bot-telegram
 ## Available Commands
 
 ### General
+
 - `/start` - Start the bot and see welcome message
 - `/gaia <message>` - Chat with GAIA
 - `/auth` - Link your Telegram account to GAIA
 
 ### Workflows
+
 - `/workflow list` - List all workflows
 - `/workflow get <id>` - Get workflow details
 - `/workflow execute <id>` - Execute a workflow
 
 ### Todos
+
 - `/todo list` - List your todos
 - `/todo add <title>` - Create a new todo
 - `/todo complete <id>` - Mark as complete
 - `/todo delete <id>` - Delete a todo
 
 ### Conversations
+
 - `/conversations` - List your recent GAIA conversations
 
 ### Utilities
+
 - `/weather <location>` - Get weather information
 - `/search <query>` - Search your GAIA data
 - `/help` - Show all available commands
@@ -105,11 +110,13 @@ nx start bot-telegram
 ## Troubleshooting
 
 ### Bot doesn't respond
+
 - Verify the bot token is correct
 - Check that the bot is running
 - Ensure you've started a conversation with the bot
 
 ### Authentication issues
+
 - Ensure GAIA_BOT_API_KEY matches the API configuration
 - Verify the API is running and accessible
 

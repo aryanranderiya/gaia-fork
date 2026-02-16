@@ -14,7 +14,10 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@gaia/shared": path.resolve(__dirname, "../../libs/shared/ts/src/index.ts"),
+      "@gaia/shared": path.resolve(
+        __dirname,
+        "../../libs/shared/ts/src/index.ts",
+      ),
     },
   },
 });

@@ -23,10 +23,7 @@ export const data = new SlashCommandBuilder()
       .setName("add")
       .setDescription("Add a new todo")
       .addStringOption((option) =>
-        option
-          .setName("title")
-          .setDescription("Todo title")
-          .setRequired(true),
+        option.setName("title").setDescription("Todo title").setRequired(true),
       )
       .addStringOption((option) =>
         option
@@ -47,10 +44,7 @@ export const data = new SlashCommandBuilder()
       .setName("complete")
       .setDescription("Mark a todo as complete")
       .addStringOption((option) =>
-        option
-          .setName("id")
-          .setDescription("Todo ID")
-          .setRequired(true),
+        option.setName("id").setDescription("Todo ID").setRequired(true),
       ),
   )
   .addSubcommand((subcommand) =>
@@ -58,10 +52,7 @@ export const data = new SlashCommandBuilder()
       .setName("delete")
       .setDescription("Delete a todo")
       .addStringOption((option) =>
-        option
-          .setName("id")
-          .setDescription("Todo ID")
-          .setRequired(true),
+        option.setName("id").setDescription("Todo ID").setRequired(true),
       ),
   );
 

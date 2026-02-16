@@ -21,11 +21,7 @@ export function registerMessageHandler(bot: Bot, gaia: GaiaClient) {
         channelId: ctx.chat.id.toString(),
       },
       async (text) => {
-        await ctx.api.editMessageText(
-          ctx.chat.id,
-          loading.message_id,
-          text,
-        );
+        await ctx.api.editMessageText(ctx.chat.id, loading.message_id, text);
       },
       async (authUrl) => {
         await ctx.api.editMessageText(
@@ -35,11 +31,7 @@ export function registerMessageHandler(bot: Bot, gaia: GaiaClient) {
         );
       },
       async (errMsg) => {
-        await ctx.api.editMessageText(
-          ctx.chat.id,
-          loading.message_id,
-          errMsg,
-        );
+        await ctx.api.editMessageText(ctx.chat.id, loading.message_id, errMsg);
       },
       STREAMING_DEFAULTS.telegram,
     );

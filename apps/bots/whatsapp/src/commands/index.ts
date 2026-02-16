@@ -1,7 +1,7 @@
 import type { Message } from "whatsapp-web.js";
 import type { GaiaClient, CommandContext } from "@gaia/shared";
 import {
-  truncateMessage,
+  truncateResponse,
   dispatchTodoSubcommand,
   dispatchWorkflowSubcommand,
   handleConversationList,
@@ -91,7 +91,7 @@ export function registerCommands(
         return;
       }
 
-      await message.reply(truncateMessage(response.response, "whatsapp"));
+      await message.reply(truncateResponse(response.response, "whatsapp"));
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -109,7 +109,7 @@ export function registerCommands(
       subcommand,
       remainingArgs,
     );
-    await message.reply(truncateMessage(response, "whatsapp"));
+    await message.reply(truncateResponse(response, "whatsapp"));
   });
 
   commands.set("todo", async (message, gaia, args) => {
@@ -122,13 +122,13 @@ export function registerCommands(
       subcommand,
       remainingArgs,
     );
-    await message.reply(truncateMessage(response, "whatsapp"));
+    await message.reply(truncateResponse(response, "whatsapp"));
   });
 
   commands.set("conversations", async (message, gaia) => {
     const ctx = getContext(message);
     const response = await handleConversationList(gaia, ctx);
-    await message.reply(truncateMessage(response, "whatsapp"));
+    await message.reply(truncateResponse(response, "whatsapp"));
   });
 
   commands.set("weather", async (message, gaia, args) => {
@@ -139,7 +139,7 @@ export function registerCommands(
       return;
     }
     const response = await handleWeather(gaia, location, ctx);
-    await message.reply(truncateMessage(response, "whatsapp"));
+    await message.reply(truncateResponse(response, "whatsapp"));
   });
 
   commands.set("search", async (message, gaia, args) => {
@@ -150,7 +150,7 @@ export function registerCommands(
       return;
     }
     const response = await handleSearch(gaia, query, ctx);
-    await message.reply(truncateMessage(response, "whatsapp"));
+    await message.reply(truncateResponse(response, "whatsapp"));
   });
 
   return commands;

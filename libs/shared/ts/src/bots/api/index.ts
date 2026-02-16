@@ -1,5 +1,5 @@
-import axios, { type AxiosInstance } from "axios";
 import type { Readable } from "node:stream";
+import axios, { type AxiosInstance } from "axios";
 import type {
   AuthStatus,
   BotUserContext,
@@ -74,8 +74,6 @@ export class GaiaClient {
 
     return {
       "X-Bot-API-Key": this.apiKey,
-      "X-Bot-Platform": ctx.platform,
-      "X-Bot-Platform-User-Id": ctx.platformUserId,
     };
   }
 
@@ -147,7 +145,7 @@ export class GaiaClient {
       channelId: request.channelId,
     };
 
-    return this.request(async () => {
+    return this.requestWithAuth(async () => {
       const { data } = await this.client.post(
         "/api/v1/bot/chat",
         {
@@ -171,7 +169,7 @@ export class GaiaClient {
         conversationId: data.conversation_id,
         authenticated: data.authenticated,
       };
-    });
+    }, ctx);
   }
 
   /**
@@ -184,14 +182,11 @@ export class GaiaClient {
    */
   async chatPublic(request: ChatRequest): Promise<ChatResponse> {
     return this.request(async () => {
-      const { data } = await this.client.post(
-        "/api/v1/bot/chat/public",
-        {
-          message: request.message,
-          platform: request.platform,
-          platform_user_id: request.platformUserId,
-        },
-      );
+      const { data } = await this.client.post("/api/v1/bot/chat/public", {
+        message: request.message,
+        platform: request.platform,
+        platform_user_id: request.platformUserId,
+      });
 
       return {
         response: data.response,
@@ -216,6 +211,16 @@ export class GaiaClient {
     onChunk: (text: string) => void | Promise<void>,
     onDone: (fullText: string, conversationId: string) => void | Promise<void>,
     onError: (error: Error) => void | Promise<void>,
+  ): Promise<string> {
+    return this._chatStreamInternal(request, onChunk, onDone, onError, false);
+  }
+
+  private async _chatStreamInternal(
+    request: ChatRequest,
+    onChunk: (text: string) => void | Promise<void>,
+    onDone: (fullText: string, conversationId: string) => void | Promise<void>,
+    onError: (error: Error) => void | Promise<void>,
+    retried: boolean,
   ): Promise<string> {
     let fullText = "";
     let conversationId = "";
@@ -252,9 +257,7 @@ export class GaiaClient {
       let finished = false;
       let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 
-      const resetInactivityTimer = (
-        resolve: () => void,
-      ) => {
+      const resetInactivityTimer = (resolve: () => void) => {
         if (inactivityTimer) clearTimeout(inactivityTimer);
         inactivityTimer = setTimeout(async () => {
           if (!finished) {
@@ -319,9 +322,7 @@ export class GaiaClient {
                 resolve();
                 return;
               }
-            } catch {
-              continue;
-            }
+            } catch {}
           }
         });
 
@@ -344,8 +345,21 @@ export class GaiaClient {
         });
       });
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown error";
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+
+      if (status === 401 && !retried) {
+        this.clearSessionToken(ctx);
+        return this._chatStreamInternal(
+          request,
+          onChunk,
+          onDone,
+          onError,
+          true,
+        );
+      }
+
+      const message = error instanceof Error ? error.message : "Unknown error";
       await onError(new Error(message));
     }
 
@@ -473,10 +487,7 @@ export class GaiaClient {
   /**
    * Deletes a workflow.
    */
-  async deleteWorkflow(
-    workflowId: string,
-    ctx: BotUserContext,
-  ): Promise<void> {
+  async deleteWorkflow(workflowId: string, ctx: BotUserContext): Promise<void> {
     return this.requestWithAuth(async () => {
       await this.client.delete(`/api/v1/bot/workflows/${workflowId}`, {
         headers: this.userHeaders(ctx),
@@ -627,10 +638,7 @@ export class GaiaClient {
    * Gets weather information for a location.
    * This uses the agent's weather tool via a chat request.
    */
-  async getWeather(
-    location: string,
-    ctx: BotUserContext,
-  ): Promise<string> {
+  async getWeather(location: string, ctx: BotUserContext): Promise<string> {
     return this.request(async () => {
       const response = await this.chatPublic({
         message: `What's the weather in ${location}?`,
@@ -644,10 +652,7 @@ export class GaiaClient {
   /**
    * Searches messages, conversations, and notes.
    */
-  async search(
-    query: string,
-    ctx: BotUserContext,
-  ): Promise<SearchResponse> {
+  async search(query: string, ctx: BotUserContext): Promise<SearchResponse> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.get<SearchResponse>(
         `/api/v1/bot/search?query=${encodeURIComponent(query)}`,
@@ -690,14 +695,11 @@ export class GaiaClient {
     channelId?: string,
   ): Promise<SessionInfo> {
     return this.request(async () => {
-      const { data } = await this.client.post(
-        "/api/v1/bot/session/new",
-        {
-          platform,
-          platform_user_id: platformUserId,
-          channel_id: channelId,
-        },
-      );
+      const { data } = await this.client.post("/api/v1/bot/session/new", {
+        platform,
+        platform_user_id: platformUserId,
+        channel_id: channelId,
+      });
       return {
         conversationId: data.conversation_id ?? data.conversationId,
         platform: data.platform,

@@ -63,24 +63,29 @@ When you first start the bot:
 All commands start with `/`:
 
 ### General
+
 - `/help` - Show all available commands
 - `/auth` - Link your WhatsApp number to GAIA
 
 ### Workflows
+
 - `/workflow list` - List all workflows
 - `/workflow get <id>` - Get workflow details
 - `/workflow execute <id>` - Execute a workflow
 
 ### Todos
+
 - `/todo list` - List your todos
 - `/todo add <title>` - Create a new todo
 - `/todo complete <id>` - Mark as complete
 - `/todo delete <id>` - Delete a todo
 
 ### Conversations
+
 - `/conversations` - List your recent GAIA conversations
 
 ### Utilities
+
 - `/weather <location>` - Get weather information
 - `/search <query>` - Search your GAIA data
 
@@ -94,21 +99,25 @@ All commands start with `/`:
 ## Troubleshooting
 
 ### QR code doesn't scan
+
 - Ensure you have a stable internet connection
 - Try restarting the bot
 - Delete `.wwebjs_auth/` and re-authenticate
 
 ### Bot disconnects frequently
+
 - Check your internet connection
 - Ensure WhatsApp Web is not open in other browsers
 - Verify your phone has a stable connection
 
 ### Commands don't work
+
 - Ensure all commands start with `/`
 - Check that you've linked your account with `/auth`
 - Verify the GAIA API is running
 
 ### "Session terminated" errors
+
 - Delete `.wwebjs_auth/` directory
 - Restart the bot
 - Re-scan the QR code
@@ -119,6 +128,7 @@ For production environments:
 
 1. Use a headless server or VPS
 2. Install Chrome/Chromium dependencies:
+
    ```bash
    # Ubuntu/Debian
    sudo apt-get install -y chromium-browser
@@ -127,6 +137,7 @@ For production environments:
    ```
 
 3. Run in background with PM2 or similar:
+
    ```bash
    pm2 start dist/index.js --name gaia-whatsapp
    ```

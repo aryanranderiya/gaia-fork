@@ -23,8 +23,8 @@ export async function createBot() {
     intents: [
       GatewayIntentBits.Guilds,
       GatewayIntentBits.GuildMessages,
-      GatewayIntentBits.MessageContent
-    ]
+      GatewayIntentBits.MessageContent,
+    ],
   });
 
   const gaia = new GaiaClient(

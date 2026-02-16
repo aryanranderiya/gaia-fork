@@ -33,9 +33,7 @@ export async function handleMention(message: Message, gaia: GaiaClient) {
         await reply.edit(text);
       },
       async (authUrl) => {
-        await reply.edit(
-          `Please link your account first: ${authUrl}`,
-        );
+        await reply.edit(`Please link your account first: ${authUrl}`);
       },
       async (errMsg) => {
         await reply.edit(errMsg);

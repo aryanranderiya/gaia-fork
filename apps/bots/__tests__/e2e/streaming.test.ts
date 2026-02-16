@@ -36,8 +36,12 @@ describe("Streaming E2E Tests", () => {
 
       await client.chatStream(
         makeStreamRequest(),
-        (chunk) => { chunks.push(chunk); },
-        (text) => { finalText = text; },
+        (chunk) => {
+          chunks.push(chunk);
+        },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
@@ -46,19 +50,24 @@ describe("Streaming E2E Tests", () => {
     });
 
     it("should handle chunks with special characters", async () => {
-      server.state.streamChunks = ["Hello! 🌍", " Here's some JSON: {\"key\": \"value\"}"];
+      server.state.streamChunks = [
+        "Hello! 🌍",
+        ' Here\'s some JSON: {"key": "value"}',
+      ];
 
       let finalText = "";
 
       await client.chatStream(
         makeStreamRequest(),
         () => {},
-        (text) => { finalText = text; },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
       expect(finalText).toContain("🌍");
-      expect(finalText).toContain("{\"key\": \"value\"}");
+      expect(finalText).toContain('{"key": "value"}');
     });
 
     it("should handle chunks with newlines", async () => {
@@ -69,7 +78,9 @@ describe("Streaming E2E Tests", () => {
       await client.chatStream(
         makeStreamRequest(),
         () => {},
-        (text) => { finalText = text; },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
@@ -85,7 +96,9 @@ describe("Streaming E2E Tests", () => {
       await client.chatStream(
         makeStreamRequest(),
         () => {},
-        (text) => { finalText = text; },
+        (text) => {
+          finalText = text;
+        },
         () => {},
       );
 
@@ -103,8 +116,12 @@ describe("Streaming E2E Tests", () => {
       await client.chatStream(
         makeStreamRequest(),
         () => {},
-        () => { doneCalled = true; },
-        () => { errorCalled = true; },
+        () => {
+          doneCalled = true;
+        },
+        () => {
+          errorCalled = true;
+        },
       );
 
       expect(errorCalled).toBe(true);
@@ -120,8 +137,12 @@ describe("Streaming E2E Tests", () => {
       await client.chatStream(
         makeStreamRequest(),
         () => {},
-        () => { doneCalled = true; },
-        () => { errorCalled = true; },
+        () => {
+          doneCalled = true;
+        },
+        () => {
+          errorCalled = true;
+        },
       );
 
       expect(errorCalled).toBe(true);
@@ -142,7 +163,9 @@ describe("Streaming E2E Tests", () => {
         makeStreamRequest(),
         () => {},
         () => {},
-        () => { errorCalled = true; },
+        () => {
+          errorCalled = true;
+        },
       );
 
       expect(errorCalled).toBe(true);
@@ -159,8 +182,13 @@ describe("Streaming E2E Tests", () => {
 
       await client.chatStream(
         makeStreamRequest(),
-        (chunk) => { chunks.push(chunk); },
-        (text) => { finalText = text; doneCalled = true; },
+        (chunk) => {
+          chunks.push(chunk);
+        },
+        (text) => {
+          finalText = text;
+          doneCalled = true;
+        },
         () => {},
       );
 
@@ -177,7 +205,9 @@ describe("Streaming E2E Tests", () => {
       await client.chatStream(
         makeStreamRequest(),
         () => {},
-        (_text, id) => { convId = id; },
+        (_text, id) => {
+          convId = id;
+        },
         () => {},
       );
 
@@ -192,7 +222,9 @@ describe("Streaming E2E Tests", () => {
 
       await client.chatStream(
         makeStreamRequest(),
-        (chunk) => { chunks.push(chunk); },
+        (chunk) => {
+          chunks.push(chunk);
+        },
         () => {},
         () => {},
       );

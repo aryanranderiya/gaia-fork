@@ -33,7 +33,7 @@ export async function createBot() {
   });
 
   bot.start({
-    onStart: () => console.log("Telegram bot is running")
+    onStart: () => console.log("Telegram bot is running"),
   });
 
   return bot;

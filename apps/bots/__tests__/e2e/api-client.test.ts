@@ -30,26 +30,31 @@ describe("GaiaClient E2E", () => {
   });
 
   describe("Authentication", () => {
-    it("should send X-Bot-API-Key header with every request", async () => {
+    it("should send X-Bot-API-Key header when no JWT token exists", async () => {
       await client.listWorkflows(TEST_CTX);
       const req = server.getLastRequest();
       expect(req?.headers["x-bot-api-key"]).toBe(TEST_API_KEY);
-    });
-
-    it("should send X-Bot-Platform and X-Bot-Platform-User-Id headers", async () => {
-      await client.listWorkflows(TEST_CTX);
-      const req = server.getLastRequest();
-      expect(req?.headers["x-bot-platform"]).toBe("discord");
-      expect(req?.headers["x-bot-platform-user-id"]).toBe(TEST_USER_ID);
+      expect(req?.headers["x-bot-platform"]).toBeUndefined();
+      expect(req?.headers["x-bot-platform-user-id"]).toBeUndefined();
     });
 
     it("should fail with 401 when API key is invalid", async () => {
-      const badClient = new GaiaClient(server.baseUrl, "wrong-key", TEST_FRONTEND_URL);
-      await expect(badClient.listWorkflows(TEST_CTX)).rejects.toThrow(/API error.*401/);
+      const badClient = new GaiaClient(
+        server.baseUrl,
+        "wrong-key",
+        TEST_FRONTEND_URL,
+      );
+      await expect(badClient.listWorkflows(TEST_CTX)).rejects.toThrow(
+        /API error.*401/,
+      );
     });
 
     it("should throw GaiaApiError with status property on auth failure", async () => {
-      const badClient = new GaiaClient(server.baseUrl, "wrong-key", TEST_FRONTEND_URL);
+      const badClient = new GaiaClient(
+        server.baseUrl,
+        "wrong-key",
+        TEST_FRONTEND_URL,
+      );
       try {
         await badClient.listWorkflows(TEST_CTX);
         expect.fail("Should have thrown");
@@ -117,7 +122,11 @@ describe("GaiaClient E2E", () => {
       server.state.errorMessage = "Unauthorized";
 
       try {
-        await client.chat({ message: "Hello", platform: "discord", platformUserId: TEST_USER_ID });
+        await client.chat({
+          message: "Hello",
+          platform: "discord",
+          platformUserId: TEST_USER_ID,
+        });
         expect.fail("Should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(GaiaApiError);
@@ -130,7 +139,11 @@ describe("GaiaClient E2E", () => {
       server.state.errorStatus = 500;
 
       try {
-        await client.chat({ message: "Hello", platform: "discord", platformUserId: TEST_USER_ID });
+        await client.chat({
+          message: "Hello",
+          platform: "discord",
+          platformUserId: TEST_USER_ID,
+        });
         expect.fail("Should have thrown");
       } catch (error) {
         expect(error).toBeInstanceOf(GaiaApiError);
@@ -205,8 +218,13 @@ describe("GaiaClient E2E", () => {
 
       await client.chatStream(
         { message: "Hi", platform: "discord", platformUserId: TEST_USER_ID },
-        (chunk) => { chunks.push(chunk); },
-        (fullText, convId) => { doneText = fullText; doneConvId = convId; },
+        (chunk) => {
+          chunks.push(chunk);
+        },
+        (fullText, convId) => {
+          doneText = fullText;
+          doneConvId = convId;
+        },
         () => {},
       );
 
@@ -224,7 +242,9 @@ describe("GaiaClient E2E", () => {
         { message: "Hi", platform: "discord", platformUserId: TEST_USER_ID },
         () => {},
         () => {},
-        (error) => { errorMsg = error.message; },
+        (error) => {
+          errorMsg = error.message;
+        },
       );
 
       expect(errorMsg).toBe("not_authenticated");
@@ -273,7 +293,9 @@ describe("GaiaClient E2E", () => {
       await client.chatStream(
         { message: "Hi", platform: "discord", platformUserId: TEST_USER_ID },
         () => {},
-        () => { doneCalled = true; },
+        () => {
+          doneCalled = true;
+        },
         () => {},
       );
 
@@ -343,14 +365,19 @@ describe("GaiaClient E2E", () => {
     });
 
     it("getWorkflow() should throw on 404", async () => {
-      await expect(client.getWorkflow("nonexistent", TEST_CTX)).rejects.toThrow(/API error.*404/);
+      await expect(client.getWorkflow("nonexistent", TEST_CTX)).rejects.toThrow(
+        /API error.*404/,
+      );
     });
 
     it("createWorkflow() should send correct request", async () => {
-      const result = await client.createWorkflow({
-        name: "My Workflow",
-        description: "Does stuff",
-      }, TEST_CTX);
+      const result = await client.createWorkflow(
+        {
+          name: "My Workflow",
+          description: "Does stuff",
+        },
+        TEST_CTX,
+      );
 
       const req = server.getLastRequest();
       expect((req?.body as Record<string, unknown>).name).toBe("My Workflow");
@@ -358,10 +385,13 @@ describe("GaiaClient E2E", () => {
     });
 
     it("executeWorkflow() should send request to correct endpoint", async () => {
-      const result = await client.executeWorkflow({
-        workflow_id: "wf-1",
-        inputs: { key: "value" },
-      }, TEST_CTX);
+      const result = await client.executeWorkflow(
+        {
+          workflow_id: "wf-1",
+          inputs: { key: "value" },
+        },
+        TEST_CTX,
+      );
 
       const req = server.getLastRequest();
       expect(req?.url).toBe("/api/v1/bot/workflows/wf-1/execute");
@@ -393,11 +423,14 @@ describe("GaiaClient E2E", () => {
     });
 
     it("createTodo() should send correct request", async () => {
-      const result = await client.createTodo({
-        title: "Buy groceries",
-        priority: "high",
-        description: "From the store",
-      }, TEST_CTX);
+      const result = await client.createTodo(
+        {
+          title: "Buy groceries",
+          priority: "high",
+          description: "From the store",
+        },
+        TEST_CTX,
+      );
 
       const req = server.getLastRequest();
       const body = req?.body as Record<string, unknown>;

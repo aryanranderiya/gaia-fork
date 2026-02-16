@@ -85,13 +85,16 @@ export async function handleStreamingChat(
           lastEditTime = now;
           await updateDisplay(fullText);
         } else if (!editTimer) {
-          editTimer = setTimeout(async () => {
-            editTimer = null;
-            if (!streamDone) {
-              lastEditTime = Date.now();
-              await updateDisplay(fullText);
-            }
-          }, editIntervalMs - (now - lastEditTime));
+          editTimer = setTimeout(
+            async () => {
+              editTimer = null;
+              if (!streamDone) {
+                lastEditTime = Date.now();
+                await updateDisplay(fullText);
+              }
+            },
+            editIntervalMs - (now - lastEditTime),
+          );
         }
       },
       async (finalText) => {
