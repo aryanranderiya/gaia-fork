@@ -609,6 +609,34 @@ export class GaiaClient {
   }
 
   /**
+   * Resets the bot session, starting a fresh conversation.
+   * The previous conversation is preserved in the GAIA web app.
+   */
+  async resetSession(
+    platform: string,
+    platformUserId: string,
+    channelId?: string,
+  ): Promise<void> {
+    return this.request(async () => {
+      await this.client.post(
+        "/api/v1/bot/reset-session",
+        {
+          platform,
+          platform_user_id: platformUserId,
+          channel_id: channelId ?? null,
+        },
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+            "X-Bot-Platform": platform,
+            "X-Bot-Platform-User-Id": platformUserId,
+          },
+        },
+      );
+    });
+  }
+
+  /**
    * Creates a secure, time-limited link token for platform account linking.
    * The token is stored in Redis and expires after 10 minutes.
    */

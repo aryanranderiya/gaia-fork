@@ -67,6 +67,16 @@ class BotConversationResponse(BaseModel):
         extra = "allow"  # Allow additional fields from MongoDB
 
 
+class ResetSessionRequest(BaseModel):
+    """Request model for resetting a bot session (starting a new conversation)."""
+
+    platform: str = Field(..., description="Platform name (discord, slack, etc.)")
+    platform_user_id: str = Field(..., description="User's ID on the platform")
+    channel_id: Optional[str] = Field(
+        None, description="Channel/group ID (None for DM)"
+    )
+
+
 class IntegrationInfo(BaseModel):
     """Integration information for bot settings."""
 

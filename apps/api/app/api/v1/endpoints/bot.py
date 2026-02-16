@@ -10,6 +10,7 @@ from app.config.settings import settings
 from app.constants.cache import PLATFORM_LINK_TOKEN_PREFIX, PLATFORM_LINK_TOKEN_TTL
 from app.core.stream_manager import stream_manager
 from app.db.redis import redis_cache
+from app.db.mongodb.collections import conversations_collection
 from app.models.bot_models import (
     BotAuthStatusResponse,
     BotChatRequest,
@@ -17,6 +18,7 @@ from app.models.bot_models import (
     CreateLinkTokenRequest,
     CreateLinkTokenResponse,
     IntegrationInfo,
+    ResetSessionRequest,
 )
 from app.models.message_models import MessageRequestWithHistory
 from app.services.bot_service import BotService
@@ -145,46 +147,62 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
     task.add_done_callback(task_done_callback)
     _background_tasks.add(task)
 
+    _KEEPALIVE_INTERVAL = 20  # seconds between SSE keepalive pings
+
     async def stream_from_redis():
         """Subscribe to Redis stream and translate chunks for bot clients."""
         # Send session token as first event
         yield f"data: {json.dumps({'session_token': session_token})}\n\n"
 
         try:
-            async for chunk in stream_manager.subscribe_stream(stream_id):
-                # Filter out web-only metadata chunks
-                if chunk.startswith("data: "):
-                    raw = chunk[len("data: ") :].strip()
-                    if raw == "[DONE]":
-                        yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
-                        break
+            gen = stream_manager.subscribe_stream(stream_id)
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(
+                        gen.__anext__(), timeout=_KEEPALIVE_INTERVAL
+                    )
+                except asyncio.TimeoutError:
+                    # Send SSE comment to keep the connection alive and reset
+                    # the client-side inactivity timer during slow LLM calls.
+                    yield ": keepalive\n\n"
+                    continue
+                except StopAsyncIteration:
+                    break
 
-                    try:
-                        data = json.loads(raw)
+                if not chunk.startswith("data: "):
+                    continue
 
-                        # Skip web-only fields
-                        if any(
-                            key in data
-                            for key in [
-                                "conversation_description",
-                                "user_message_id",
-                                "bot_message_id",
-                                "stream_id",
-                                "tool_data",
-                                "tool_output",
-                                "follow_up_actions",
-                            ]
-                        ):
-                            continue
+                raw = chunk[len("data: ") :].strip()
+                if raw == "[DONE]":
+                    yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
+                    break
 
-                        # Translate {"response": "..."} → {"text": "..."}
-                        if "response" in data:
-                            yield f"data: {json.dumps({'text': data['response']})}\n\n"
-                        elif "error" in data:
-                            yield f"data: {json.dumps({'error': data['error']})}\n\n"
-                            break
-                    except json.JSONDecodeError:
+                try:
+                    data = json.loads(raw)
+
+                    # Skip web-only fields
+                    if any(
+                        key in data
+                        for key in [
+                            "conversation_description",
+                            "user_message_id",
+                            "bot_message_id",
+                            "stream_id",
+                            "tool_data",
+                            "tool_output",
+                            "follow_up_actions",
+                        ]
+                    ):
                         continue
+
+                    # Translate {"response": "..."} → {"text": "..."}
+                    if "response" in data:
+                        yield f"data: {json.dumps({'text': data['response']})}\n\n"
+                    elif "error" in data:
+                        yield f"data: {json.dumps({'error': data['error']})}\n\n"
+                        break
+                except json.JSONDecodeError:
+                    continue
         except Exception as e:
             logger.error(f"Bot stream subscription error: {e}")
             yield f"data: {json.dumps({'error': 'Stream error occurred'})}\n\n"
@@ -219,12 +237,13 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
         history = await BotService.load_conversation_history(conversation_id, user_id)
     else:
         # Anonymous session - no history, fresh conversation each time
+        user_id = f"anon:{body.platform}:{body.platform_user_id}"
         conversation_id = await BotService.get_or_create_anonymous_session(
             body.platform, body.platform_user_id, body.channel_id
         )
         history = []
         user = {
-            "user_id": f"anon:{body.platform}:{body.platform_user_id}",
+            "user_id": user_id,
             "name": "Anonymous",
             "auth_provider": f"bot:{body.platform}:anonymous",
         }
@@ -237,6 +256,9 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
         messages=history,
     )
 
+    is_anonymous = user_id.startswith("anon:") if user_id else True
+    _MENTION_KEEPALIVE_INTERVAL = 20  # seconds
+
     async def event_generator():
         complete_message = ""
         try:
@@ -247,9 +269,20 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
                 user_time=datetime.now(timezone.utc),
             )
 
-            async for chunk in stream:
+            while True:
+                try:
+                    chunk = await asyncio.wait_for(
+                        stream.__anext__(), timeout=_MENTION_KEEPALIVE_INTERVAL
+                    )
+                except asyncio.TimeoutError:
+                    # Send SSE keepalive comment to prevent client timeout
+                    yield ": keepalive\n\n"
+                    continue
+                except StopAsyncIteration:
+                    break
+
                 if chunk.startswith("nostream:"):
-                    payload = json.loads(chunk[len("nostream: ") :])
+                    payload = json.loads(chunk[len("nostream:") :].strip())
                     complete_message = payload.get("complete_message", complete_message)
                     continue
 
@@ -269,9 +302,64 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
             logger.error(f"Bot mention stream error: {e}")
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
+        # Persist messages for authenticated users after stream completes
+        if not is_anonymous and complete_message and user_id:
+            try:
+                now = datetime.now(timezone.utc).isoformat()
+                await conversations_collection.update_one(
+                    {"user_id": user_id, "conversation_id": conversation_id},
+                    {
+                        "$push": {
+                            "messages": {
+                                "$each": [
+                                    {
+                                        "type": "user",
+                                        "response": body.message,
+                                        "date": now,
+                                        "message_id": str(uuid4()),
+                                    },
+                                    {
+                                        "type": "bot",
+                                        "response": complete_message,
+                                        "date": now,
+                                        "message_id": str(uuid4()),
+                                    },
+                                ]
+                            }
+                        },
+                        "$currentDate": {"updatedAt": True},
+                    },
+                )
+            except Exception as e:
+                logger.error(f"Failed to save mention messages: {e}")
+
         yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+@router.post(
+    "/reset-session",
+    status_code=200,
+    summary="Reset Bot Session",
+    description="Start a new conversation, archiving the current one.",
+)
+async def reset_session(request: Request, body: ResetSessionRequest) -> dict:
+    await require_bot_api_key(request)
+
+    user = getattr(request.state, "user", None)
+    if not user or not getattr(request.state, "authenticated", False):
+        user = await PlatformLinkService.get_user_by_platform_id(
+            body.platform, body.platform_user_id
+        )
+
+    if not user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    new_conversation_id = await BotService.reset_session(
+        body.platform, body.platform_user_id, body.channel_id, user
+    )
+    return {"success": True, "conversation_id": new_conversation_id}
 
 
 @router.get(
