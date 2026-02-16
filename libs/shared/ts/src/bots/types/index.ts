@@ -1,4 +1,18 @@
 /**
+ * Shared types for all GAIA bot integrations.
+ *
+ * These interfaces define the contract between bot adapters and the
+ * shared library. Bot-specific types (Discord Interaction, Slack Command, etc.)
+ * live in each bot's own code - only platform-agnostic types belong here.
+ *
+ * Key types:
+ * - ChatRequest / ChatResponse: chat API payloads
+ * - CommandContext: user identity passed to all shared command handlers
+ * - BotConfig: environment config loaded by config/index.ts
+ * - Domain types: Workflow, Todo, Conversation (match backend API schemas)
+ */
+
+/**
  * Represents a chat request sent to the GAIA bot API.
  */
 export interface ChatRequest {
@@ -44,6 +58,8 @@ export interface BotConfig {
   gaiaApiUrl: string;
   /** The secure API key for authenticating with the backend. */
   gaiaApiKey: string;
+  /** The base URL of the GAIA frontend app. */
+  gaiaFrontendUrl: string;
 }
 
 /**
@@ -123,25 +139,17 @@ export interface ConversationListResponse {
   page: number;
 }
 
-export interface WeatherRequest {
-  location: string;
-}
-
-export interface WeatherResponse {
-  location: string;
-  temperature: number;
-  condition: string;
-  humidity?: number;
-  wind_speed?: number;
-  forecast?: Record<string, unknown>[];
-}
-
-export interface SearchRequest {
-  query: string;
-}
-
 export interface SearchResponse {
   messages: Record<string, unknown>[];
   conversations: Record<string, unknown>[];
   notes: Record<string, unknown>[];
 }
+
+export interface BotUserContext {
+  platform: "discord" | "slack" | "telegram" | "whatsapp";
+  platformUserId: string;
+}
+
+export type CommandContext = BotUserContext & {
+  channelId?: string;
+};

@@ -1,3 +1,15 @@
+/**
+ * Pure display formatters for bot responses.
+ *
+ * These are data-in, string-out functions with no side effects.
+ * They are used by the shared command handlers in commands.ts
+ * and can also be called directly when assembling custom responses.
+ *
+ * formatBotError is the single error formatter for all bots.
+ * It checks for GaiaApiError (preserves HTTP status), then
+ * falls back to axios-style errors, then generic Error messages.
+ */
+import { GaiaApiError } from "../api";
 import type { Workflow, Todo, Conversation } from "../types";
 
 /**
@@ -75,39 +87,44 @@ export function formatConversationList(
   return conversations.map((c) => formatConversation(c, baseUrl)).join("\n\n");
 }
 
-/**
- * Truncates text to fit platform message limits.
- */
-export function truncateMessage(
-  text: string,
-  platform: "discord" | "slack" | "telegram" | "whatsapp",
-): string {
-  const limits = {
-    discord: 2000,
-    slack: 4000,
-    telegram: 4096,
-    whatsapp: 4096,
-  };
-
-  const limit = limits[platform];
-  if (text.length <= limit) {
-    return text;
-  }
-
-  return text.substring(0, limit - 50) + "\n\n... (message truncated)";
-}
+/** Shared help text and usage strings for text-based command platforms. */
+export const COMMAND_HELP = {
+  todo:
+    "Available commands:\n" +
+    "/todo list - List your todos\n" +
+    "/todo add <title> - Create a new todo\n" +
+    "/todo complete <id> - Mark todo as complete\n" +
+    "/todo delete <id> - Delete a todo",
+  workflow:
+    "Available commands:\n" +
+    "/workflow list - List all workflows\n" +
+    "/workflow get <id> - Get workflow details\n" +
+    "/workflow execute <id> - Execute a workflow",
+  todoUsage: {
+    add: "Usage: /todo add <title>",
+    complete: "Usage: /todo complete <todo-id>",
+    delete: "Usage: /todo delete <todo-id>",
+  },
+  workflowUsage: {
+    get: "Usage: /workflow get <workflow-id>",
+    execute: "Usage: /workflow execute <workflow-id>",
+  },
+};
 
 /**
  * Formats an error message for user display.
  */
 export function formatBotError(error: unknown): string {
-  const response = (error as { response?: { status?: number } })?.response;
+  const status =
+    error instanceof GaiaApiError
+      ? error.status
+      : (error as { response?: { status?: number } })?.response?.status;
 
-  if (response?.status === 401) {
+  if (status === 401) {
     return "❌ Authentication required. Use `/auth` to link your account.";
   }
 
-  if (response?.status === 404) {
+  if (status === 404) {
     return "❌ Not found. Please check the ID and try again.";
   }
 

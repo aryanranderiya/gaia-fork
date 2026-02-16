@@ -12,6 +12,7 @@ dotenv.config();
 export function loadConfig(): BotConfig {
   const gaiaApiUrl = process.env.GAIA_API_URL;
   const gaiaApiKey = process.env.GAIA_BOT_API_KEY;
+  const gaiaFrontendUrl = process.env.GAIA_FRONTEND_URL;
 
   if (!gaiaApiUrl) {
     throw new Error("GAIA_API_URL is required");
@@ -19,6 +20,9 @@ export function loadConfig(): BotConfig {
   if (!gaiaApiKey) {
     throw new Error("GAIA_BOT_API_KEY is required");
   }
+  if (!gaiaFrontendUrl) {
+    throw new Error("GAIA_FRONTEND_URL is required");
+  }
 
-  return { gaiaApiUrl, gaiaApiKey };
+  return { gaiaApiUrl, gaiaApiKey, gaiaFrontendUrl };
 }
