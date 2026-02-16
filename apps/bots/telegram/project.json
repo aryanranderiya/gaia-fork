@@ -19,6 +19,13 @@
         "command": "pnpm tsx watch src/index.ts",
         "cwd": "{projectRoot}"
       }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "pnpm vitest run --config ../../vitest.config.ts",
+        "cwd": "{projectRoot}"
+      }
     }
   }
 }
