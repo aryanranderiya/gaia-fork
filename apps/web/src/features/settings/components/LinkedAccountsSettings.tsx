@@ -1,10 +1,10 @@
 "use client";
 
 import { Button } from "@heroui/button";
+import { Chip } from "@heroui/chip";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-
 import { TelegramIcon } from "@/components/shared/icons";
 import { SettingsCard } from "@/features/settings/components/SettingsCard";
 import { apiService } from "@/lib/api";
@@ -44,18 +44,19 @@ const PLATFORMS: PlatformConfig[] = [
   {
     id: "telegram",
     name: "Telegram",
-    color: "#0088cc",
     description: "Chat with GAIA on Telegram",
+    image: "/images/icons/macos/telegram.webp",
+    color: "#0088cc",
     connectedDescription: "Message your bot on Telegram to chat with GAIA",
   },
-  {
-    id: "whatsapp",
-    name: "WhatsApp",
-    image: "/images/icons/macos/whatsapp.webp",
-    color: "#25D366",
-    description: "Connect GAIA to WhatsApp (Beta)",
-    connectedDescription: "Message GAIA on WhatsApp",
-  },
+  // {
+  //   id: "whatsapp",
+  //   name: "WhatsApp",
+  //   image: "/images/icons/macos/whatsapp.webp",
+  //   color: "#25D366",
+  //   description: "Connect GAIA to WhatsApp (Beta)",
+  //   connectedDescription: "Message GAIA on WhatsApp",
+  // },
 ];
 
 export default function LinkedAccountsSettings() {
@@ -139,7 +140,12 @@ export default function LinkedAccountsSettings() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h3 className="text-lg font-semibold text-white">Linked Accounts</h3>
+        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+          <span>Linked Accounts</span>
+          <Chip color="success" variant="bordered" size="sm">
+            Beta
+          </Chip>
+        </h3>
         <p className="mt-1 text-sm text-zinc-400">
           Connect your messaging platforms to use GAIA from anywhere
         </p>

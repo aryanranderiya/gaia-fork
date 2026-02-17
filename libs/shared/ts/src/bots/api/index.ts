@@ -316,19 +316,17 @@ export class GaiaClient {
             if (finished) return;
             const trimmed = line.trim();
 
-            // Handle SSE keepalive comments (proper SSE comment format)
-            // Backend sends ": keepalive" as an SSE comment to keep connection alive
-            if (trimmed === ": keepalive" || trimmed === ":keepalive") {
-              receivedKeepalive = true;
-              continue;
-            }
-
             if (!trimmed || !trimmed.startsWith("data: ")) continue;
             const raw = trimmed.slice(6);
             if (raw === "[DONE]") continue;
 
             try {
               const data = JSON.parse(raw);
+              if (data.keepalive) {
+                // Server keepalive ping to keep the connection alive
+                receivedKeepalive = true;
+                continue;
+              }
               if (data.error === "not_authenticated") {
                 finished = true;
                 if (inactivityTimer) clearTimeout(inactivityTimer);

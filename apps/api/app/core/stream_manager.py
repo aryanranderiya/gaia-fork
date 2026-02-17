@@ -208,8 +208,11 @@ class StreamManager:
                 )
 
                 if message is None:
-                    # No message within interval — send keepalive
-                    yield ": keepalive\n\n"
+                    # No message within interval — send keepalive as a data event.
+                    # SSE comment format (": keepalive") triggers onmessage with
+                    # empty data in @microsoft/fetch-event-source due to a spec
+                    # non-compliance in that library, causing JSON.parse("") errors.
+                    yield 'data: {"keepalive":true}\n\n'
                     continue
 
                 if message["type"] != "message":

@@ -554,8 +554,10 @@ export const useChatStream = () => {
     }
 
     try {
-      const data = event.data === "[DONE]" ? null : JSON.parse(event.data);
+      if (!event.data) return; // Skip empty events (@microsoft/fetch-event-source dispatches these for SSE comments)
       if (event.data === "[DONE]") return;
+      const data = JSON.parse(event.data);
+      if (data.keepalive) return; // Server keepalive ping, not real data
       if (data.error) {
         toast.error(data.error);
         return data.error;
