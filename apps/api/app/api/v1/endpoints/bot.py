@@ -148,27 +148,20 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
     task.add_done_callback(task_done_callback)
     _background_tasks.add(task)
 
-    _KEEPALIVE_INTERVAL = 20  # seconds between SSE keepalive pings
-
     async def stream_from_redis():
         """Subscribe to Redis stream and translate chunks for bot clients."""
         # Send session token as first event
         yield f"data: {json.dumps({'session_token': session_token})}\n\n"
 
+        # Send initial keepalive to establish connection
+        yield ": keepalive\n\n"
+
         try:
-            gen = stream_manager.subscribe_stream(stream_id)
-            while True:
-                try:
-                    chunk = await asyncio.wait_for(
-                        gen.__anext__(), timeout=_KEEPALIVE_INTERVAL
-                    )
-                except asyncio.TimeoutError:
-                    # Send SSE comment to keep the connection alive and reset
-                    # the client-side inactivity timer during slow LLM calls.
-                    yield ": keepalive\n\n"
+            async for chunk in stream_manager.subscribe_stream(stream_id):
+                # Forward keepalive comments directly
+                if chunk.startswith(":"):
+                    yield chunk
                     continue
-                except StopAsyncIteration:
-                    break
 
                 if not chunk.startswith("data: "):
                     continue
@@ -176,7 +169,7 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
                 raw = chunk[len("data: ") :].strip()
                 if raw == "[DONE]":
                     yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
-                    break
+                    return
 
                 try:
                     data = json.loads(raw)
@@ -269,10 +262,13 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
     )
 
     is_anonymous = user_id.startswith("anon:") if user_id else True
-    _MENTION_KEEPALIVE_INTERVAL = 20  # seconds
+    _MENTION_KEEPALIVE_INTERVAL = 15  # seconds
 
     async def event_generator():
         complete_message = ""
+        # Send initial keepalive to establish connection
+        yield ": keepalive\n\n"
+
         try:
             stream = await call_agent(
                 request=message_request,
@@ -281,37 +277,45 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
                 user_time=datetime.now(timezone.utc),
             )
 
-            while True:
-                try:
-                    chunk = await asyncio.wait_for(
-                        stream.__anext__(), timeout=_MENTION_KEEPALIVE_INTERVAL
+            # Use asyncio.Task + wait to avoid cancelling the generator on timeout
+            next_task: asyncio.Task | None = None
+            try:
+                while True:
+                    if next_task is None:
+                        next_task = asyncio.ensure_future(stream.__anext__())
+                    done, _ = await asyncio.wait(
+                        {next_task}, timeout=_MENTION_KEEPALIVE_INTERVAL
                     )
-                except asyncio.TimeoutError:
-                    # Send SSE keepalive comment to prevent client timeout
-                    yield ": keepalive\n\n"
-                    continue
-                except StopAsyncIteration:
-                    break
-
-                if chunk.startswith("nostream:"):
-                    payload = json.loads(chunk[len("nostream:") :].strip())
-                    complete_message = payload.get("complete_message", complete_message)
-                    continue
-
-                if chunk.startswith("data: "):
-                    raw = chunk[len("data: ") :].strip()
-                    if raw == "[DONE]":
-                        break
-
-                    try:
-                        data = json.loads(raw)
-                        if "response" in data:
-                            complete_message += data["response"]
-                            yield f"data: {json.dumps({'text': data['response']})}\n\n"
-                    except json.JSONDecodeError:
+                    if not done:
+                        yield ": keepalive\n\n"
                         continue
+
+                    chunk = next_task.result()
+                    next_task = None
+
+                    if chunk.startswith("nostream:"):
+                        payload = json.loads(chunk[len("nostream:") :].strip())
+                        complete_message = payload.get(
+                            "complete_message", complete_message
+                        )
+                        continue
+
+                    if chunk.startswith("data: "):
+                        raw = chunk[len("data: ") :].strip()
+                        if raw == "[DONE]":
+                            break
+
+                        try:
+                            data = json.loads(raw)
+                            if "response" in data:
+                                complete_message += data["response"]
+                                yield f"data: {json.dumps({'text': data['response']})}\n\n"
+                        except json.JSONDecodeError:
+                            continue
+            except StopAsyncIteration:
+                pass
         except Exception as e:
-            logger.error(f"Bot mention stream error: {e}")
+            logger.error(f"Bot mention stream error: {e}", exc_info=True)
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
 
         # Persist messages for authenticated users after stream completes

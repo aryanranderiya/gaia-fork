@@ -176,6 +176,39 @@ export function formatBotError(error: unknown): string {
     return "⏳ You're sending messages too fast. Please wait a moment and try again.";
   }
 
+  const message =
+    error instanceof Error ? error.message : String(error ?? "");
+
+  if (message.includes("timed out") || message.includes("timeout")) {
+    return "⏳ The request timed out. The server may be busy — please try again in a moment.";
+  }
+
+  if (
+    message.includes("No response received") ||
+    message.includes("Connection lost before receiving a response")
+  ) {
+    return "❌ Connection lost before receiving a response. Please try again.";
+  }
+
+  if (
+    message.includes("AI is taking longer than expected") ||
+    message.includes("AI is processing your request")
+  ) {
+    return "⏳ Your request is taking longer than usual. Try a simpler question or wait a moment and try again.";
+  }
+
+  if (
+    message.includes("Connection interrupted") ||
+    message.includes("ECONNRESET") ||
+    message.includes("socket hang up")
+  ) {
+    return "🔌 Connection interrupted. Please try again.";
+  }
+
+  if (message.includes("Stream processing incomplete")) {
+    return "⚠️ Response was incomplete. Please try again.";
+  }
+
   console.error("Unhandled bot error:", error);
   return "❌ Something went wrong. Please try again later.";
 }

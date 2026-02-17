@@ -141,12 +141,11 @@ export class GaiaClient {
     onDone: (fullText: string, conversationId: string) => void | Promise<void>,
     onError: (error: Error) => void | Promise<void>,
   ): Promise<string> {
-    return this._chatStreamInternal(
+    return this._chatStreamWithRetry(
       request,
       onChunk,
       onDone,
       onError,
-      false,
       "/api/v1/bot/chat-stream",
     );
   }
@@ -161,14 +160,77 @@ export class GaiaClient {
     onDone: (fullText: string, conversationId: string) => void | Promise<void>,
     onError: (error: Error) => void | Promise<void>,
   ): Promise<string> {
-    return this._chatStreamInternal(
+    return this._chatStreamWithRetry(
       request,
       onChunk,
       onDone,
       onError,
-      false,
       "/api/v1/bot/chat-mention",
     );
+  }
+
+  /**
+   * Wrapper that adds retry logic for transient failures.
+   */
+  private async _chatStreamWithRetry(
+    request: ChatRequest,
+    onChunk: (text: string) => void | Promise<void>,
+    onDone: (fullText: string, conversationId: string) => void | Promise<void>,
+    onError: (error: Error) => void | Promise<void>,
+    endpoint: string,
+    maxRetries = 2,
+  ): Promise<string> {
+    const retryableErrors = [
+      "ECONNRESET",
+      "socket hang up",
+      "ETIMEDOUT",
+      "ECONNREFUSED",
+      "Connection interrupted",
+      "Connection lost before receiving a response",
+    ];
+
+    let lastError: Error | null = null;
+    let attemptedRetries = 0;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this._chatStreamInternal(
+          request,
+          onChunk,
+          onDone,
+          onError,
+          attempt > 0,
+          endpoint,
+        );
+      } catch (error: unknown) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        const errorMsg = lastError.message;
+
+        // Check if this is a retryable error
+        const isRetryable = retryableErrors.some((retryableErr) =>
+          errorMsg.includes(retryableErr)
+        );
+
+        if (!isRetryable || attempt === maxRetries) {
+          // Non-retryable error or max retries reached
+          await onError(lastError);
+          throw lastError;
+        }
+
+        // Wait before retrying (exponential backoff)
+        const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
+        attemptedRetries++;
+        console.log(
+          `Retrying stream (attempt ${attemptedRetries}/${maxRetries}) after ${delayMs}ms...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    }
+
+    // Should never reach here, but just in case
+    const finalError = lastError || new Error("Stream failed after retries");
+    await onError(finalError);
+    throw finalError;
   }
 
   private async _chatStreamInternal(
@@ -182,7 +244,9 @@ export class GaiaClient {
     let fullText = "";
     let conversationId = "";
 
-    const STREAM_TIMEOUT_MS = 120_000;
+    // Increased timeouts for slow API operations (lazy loading, cold starts, etc.)
+    const STREAM_TIMEOUT_MS = 600_000; // 10 minutes - overall connection timeout
+    const INACTIVITY_TIMEOUT_MS = 300_000; // 5 minutes - no data received timeout
 
     const ctx = {
       platform: request.platform,
@@ -213,21 +277,29 @@ export class GaiaClient {
       let buffer = "";
       let finished = false;
       let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+      let lastActivity = Date.now();
+      let receivedKeepalive = false;
 
       const resetInactivityTimer = (resolve: () => void) => {
         if (inactivityTimer) clearTimeout(inactivityTimer);
+        lastActivity = Date.now();
         inactivityTimer = setTimeout(async () => {
           if (!finished) {
             finished = true;
             stream.destroy();
             if (fullText) {
+              // If we got some content, consider it a success
               await onDone(fullText, conversationId);
             } else {
-              await onError(new Error("Stream timed out"));
+              // No content after timeout - this is an error
+              const errorMsg = receivedKeepalive
+                ? "The AI is taking longer than expected. Please try a simpler request or try again later."
+                : "Connection timeout - no response from server. Please try again.";
+              await onError(new Error(errorMsg));
             }
             resolve();
           }
-        }, 60_000);
+        }, INACTIVITY_TIMEOUT_MS);
       };
 
       await new Promise<void>((resolve) => {
@@ -243,6 +315,14 @@ export class GaiaClient {
           for (const line of lines) {
             if (finished) return;
             const trimmed = line.trim();
+
+            // Handle SSE keepalive comments (proper SSE comment format)
+            // Backend sends ": keepalive" as an SSE comment to keep connection alive
+            if (trimmed === ": keepalive" || trimmed === ":keepalive") {
+              receivedKeepalive = true;
+              continue;
+            }
+
             if (!trimmed || !trimmed.startsWith("data: ")) continue;
             const raw = trimmed.slice(6);
             if (raw === "[DONE]") continue;
@@ -282,15 +362,40 @@ export class GaiaClient {
                 resolve();
                 return;
               }
-            } catch {}
+            } catch (parseErr) {
+              if (!(parseErr instanceof SyntaxError)) {
+                finished = true;
+                if (inactivityTimer) clearTimeout(inactivityTimer);
+                await onError(
+                  parseErr instanceof Error
+                    ? parseErr
+                    : new Error("Stream processing failed"),
+                );
+                resolve();
+                return;
+              }
+            }
           }
         });
 
         stream.on("end", async () => {
           if (inactivityTimer) clearTimeout(inactivityTimer);
-          if (!finished && fullText) {
+          if (!finished) {
             finished = true;
-            await onDone(fullText, conversationId);
+            if (fullText) {
+              // Got partial response - return what we have
+              await onDone(fullText, conversationId);
+            } else if (receivedKeepalive) {
+              // Received keepalive but no content - server is working but slow
+              await onError(
+                new Error("The AI is processing your request but hasn't responded yet. Please try again."),
+              );
+            } else {
+              // No keepalive, no content - connection issue
+              await onError(
+                new Error("Connection lost before receiving a response. Please try again."),
+              );
+            }
           }
           resolve();
         });
@@ -299,7 +404,13 @@ export class GaiaClient {
           if (inactivityTimer) clearTimeout(inactivityTimer);
           if (!finished) {
             finished = true;
-            await onError(err);
+            // Provide more helpful error messages
+            const errorMsg = err.message.includes("ECONNRESET") || err.message.includes("socket hang up")
+              ? "Connection interrupted. Please try again."
+              : err.message.includes("timeout")
+              ? "Request timed out. The server may be busy - please try again."
+              : err.message;
+            await onError(new Error(errorMsg));
           }
           resolve();
         });
