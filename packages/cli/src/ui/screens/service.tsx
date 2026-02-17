@@ -97,14 +97,30 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({ store }) => {
           )}
           {state.data.setupMode === "developer" && (
             <Box marginTop={1} flexDirection="column">
-              <Text color="gray">Dev servers started in background.</Text>
-              <Text color="gray">
-                Logs: <Text color={THEME_COLOR}>dev-start.log</Text> in your
-                repo root.
-              </Text>
-              <Text color="gray">
-                Run <Text color={THEME_COLOR}>gaia stop</Text> to shut down.
-              </Text>
+              <Box flexDirection="column">
+                <Text>
+                  Web:{" "}
+                  <Text color="cyan" bold>
+                    http://localhost:{state.data.webPort || 3000}
+                  </Text>
+                </Text>
+                <Text>
+                  API:{" "}
+                  <Text color="cyan" bold>
+                    http://localhost:{state.data.apiPort || 8000}
+                  </Text>
+                </Text>
+              </Box>
+              <Box marginTop={1} flexDirection="column">
+                <Text color="gray">Dev servers started in background.</Text>
+                <Text color="gray">
+                  Logs: <Text color={THEME_COLOR}>dev-start.log</Text> in your
+                  repo root.
+                </Text>
+                <Text color="gray">
+                  Run <Text color={THEME_COLOR}>gaia stop</Text> to shut down.
+                </Text>
+              </Box>
             </Box>
           )}
           <Box marginTop={1}>

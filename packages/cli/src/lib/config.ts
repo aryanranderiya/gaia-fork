@@ -4,6 +4,7 @@ import * as path from "path";
 
 export const GAIA_CONFIG_DIR = path.join(os.homedir(), ".gaia");
 export const CONFIG_PATH = path.join(GAIA_CONFIG_DIR, "config.json");
+export const CLI_VERSION = "0.1.10";
 
 export interface GaiaConfig {
   version: string;
@@ -39,7 +40,7 @@ export function updateConfig(partial: Partial<GaiaConfig>): void {
   const existing = readConfig();
   const updated: GaiaConfig = {
     ...(existing ?? {
-      version: "0.1.8",
+      version: CLI_VERSION,
       setupComplete: false,
       setupMethod: "manual",
       repoPath: "",

@@ -1,8 +1,13 @@
 import { readDockerComposePortOverrides } from "../../lib/env-writer.js";
 import {
-  type StartServicesOptions,
+  checkDockerDetailed,
+  checkMise,
+  PREREQUISITE_URLS,
+} from "../../lib/prerequisites.js";
+import {
   detectSetupMode,
   findRepoRoot,
+  type StartServicesOptions,
   startServices,
 } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
@@ -30,10 +35,36 @@ export async function runStartFlow(
   if (!mode) {
     store.setError(
       new Error(
-        "No .env file found. Run 'gaia setup' first to configure the environment.",
+        "No .env file found. Run 'gaia init' for fresh setup, or 'gaia setup' to configure an existing repo.",
       ),
     );
     return;
+  }
+
+  // Check prerequisites before starting
+  if (mode === "selfhost") {
+    store.setStatus("Checking Docker...");
+    const dockerInfo = await checkDockerDetailed();
+    if (!dockerInfo.working) {
+      store.setError(
+        new Error(
+          dockerInfo.errorMessage ||
+            `Docker is not running. Please start Docker and try again.\n  ${PREREQUISITE_URLS.docker}`,
+        ),
+      );
+      return;
+    }
+  } else {
+    store.setStatus("Checking Mise...");
+    const miseResult = await checkMise();
+    if (miseResult === "missing" || miseResult === "error") {
+      store.setError(
+        new Error(
+          `Developer mode requires Mise but it is not installed.\n  Install: ${PREREQUISITE_URLS.mise}`,
+        ),
+      );
+      return;
+    }
   }
 
   const portOverrides = readDockerComposePortOverrides(repoPath);

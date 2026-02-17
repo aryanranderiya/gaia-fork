@@ -27,6 +27,12 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
     };
   }, [store]);
 
+  useInput((_input, key) => {
+    if ((key.return || key.escape) && state.error) {
+      store.submitInput("exit");
+    }
+  });
+
   return (
     <Shell status={state.status} step={state.step} steps={SETUP_STEPS}>
       {state.step === "Detect Repo" && (
@@ -190,8 +196,19 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
       )}
 
       {state.error && (
-        <Box borderStyle="single" borderColor="red" padding={1} marginTop={2}>
+        <Box
+          flexDirection="column"
+          borderStyle="single"
+          borderColor="red"
+          padding={1}
+          marginTop={2}
+        >
           <Text color="red">Error: {state.error.message}</Text>
+          <Box marginTop={1}>
+            <Text dimColor>
+              <Text bold>Enter</Text> to exit
+            </Text>
+          </Box>
         </Box>
       )}
     </Shell>

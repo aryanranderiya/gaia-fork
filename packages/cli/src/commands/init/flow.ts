@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { writeConfig } from "../../lib/config.js";
+import { CLI_VERSION, writeConfig } from "../../lib/config.js";
 import { runEnvSetup, selectSetupMode } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as git from "../../lib/git.js";
@@ -19,7 +19,10 @@ const DEV_MODE = process.env.GAIA_CLI_DEV === "true";
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms));
 
-export async function runInitFlow(store: CLIStore, branch?: string): Promise<void> {
+export async function runInitFlow(
+  store: CLIStore,
+  branch?: string,
+): Promise<void> {
   // 0. Welcome
   store.setStep("Welcome");
   store.setStatus("Waiting for user input...");
@@ -295,16 +298,6 @@ export async function runInitFlow(store: CLIStore, branch?: string): Promise<voi
 
   if (setupMode === "selfhost") {
     // Selfhost mode: everything runs in Docker, no local tools needed
-    const envMethod = (store.currentState.data.envMethod as string) || "manual";
-    writeConfig({
-      version: "0.1.8",
-      setupComplete: true,
-      setupMethod: envMethod as "manual" | "infisical",
-      repoPath,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
-
     store.setStep("Installing CLI");
     store.setStatus("Installing gaia CLI globally...");
     try {
@@ -329,7 +322,13 @@ export async function runInitFlow(store: CLIStore, branch?: string): Promise<voi
     // Build and start services automatically on first init
     store.setStep("Project Setup");
     store.setStatus("Building and starting all services in Docker...");
-    store.updateData("dockerLogs", []);
+    store.updateData(
+      "dependencyPhase",
+      "Building and starting Docker services...",
+    );
+    store.updateData("dependencyProgress", 0);
+    store.updateData("dependencyLogs", []);
+    store.updateData("dependencyComplete", false);
 
     const dockerLogHandler = (chunk: string) => {
       const lines = chunk
@@ -337,8 +336,8 @@ export async function runInitFlow(store: CLIStore, branch?: string): Promise<voi
         .map((l: string) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
         .filter((l: string) => l.length > 0);
       if (lines.length === 0) return;
-      const current: string[] = store.currentState.data.dockerLogs || [];
-      store.updateData("dockerLogs", [...current, ...lines].slice(-50));
+      const current: string[] = store.currentState.data.dependencyLogs || [];
+      store.updateData("dependencyLogs", [...current, ...lines].slice(-50));
     };
 
     try {
@@ -357,6 +356,20 @@ export async function runInitFlow(store: CLIStore, branch?: string): Promise<voi
       return;
     }
 
+    store.updateData("dependencyProgress", 100);
+    store.updateData("dependencyComplete", true);
+
+    const envMethod = (store.currentState.data.envMethod as string) || "manual";
+    writeConfig({
+      version: CLI_VERSION,
+      setupComplete: true,
+      setupMethod: envMethod as "manual" | "infisical",
+      repoPath,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    store.updateData("setupMode", setupMode);
     store.setStep("Finished");
     store.setStatus("Setup complete! GAIA is running.");
     await store.waitForInput("exit");

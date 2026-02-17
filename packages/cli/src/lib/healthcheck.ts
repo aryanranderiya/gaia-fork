@@ -49,7 +49,7 @@ async function checkHttpService(
     return {
       name,
       port,
-      status: "up",
+      status: res.ok ? "up" : "down",
       latency,
       details: res.ok ? `HTTP ${res.status}` : `HTTP ${res.status} (error)`,
     };

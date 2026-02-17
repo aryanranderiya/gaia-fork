@@ -131,7 +131,7 @@ const FinishedStep: React.FC<{
   setupMode?: SetupMode;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ portOverrides, onConfirm }) => {
+}> = ({ setupMode, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) {
       onConfirm();
@@ -140,6 +140,51 @@ const FinishedStep: React.FC<{
 
   const webPort = portOverrides?.[3000] ?? 3000;
   const apiPort = portOverrides?.[8000] ?? 8000;
+
+  if (setupMode === "selfhost") {
+    return (
+      <Box
+        flexDirection="column"
+        marginTop={2}
+        borderStyle="round"
+        borderColor="green"
+        padding={1}
+      >
+        <Text bold color="green">
+          GAIA is Running!
+        </Text>
+
+        <Box marginTop={1}>
+          <Text color="green">✓ All services started</Text>
+        </Box>
+
+        <Box marginTop={1} flexDirection="column">
+          <Text>
+            Web:{" "}
+            <Text color="cyan" bold>
+              http://localhost:{webPort}
+            </Text>
+          </Text>
+          <Text>
+            API:{" "}
+            <Text color="cyan" bold>
+              http://localhost:{apiPort}
+            </Text>
+          </Text>
+        </Box>
+
+        <Box marginTop={1}>
+          <Text color="gray">gaia stop · gaia status · gaia setup</Text>
+        </Box>
+
+        <Box marginTop={1}>
+          <Text dimColor>
+            <Text bold>Enter</Text> to exit
+          </Text>
+        </Box>
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -1279,6 +1324,12 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
     };
   }, [store]);
 
+  useInput((_input, key) => {
+    if ((key.return || key.escape) && state.error) {
+      store.submitInput("exit");
+    }
+  });
+
   return (
     <Shell status={state.status} step={state.step}>
       {state.step === "Welcome" && state.inputRequest?.id === "welcome" && (
@@ -1454,8 +1505,19 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
       )}
 
       {state.error && (
-        <Box borderStyle="single" borderColor="red" padding={1} marginTop={2}>
+        <Box
+          flexDirection="column"
+          borderStyle="single"
+          borderColor="red"
+          padding={1}
+          marginTop={2}
+        >
           <Text color="red">Error: {state.error.message}</Text>
+          <Box marginTop={1}>
+            <Text dimColor>
+              <Text bold>Enter</Text> to exit
+            </Text>
+          </Box>
         </Box>
       )}
     </Shell>

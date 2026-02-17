@@ -203,9 +203,7 @@ export function writeDockerComposeEnv(
     const apiPort = portOverrides[8000] ?? 8000;
     lines.push("");
     lines.push("# Web build args");
-    lines.push(
-      `NEXT_PUBLIC_API_BASE_URL=http://localhost:${apiPort}/api/v1/`,
-    );
+    lines.push(`NEXT_PUBLIC_API_BASE_URL=http://localhost:${apiPort}/api/v1/`);
   }
 
   lines.push("");
@@ -273,7 +271,7 @@ export function patchDockerComposePorts(repoRoot: string): void {
     const hardcoded = `"${hostPort}:${containerPort}"`;
     const variable = `"\${${varName}:-${hostPort}}:${containerPort}"`;
     if (content.includes(hardcoded)) {
-      content = content.replace(hardcoded, variable);
+      content = content.replaceAll(hardcoded, variable);
       changed = true;
     }
   }
@@ -310,7 +308,11 @@ export function readDockerComposePortOverrides(
     if (trimmed && !trimmed.startsWith("#")) {
       const [key, ...valueParts] = trimmed.split("=");
       if (key && DOCKER_PORT_VAR_TO_PORT[key]) {
-        const port = Number(valueParts.join("=").trim());
+        const cleaned = valueParts
+          .join("=")
+          .trim()
+          .replace(/^["']|["']$/g, "");
+        const port = Number(cleaned);
         if (!Number.isNaN(port) && port > 0) {
           overrides[DOCKER_PORT_VAR_TO_PORT[key]] = port;
         }

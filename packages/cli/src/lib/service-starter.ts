@@ -1,6 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
-import { readConfig } from "./config.js";
+import { readConfig, updateConfig } from "./config.js";
 import type { SetupMode } from "./env-parser.js";
 import { portOverridesToDockerEnv } from "./env-writer.js";
 
@@ -9,6 +9,7 @@ const delay = (ms: number): Promise<void> =>
 
 export const DEV_LOG_FILE = "dev-start.log";
 export const WEB_LOG_FILE = "web-start.log";
+export const DEV_PID_FILE = ".gaia-dev.pid";
 
 function getEnvFileArgs(dockerDir: string): string[] {
   const envPath = path.join(dockerDir, ".env");
@@ -77,7 +78,8 @@ export async function startServices(
     onStatus?.("Starting development servers...");
     const { spawn } = await import("child_process");
     const logPath = path.join(repoPath, DEV_LOG_FILE);
-    const devLog = fs.openSync(logPath, "a");
+    const pidPath = path.join(repoPath, DEV_PID_FILE);
+    const devLog = fs.openSync(logPath, "w");
     let child: ReturnType<typeof spawn>;
     try {
       child = spawn("mise", ["dev"], {
@@ -90,12 +92,17 @@ export async function startServices(
     } finally {
       fs.closeSync(devLog);
     }
+
+    // Store PID for targeted stop
+    if (child.pid != null) {
+      fs.writeFileSync(pidPath, String(child.pid), "utf-8");
+    }
+
     await delay(1500);
 
     // Verify the spawned process is still running
     if (child.pid != null) {
       try {
-        // Sending signal 0 checks if the process is alive without killing it
         process.kill(child.pid, 0);
       } catch {
         throw new Error(
@@ -131,43 +138,75 @@ export async function stopServices(
   // In selfhost mode everything runs in Docker, no local processes to kill
   if (mode !== "selfhost") {
     onStatus?.("Stopping local processes...");
-    try {
-      const apiPort = portOverrides?.[8000] ?? 8000;
-      const webPort = portOverrides?.[3000] ?? 3000;
+    const pidPath = path.join(repoPath, DEV_PID_FILE);
+    let killedByPid = false;
 
-      if (process.platform === "win32") {
-        for (const port of [apiPort, webPort]) {
+    // Try to kill by stored PID first (targets only GAIA processes)
+    if (fs.existsSync(pidPath)) {
+      try {
+        const pid = Number.parseInt(
+          fs.readFileSync(pidPath, "utf-8").trim(),
+          10,
+        );
+        if (!Number.isNaN(pid) && pid > 0) {
           try {
-            await runCommand(
-              "powershell",
-              [
-                "-Command",
-                `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`,
-              ],
-              repoPath,
-            );
+            // Kill the process group (negative PID)
+            process.kill(-pid, "SIGTERM");
+            killedByPid = true;
           } catch {
-            // Port not in use
+            // Process already dead
           }
         }
-      } else {
-        for (const port of [apiPort, webPort]) {
-          try {
-            await runCommand(
-              "sh",
-              [
-                "-c",
-                `lsof -ti :${port} -sTCP:LISTEN | xargs kill 2>/dev/null || true`,
-              ],
-              repoPath,
-            );
-          } catch {
-            // Port not in use
-          }
-        }
+      } catch {
+        // Ignore PID file read errors
       }
-    } catch {
-      // Ignore cleanup errors
+      try {
+        fs.unlinkSync(pidPath);
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
+
+    // Fall back to port-based kill only if PID approach didn't work
+    if (!killedByPid) {
+      try {
+        const apiPort = portOverrides?.[8000] ?? 8000;
+        const webPort = portOverrides?.[3000] ?? 3000;
+
+        if (process.platform === "win32") {
+          for (const port of [apiPort, webPort]) {
+            try {
+              await runCommand(
+                "powershell",
+                [
+                  "-Command",
+                  `Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }`,
+                ],
+                repoPath,
+              );
+            } catch {
+              // Port not in use
+            }
+          }
+        } else {
+          for (const port of [apiPort, webPort]) {
+            try {
+              await runCommand(
+                "sh",
+                [
+                  "-c",
+                  `lsof -ti :${port} -sTCP:LISTEN | xargs kill 2>/dev/null || true`,
+                ],
+                repoPath,
+              );
+            } catch {
+              // Port not in use
+            }
+          }
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
     }
   }
 
@@ -217,20 +256,32 @@ export async function checkUrl(url: string, retries = 30): Promise<boolean> {
 export async function areServicesRunning(repoPath: string): Promise<boolean> {
   const dockerComposePath = path.join(repoPath, "infra/docker");
   try {
-    const { execSync } = await import("child_process");
     const mode = await detectSetupMode(repoPath);
-    const fileFlag =
-      mode === "selfhost" ? "-f docker-compose.selfhost.yml " : "";
-    const envFlag = fs.existsSync(path.join(dockerComposePath, ".env"))
-      ? "--env-file .env "
-      : "";
-    const composeCmd = `docker compose ${fileFlag}${envFlag}ps --format json --status running`;
-    const output = execSync(composeCmd, {
+    const args = ["compose"];
+    if (mode === "selfhost") {
+      args.push("-f", "docker-compose.selfhost.yml");
+    }
+    if (fs.existsSync(path.join(dockerComposePath, ".env"))) {
+      args.push("--env-file", ".env");
+    }
+    args.push("ps", "--format", "json", "--status", "running");
+
+    const { execa: run } = await import("execa");
+    const { stdout } = await run("docker", args, {
       cwd: dockerComposePath,
-      stdio: ["pipe", "pipe", "pipe"],
-    }).toString();
-    const lines = output.trim().split("\n").filter(Boolean);
-    return lines.length >= 3;
+    });
+    const lines = stdout.trim().split("\n").filter(Boolean);
+    // Only count lines that are valid JSON (ignore warnings/notices)
+    let count = 0;
+    for (const line of lines) {
+      try {
+        JSON.parse(line);
+        count++;
+      } catch {
+        // Skip non-JSON lines (Docker warnings, deprecation notices)
+      }
+    }
+    return count >= 3;
   } catch {
     return false;
   }
@@ -323,13 +374,18 @@ export function findRepoRoot(startDir?: string): string | null {
   }
 
   const config = readConfig();
-  if (
-    config?.repoPath &&
-    fs.existsSync(
-      path.join(config.repoPath, "apps/api/app/config/settings_validator.py"),
-    )
-  ) {
-    return config.repoPath;
+  if (config?.repoPath) {
+    if (
+      fs.existsSync(
+        path.join(config.repoPath, "apps/api/app/config/settings_validator.py"),
+      )
+    ) {
+      return config.repoPath;
+    }
+    console.warn(
+      `Warning: Saved repo path "${config.repoPath}" is no longer a valid GAIA installation. Resetting config.`,
+    );
+    updateConfig({ repoPath: "", setupComplete: false });
   }
 
   return null;
