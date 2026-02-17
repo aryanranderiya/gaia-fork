@@ -1,9 +1,10 @@
 {
   "name": "bot-whatsapp",
-  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
+  "$schema": "../../../../node_modules/nx/schemas/project-schema.json",
+  "root": "apps/bots/whatsapp",
   "sourceRoot": "apps/bots/whatsapp/src",
   "projectType": "application",
-  "tags": ["type:app", "platform:whatsapp"],
+  "tags": ["type:app", "platform:whatsapp", "status:wip"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
