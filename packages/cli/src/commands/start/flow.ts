@@ -1,12 +1,16 @@
 import { readDockerComposePortOverrides } from "../../lib/env-writer.js";
 import {
+  type StartServicesOptions,
   detectSetupMode,
   findRepoRoot,
   startServices,
 } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
 
-export async function runStartFlow(store: CLIStore): Promise<void> {
+export async function runStartFlow(
+  store: CLIStore,
+  options?: StartServicesOptions,
+): Promise<void> {
   store.setStep("Starting");
   store.setStatus("Locating GAIA repository...");
 
@@ -61,6 +65,7 @@ export async function runStartFlow(store: CLIStore): Promise<void> {
       },
       portOverrides,
       logHandler,
+      options,
     );
 
     store.setStep("Running");

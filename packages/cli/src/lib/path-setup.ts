@@ -10,21 +10,71 @@ interface PathSetupResult {
   pathAdded: boolean;
 }
 
-function getNpmBinDir(): string | null {
+const isWindows = process.platform === "win32";
+
+function tryExec(cmd: string): string | null {
   try {
-    const prefix = execSync("npm config get prefix", {
+    return execSync(cmd, {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
-    return path.join(prefix, "bin");
   } catch {
     return null;
   }
 }
 
+function getNpmBinDir(): string | null {
+  const prefix = tryExec("npm config get prefix");
+  if (!prefix) return null;
+  return isWindows ? prefix : path.join(prefix, "bin");
+}
+
+function getPnpmBinDir(): string | null {
+  const binDir = tryExec("pnpm bin -g");
+  if (binDir && fs.existsSync(binDir)) return binDir;
+
+  const root = tryExec("pnpm root -g");
+  if (root) {
+    const candidate = path.join(path.dirname(root), "bin");
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+function getBunBinDir(): string | null {
+  const bunBin = path.join(os.homedir(), ".bun", "bin");
+  if (fs.existsSync(bunBin)) return bunBin;
+  return null;
+}
+
+function getYarnBinDir(): string | null {
+  const binDir = tryExec("yarn global bin");
+  if (binDir && fs.existsSync(binDir)) return binDir;
+  return null;
+}
+
+function findGaiaBinDir(): string | null {
+  const gaiaBin = isWindows ? "gaia.cmd" : "gaia";
+
+  for (const getter of [getNpmBinDir, getPnpmBinDir, getBunBinDir, getYarnBinDir]) {
+    const dir = getter();
+    if (dir && fs.existsSync(path.join(dir, gaiaBin))) return dir;
+  }
+
+  // Also check plain "gaia" on Windows (some PMs use extensionless files)
+  if (isWindows) {
+    for (const getter of [getNpmBinDir, getPnpmBinDir, getBunBinDir, getYarnBinDir]) {
+      const dir = getter();
+      if (dir && fs.existsSync(path.join(dir, "gaia"))) return dir;
+    }
+  }
+
+  return null;
+}
+
 function isGaiaInPath(): boolean {
   try {
-    const cmd = process.platform === "win32" ? "where gaia" : "command -v gaia";
+    const cmd = isWindows ? "where gaia" : "command -v gaia";
     execSync(cmd, { stdio: ["pipe", "pipe", "pipe"] });
     return true;
   } catch {
@@ -68,6 +118,45 @@ function addToRcFile(binDir: string, rcFile: string): boolean {
   }
 }
 
+function addToWindowsPath(binDir: string): boolean {
+  try {
+    // Update persistent user PATH via setx
+    const currentPath = tryExec(
+      'powershell -Command "[Environment]::GetEnvironmentVariable(\'Path\', \'User\')"',
+    );
+    if (currentPath && currentPath.includes(binDir)) return true;
+
+    execSync(`setx PATH "${binDir};${currentPath || ""}"`, {
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+
+    // Also try to append to PowerShell profile
+    const psProfile = path.join(
+      os.homedir(),
+      "Documents",
+      "PowerShell",
+      "Microsoft.PowerShell_profile.ps1",
+    );
+    const psProfileDir = path.dirname(psProfile);
+    if (!fs.existsSync(psProfileDir)) {
+      fs.mkdirSync(psProfileDir, { recursive: true });
+    }
+    const psContent = fs.existsSync(psProfile)
+      ? fs.readFileSync(psProfile, "utf-8")
+      : "";
+    if (!psContent.includes(binDir)) {
+      fs.appendFileSync(
+        psProfile,
+        `\n$env:Path = "${binDir};" + $env:Path  # Added by GAIA CLI\n`,
+      );
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function ensureGaiaInPath(): Promise<PathSetupResult> {
   if (isGaiaInPath()) {
     return {
@@ -78,22 +167,31 @@ export async function ensureGaiaInPath(): Promise<PathSetupResult> {
     };
   }
 
-  const binDir = getNpmBinDir();
+  const binDir = findGaiaBinDir();
   if (!binDir) {
     return {
       success: false,
       message:
-        "Could not detect npm bin directory. Run manually: npm install -g @heygaia/cli",
+        "Could not find gaia binary. Run manually: npm install -g @heygaia/cli",
       inPath: false,
       pathAdded: false,
     };
   }
 
-  const gaiaPath = path.join(binDir, "gaia");
-  if (!fs.existsSync(gaiaPath)) {
+  if (isWindows) {
+    const added = addToWindowsPath(binDir);
+    if (added) {
+      return {
+        success: true,
+        message:
+          "Added to PATH. Restart your terminal for the 'gaia' command to be available.",
+        inPath: false,
+        pathAdded: true,
+      };
+    }
     return {
       success: false,
-      message: `gaia binary not found at ${gaiaPath}. Install may have failed.`,
+      message: `Add to your PATH manually: setx PATH "${binDir};%PATH%"`,
       inPath: false,
       pathAdded: false,
     };

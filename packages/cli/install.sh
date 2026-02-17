@@ -53,6 +53,26 @@ install_node() {
   success "Node.js $(node --version) installed successfully"
 }
 
+show_path_help() {
+  PKG="$1"
+  case "$PKG" in
+    npm)
+      BIN_DIR="$(npm config get prefix)/bin"
+      printf "  Run: ${BOLD}export PATH=\"%s:\$PATH\"${NC}\n" "$BIN_DIR"
+      printf "  Or add it to your shell profile (~/.bashrc, ~/.zshrc, etc.)\n"
+      ;;
+    pnpm)
+      BIN_DIR="$(pnpm bin -g 2>/dev/null || echo '$HOME/.local/share/pnpm')"
+      printf "  Run: ${BOLD}export PATH=\"%s:\$PATH\"${NC}\n" "$BIN_DIR"
+      printf "  Or run: ${BOLD}pnpm setup${NC} to configure PATH automatically\n"
+      ;;
+    bun)
+      printf "  Run: ${BOLD}export PATH=\"\$HOME/.bun/bin:\$PATH\"${NC}\n"
+      printf "  Or add it to your shell profile (~/.bashrc, ~/.zshrc, etc.)\n"
+      ;;
+  esac
+}
+
 main() {
   printf "\n${BOLD}${BLUE}GAIA CLI Installer${NC}\n\n"
 
@@ -64,28 +84,31 @@ main() {
     error "Unsupported operating system"
   fi
 
-  # Determine package manager: prefer npm, fallback to bun
+  # Determine package manager: prefer npm, then pnpm, then bun
   PKG_MGR=""
 
   if check_command npm; then
     success "npm is already installed ($(npm --version))"
     PKG_MGR="npm"
+  elif check_command pnpm; then
+    success "pnpm is already installed ($(pnpm --version))"
+    PKG_MGR="pnpm"
   elif check_command bun; then
     success "Bun is already installed ($(bun --version))"
     PKG_MGR="bun"
   else
-    warn "No supported package manager found (npm or bun)"
+    warn "No supported package manager found (npm, pnpm, or bun)"
     install_node
     PKG_MGR="npm"
   fi
 
   # Install GAIA CLI globally
   info "Installing @heygaia/cli via $PKG_MGR..."
-  if [ "$PKG_MGR" = "npm" ]; then
-    npm install -g @heygaia/cli
-  else
-    bun install -g @heygaia/cli
-  fi
+  case "$PKG_MGR" in
+    npm)  npm install -g @heygaia/cli ;;
+    pnpm) pnpm add -g @heygaia/cli ;;
+    bun)  bun install -g @heygaia/cli ;;
+  esac
 
   if check_command gaia; then
     success "GAIA CLI installed successfully!"
@@ -96,13 +119,8 @@ main() {
     printf "  ${GREEN}gaia --help${NC}  - Show all commands\n\n"
   else
     warn "Installation completed but 'gaia' command not found in PATH"
-    if [ "$PKG_MGR" = "npm" ]; then
-      printf "You may need to add npm's global bin directory to your PATH:\n"
-      printf "  export PATH=\"\$(npm config get prefix)/bin:\$PATH\"\n\n"
-    else
-      printf "You may need to add Bun's global bin directory to your PATH:\n"
-      printf "  export PATH=\"\$HOME/.bun/bin:\$PATH\"\n\n"
-    fi
+    show_path_help "$PKG_MGR"
+    printf "\n"
   fi
 }
 

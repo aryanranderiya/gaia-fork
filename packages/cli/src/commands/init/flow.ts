@@ -7,7 +7,11 @@ import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as git from "../../lib/git.js";
 import { ensureGaiaInPath } from "../../lib/path-setup.js";
 import * as prereqs from "../../lib/prerequisites.js";
-import { findRepoRoot, runCommand } from "../../lib/service-starter.js";
+import {
+  findRepoRoot,
+  runCommand,
+  startServices,
+} from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
 
 const DEV_MODE = process.env.GAIA_CLI_DEV === "true";
@@ -322,10 +326,39 @@ export async function runInitFlow(store: CLIStore, branch?: string): Promise<voi
 
     await delay(500);
 
+    // Build and start services automatically on first init
+    store.setStep("Project Setup");
+    store.setStatus("Building and starting all services in Docker...");
+    store.updateData("dockerLogs", []);
+
+    const dockerLogHandler = (chunk: string) => {
+      const lines = chunk
+        .split("\n")
+        .map((l: string) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
+        .filter((l: string) => l.length > 0);
+      if (lines.length === 0) return;
+      const current: string[] = store.currentState.data.dockerLogs || [];
+      store.updateData("dockerLogs", [...current, ...lines].slice(-50));
+    };
+
+    try {
+      await startServices(
+        repoPath,
+        "selfhost",
+        (status) => store.setStatus(status),
+        portOverrides,
+        dockerLogHandler,
+        { build: true },
+      );
+    } catch (e) {
+      store.setError(
+        new Error(`Failed to start services: ${(e as Error).message}`),
+      );
+      return;
+    }
+
     store.setStep("Finished");
-    store.setStatus(
-      "Setup complete! Run 'gaia start' to build and start all services in Docker.",
-    );
+    store.setStatus("Setup complete! GAIA is running.");
     await store.waitForInput("exit");
     return;
   }

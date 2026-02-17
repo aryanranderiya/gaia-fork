@@ -39,8 +39,10 @@ program
 program
   .command("start")
   .description("Start GAIA services")
-  .action(async () => {
-    await runStart();
+  .option("-b, --build", "Rebuild Docker images before starting")
+  .option("--pull", "Pull latest base images before starting")
+  .action(async (options: { build?: boolean; pull?: boolean }) => {
+    await runStart({ build: options.build, pull: options.pull });
   });
 
 program

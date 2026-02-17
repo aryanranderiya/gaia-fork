@@ -18,15 +18,29 @@ function getEnvFileArgs(dockerDir: string): string[] {
   return [];
 }
 
+export interface StartServicesOptions {
+  build?: boolean;
+  pull?: boolean;
+}
+
 export async function startServices(
   repoPath: string,
   setupMode: SetupMode,
   onStatus?: (status: string) => void,
   portOverrides?: Record<number, number>,
   onLog?: (chunk: string) => void,
+  options?: StartServicesOptions,
 ): Promise<void> {
   if (setupMode === "selfhost") {
-    onStatus?.("Starting all services in Docker (selfhost mode)...");
+    const isBuild = options?.build ?? false;
+    const isPull = options?.pull ?? false;
+
+    if (isBuild) {
+      onStatus?.("Building and starting all services in Docker...");
+    } else {
+      onStatus?.("Starting all services in Docker (selfhost mode)...");
+    }
+
     const dockerComposePath = path.join(repoPath, "infra/docker");
     const envArgs = getEnvFileArgs(dockerComposePath);
     const dockerEnv =
@@ -34,22 +48,29 @@ export async function startServices(
         ? portOverridesToDockerEnv(portOverrides)
         : undefined;
 
+    const upArgs = [
+      "compose",
+      "-f",
+      "docker-compose.selfhost.yml",
+      ...envArgs,
+      "up",
+      "-d",
+      "--remove-orphans",
+    ];
+
+    if (isBuild) upArgs.push("--build");
+    if (isPull) upArgs.push("--pull", "always");
+
+    const timeoutMs = isBuild ? 15 * 60 * 1000 : 5 * 60 * 1000;
+
     await runCommand(
       "docker",
-      [
-        "compose",
-        "-f",
-        "docker-compose.selfhost.yml",
-        ...envArgs,
-        "up",
-        "-d",
-        "--build",
-        "--remove-orphans",
-      ],
+      upArgs,
       dockerComposePath,
       undefined,
       onLog,
       dockerEnv,
+      timeoutMs,
     );
     onStatus?.("All services started in Docker!");
   } else {
@@ -222,6 +243,7 @@ export async function runCommand(
   onProgress?: (progress: number) => void,
   onLog?: (chunk: string) => void,
   env?: Record<string, string>,
+  timeoutMs?: number,
 ): Promise<void> {
   const { spawn } = await import("child_process");
 
@@ -235,6 +257,20 @@ export async function runCommand(
 
     let output = "";
     let progress = 0;
+    let timedOut = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (timeoutMs) {
+      timer = setTimeout(() => {
+        timedOut = true;
+        proc.kill("SIGTERM");
+        reject(
+          new Error(
+            `Command timed out after ${Math.round(timeoutMs / 60000)}m. Check \`docker compose logs\` to debug.`,
+          ),
+        );
+      }, timeoutMs);
+    }
 
     proc.stdout?.on("data", (data) => {
       const chunk = data.toString();
@@ -253,6 +289,8 @@ export async function runCommand(
     });
 
     proc.on("close", (code) => {
+      if (timer) clearTimeout(timer);
+      if (timedOut) return;
       if (code === 0) {
         onProgress?.(100);
         resolve();
@@ -264,6 +302,8 @@ export async function runCommand(
     });
 
     proc.on("error", (err) => {
+      if (timer) clearTimeout(timer);
+      if (timedOut) return;
       reject(err);
     });
   });
