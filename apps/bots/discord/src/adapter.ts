@@ -46,16 +46,7 @@ import {
 export class DiscordAdapter extends BaseBotAdapter {
   readonly platform: PlatformName = "discord";
   private client!: Client;
-  private token: string;
-
-  constructor() {
-    super();
-    const token = process.env.DISCORD_BOT_TOKEN;
-    if (!token) {
-      throw new Error("DISCORD_BOT_TOKEN is required");
-    }
-    this.token = token;
-  }
+  private token!: string;
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -63,6 +54,12 @@ export class DiscordAdapter extends BaseBotAdapter {
 
   /** Creates the Discord.js Client with the required intents and partials. */
   protected async initialize(): Promise<void> {
+    const token = process.env.DISCORD_BOT_TOKEN;
+    if (!token) {
+      throw new Error("DISCORD_BOT_TOKEN is required");
+    }
+    this.token = token;
+
     this.client = new Client({
       intents: [
         GatewayIntentBits.Guilds,

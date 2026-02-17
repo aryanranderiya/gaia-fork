@@ -77,12 +77,16 @@ interface SlackWebClient {
 export class SlackAdapter extends BaseBotAdapter {
   readonly platform: PlatformName = "slack";
   private app!: App;
-  private token: string;
-  private signingSecret: string;
-  private appToken: string;
+  private token!: string;
+  private signingSecret!: string;
+  private appToken!: string;
 
-  constructor() {
-    super();
+  // ---------------------------------------------------------------------------
+  // Lifecycle
+  // ---------------------------------------------------------------------------
+
+  /** Creates the Slack Bolt App in Socket Mode. */
+  protected async initialize(): Promise<void> {
     const token = process.env.SLACK_BOT_TOKEN;
     const signingSecret = process.env.SLACK_SIGNING_SECRET;
     const appToken = process.env.SLACK_APP_TOKEN;
@@ -96,14 +100,7 @@ export class SlackAdapter extends BaseBotAdapter {
     this.token = token;
     this.signingSecret = signingSecret;
     this.appToken = appToken;
-  }
 
-  // ---------------------------------------------------------------------------
-  // Lifecycle
-  // ---------------------------------------------------------------------------
-
-  /** Creates the Slack Bolt App in Socket Mode. */
-  protected async initialize(): Promise<void> {
     this.app = new App({
       token: this.token,
       signingSecret: this.signingSecret,

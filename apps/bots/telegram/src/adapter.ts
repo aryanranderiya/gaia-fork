@@ -45,17 +45,8 @@ import { Bot, type Context } from "grammy";
 export class TelegramAdapter extends BaseBotAdapter {
   readonly platform: PlatformName = "telegram";
   private bot!: Bot;
-  private token: string;
+  private token!: string;
   private botUsername: string | undefined;
-
-  constructor() {
-    super();
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    if (!token) {
-      throw new Error("TELEGRAM_BOT_TOKEN is required");
-    }
-    this.token = token;
-  }
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -63,6 +54,12 @@ export class TelegramAdapter extends BaseBotAdapter {
 
   /** Creates the grammY Bot, caches bot username, and registers the error handler. */
   protected async initialize(): Promise<void> {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+      throw new Error("TELEGRAM_BOT_TOKEN is required");
+    }
+    this.token = token;
+
     this.bot = new Bot(this.token);
     this.bot.catch((err) => {
       console.error("Bot error:", err);

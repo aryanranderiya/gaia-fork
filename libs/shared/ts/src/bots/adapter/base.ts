@@ -71,22 +71,13 @@ export abstract class BaseBotAdapter {
   abstract readonly platform: PlatformName;
 
   /** GAIA API client shared across all command handlers. */
-  protected gaia: GaiaClient;
+  protected gaia!: GaiaClient;
 
   /** Bot configuration loaded from environment variables. */
-  protected config: BotConfig;
+  protected config!: BotConfig;
 
   /** Map of registered unified commands, keyed by command name. */
   protected commands: Map<string, BotCommand> = new Map();
-
-  constructor() {
-    this.config = loadConfig();
-    this.gaia = new GaiaClient(
-      this.config.gaiaApiUrl,
-      this.config.gaiaApiKey,
-      this.config.gaiaFrontendUrl,
-    );
-  }
 
   // ---------------------------------------------------------------------------
   // Lifecycle — template method pattern
@@ -106,6 +97,13 @@ export abstract class BaseBotAdapter {
    * @param commands - Array of unified {@link BotCommand} definitions to register.
    */
   async boot(commands: BotCommand[]): Promise<void> {
+    this.config = await loadConfig();
+    this.gaia = new GaiaClient(
+      this.config.gaiaApiUrl,
+      this.config.gaiaApiKey,
+      this.config.gaiaFrontendUrl,
+    );
+
     for (const cmd of commands) {
       this.commands.set(cmd.name, cmd);
     }
