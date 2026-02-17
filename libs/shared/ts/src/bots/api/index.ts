@@ -352,7 +352,7 @@ export class GaiaClient {
               }
               if (data.text) {
                 fullText += data.text;
-                await onChunk(data.text);
+                onChunk(data.text);
               }
               if (data.done) {
                 finished = true;

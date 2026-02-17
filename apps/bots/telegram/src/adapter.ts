@@ -35,6 +35,7 @@ import {
   STREAMING_DEFAULTS,
 } from "@gaia/shared";
 import { Bot, type Context } from "grammy";
+import type { Message } from "@grammyjs/types";
 
 /**
  * Telegram-specific implementation of the GAIA bot adapter.
@@ -238,13 +239,43 @@ export class TelegramAdapter extends BaseBotAdapter {
         },
         async (text: string) => {
           try {
-            await ctx.api.editMessageText(chatId, currentMessageId, text);
+            await ctx.api.editMessageText(chatId, currentMessageId, text, {
+              parse_mode: "Markdown",
+            });
           } catch (e) {
+            if (
+              e instanceof Error &&
+              e.message.includes("message is not modified")
+            )
+              return;
+            // Markdown parse failure — retry without parse_mode so the
+            // user sees the latest content instead of a stale message
+            if (
+              e instanceof Error &&
+              e.message.includes("can't parse entities")
+            ) {
+              try {
+                await ctx.api.editMessageText(
+                  chatId,
+                  currentMessageId,
+                  text,
+                );
+              } catch {}
+              return;
+            }
             console.error("Telegram editMessageText error:", e);
           }
         },
         async (text: string) => {
-          const newMessage = await ctx.reply(text);
+          let newMessage: Message.TextMessage;
+          try {
+            newMessage = await ctx.reply(text, {
+              parse_mode: "Markdown",
+            });
+          } catch {
+            // Markdown parse failure — send without parse_mode
+            newMessage = await ctx.reply(text);
+          }
           currentMessageId = newMessage.message_id;
           return async (updatedText: string) => {
             try {
@@ -252,8 +283,27 @@ export class TelegramAdapter extends BaseBotAdapter {
                 chatId,
                 newMessage.message_id,
                 updatedText,
+                { parse_mode: "Markdown" },
               );
             } catch (e) {
+              if (
+                e instanceof Error &&
+                e.message.includes("message is not modified")
+              )
+                return;
+              if (
+                e instanceof Error &&
+                e.message.includes("can't parse entities")
+              ) {
+                try {
+                  await ctx.api.editMessageText(
+                    chatId,
+                    newMessage.message_id,
+                    updatedText,
+                  );
+                } catch {}
+                return;
+              }
               console.error("Telegram editMessageText error:", e);
             }
           };
@@ -340,13 +390,40 @@ export class TelegramAdapter extends BaseBotAdapter {
         },
         async (text: string) => {
           try {
-            await ctx.api.editMessageText(chatId, currentMessageId, text);
+            await ctx.api.editMessageText(chatId, currentMessageId, text, {
+              parse_mode: "Markdown",
+            });
           } catch (e) {
+            if (
+              e instanceof Error &&
+              e.message.includes("message is not modified")
+            )
+              return;
+            if (
+              e instanceof Error &&
+              e.message.includes("can't parse entities")
+            ) {
+              try {
+                await ctx.api.editMessageText(
+                  chatId,
+                  currentMessageId,
+                  text,
+                );
+              } catch {}
+              return;
+            }
             console.error("Telegram editMessageText error:", e);
           }
         },
         async (text: string) => {
-          const newMessage = await ctx.reply(text);
+          let newMessage: Message.TextMessage;
+          try {
+            newMessage = await ctx.reply(text, {
+              parse_mode: "Markdown",
+            });
+          } catch {
+            newMessage = await ctx.reply(text);
+          }
           currentMessageId = newMessage.message_id;
           return async (updatedText: string) => {
             try {
@@ -354,8 +431,27 @@ export class TelegramAdapter extends BaseBotAdapter {
                 chatId,
                 newMessage.message_id,
                 updatedText,
+                { parse_mode: "Markdown" },
               );
             } catch (e) {
+              if (
+                e instanceof Error &&
+                e.message.includes("message is not modified")
+              )
+                return;
+              if (
+                e instanceof Error &&
+                e.message.includes("can't parse entities")
+              ) {
+                try {
+                  await ctx.api.editMessageText(
+                    chatId,
+                    newMessage.message_id,
+                    updatedText,
+                  );
+                } catch {}
+                return;
+              }
               console.error("Telegram editMessageText error:", e);
             }
           };
@@ -365,6 +461,11 @@ export class TelegramAdapter extends BaseBotAdapter {
           try {
             await ctx.api.editMessageText(chatId, currentMessageId, errMsg);
           } catch (e) {
+            if (
+              e instanceof Error &&
+              e.message.includes("message is not modified")
+            )
+              return;
             console.error("Telegram editMessageText error:", e);
           }
         },

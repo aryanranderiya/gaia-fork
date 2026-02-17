@@ -1,17 +1,13 @@
 "use client";
 
 import { Button } from "@heroui/button";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import {
-  DiscordIcon,
-  SlackIcon,
-  TelegramIcon,
-  WhatsappIcon,
-} from "@/components/shared/icons";
+
+import { TelegramIcon } from "@/components/shared/icons";
 import { SettingsCard } from "@/features/settings/components/SettingsCard";
-import { SettingsOption } from "@/features/settings/components/SettingsOption";
-import { api } from "@/lib/api";
+import { apiService } from "@/lib/api";
 
 interface PlatformLink {
   platform: "discord" | "slack" | "telegram" | "whatsapp";
@@ -22,39 +18,43 @@ interface PlatformLink {
 interface PlatformConfig {
   id: string;
   name: string;
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  description: string;
+  image?: string;
   color: string;
+  description: string;
+  connectedDescription: string;
 }
 
 const PLATFORMS: PlatformConfig[] = [
   {
     id: "discord",
     name: "Discord",
-    icon: DiscordIcon,
+    image: "/images/icons/macos/discord.webp",
+    color: "#5865F2",
     description: "Use GAIA directly from Discord servers and DMs",
-    color: "bg-[#5865F2]",
+    connectedDescription: "Use /gaia in Discord to chat with GAIA",
   },
   {
     id: "slack",
     name: "Slack",
-    icon: SlackIcon,
+    image: "/images/icons/macos/slack.webp",
+    color: "#4A154B",
     description: "Bring GAIA into your Slack workspace",
-    color: "bg-[#4A154B]",
+    connectedDescription: "Use /gaia in Slack to chat with GAIA",
   },
   {
     id: "telegram",
     name: "Telegram",
-    icon: TelegramIcon,
+    color: "#0088cc",
     description: "Chat with GAIA on Telegram",
-    color: "bg-[#0088cc]",
+    connectedDescription: "Message your bot on Telegram to chat with GAIA",
   },
   {
     id: "whatsapp",
     name: "WhatsApp",
-    icon: WhatsappIcon,
+    image: "/images/icons/macos/whatsapp.webp",
+    color: "#25D366",
     description: "Connect GAIA to WhatsApp (Beta)",
-    color: "bg-[#25D366]",
+    connectedDescription: "Message GAIA on WhatsApp",
   },
 ];
 
@@ -74,10 +74,11 @@ export default function LinkedAccountsSettings() {
   const fetchPlatformLinks = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get("/platform-links");
-      setPlatformLinks(response.data.platform_links || {});
-    } catch (error) {
-      console.error("Failed to fetch platform links:", error);
+      const data = await apiService.get<{
+        platform_links: Record<string, PlatformLink | null>;
+      }>("/platform-links", { silent: true });
+      setPlatformLinks(data.platform_links || {});
+    } catch {
       toast.error("Failed to load connected accounts");
     } finally {
       setIsLoading(false);
@@ -88,39 +89,36 @@ export default function LinkedAccountsSettings() {
     try {
       setConnectingPlatform(platformId);
 
-      // Get OAuth URL from backend
-      const response = await api.post(
-        `/platform-links/${platformId}/connect`,
-        {},
-      );
+      const data = await apiService.post<{
+        auth_url?: string;
+        instructions?: string;
+        auth_type: string;
+      }>(`/platform-links/${platformId}/connect`, {}, { silent: true });
 
-      if (response.data.auth_url) {
-        // Open OAuth in popup
+      if (data.auth_url) {
         const width = 600;
         const height = 700;
         const left = window.screen.width / 2 - width / 2;
         const top = window.screen.height / 2 - height / 2;
 
         const popup = window.open(
-          response.data.auth_url,
+          data.auth_url,
           `Connect ${platformId}`,
           `width=${width},height=${height},left=${left},top=${top}`,
         );
 
-        // Poll for popup close
         const pollTimer = setInterval(() => {
           if (popup?.closed) {
             clearInterval(pollTimer);
-            fetchPlatformLinks(); // Refresh status
+            fetchPlatformLinks();
             setConnectingPlatform(null);
           }
         }, 500);
-      } else if (response.data.instructions) {
-        toast.info(response.data.instructions, { duration: 8000 });
+      } else if (data.instructions) {
+        toast.info(data.instructions, { duration: 8000 });
         setConnectingPlatform(null);
       }
-    } catch (error) {
-      console.error(`Failed to connect ${platformId}:`, error);
+    } catch {
       toast.error(`Failed to connect ${platformId}`);
       setConnectingPlatform(null);
     }
@@ -128,89 +126,136 @@ export default function LinkedAccountsSettings() {
 
   const handleDisconnect = async (platformId: string) => {
     try {
-      await api.delete(`/platform-links/${platformId}`);
+      await apiService.delete(`/platform-links/${platformId}`, {
+        silent: true,
+      });
       toast.success(`Disconnected from ${platformId}`);
       await fetchPlatformLinks();
-    } catch (error) {
-      console.error(`Failed to disconnect ${platformId}:`, error);
+    } catch {
       toast.error(`Failed to disconnect from ${platformId}`);
     }
   };
 
   return (
-    <div className="flex w-full grid-cols-4 gap-10 space-y-4">
-      <div className="col-span-3 w-full space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold text-white">Linked Accounts</h3>
-          <p className="text-sm text-zinc-400">
-            Connect your chat platforms to use GAIA from anywhere
-          </p>
-        </div>
+    <div className="mx-auto max-w-3xl space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold text-white">Linked Accounts</h3>
+        <p className="mt-1 text-sm text-zinc-400">
+          Connect your messaging platforms to use GAIA from anywhere
+        </p>
+      </div>
 
-        <SettingsCard>
-          <div className="space-y-4">
-            {PLATFORMS.map((platform) => {
-              const isConnected =
-                platformLinks[platform.id]?.platformUserId != null;
-              const Icon = platform.icon;
+      <SettingsCard>
+        <div className="divide-y divide-zinc-800">
+          {PLATFORMS.map((platform) => {
+            const isConnected =
+              platformLinks[platform.id]?.platformUserId != null;
 
-              return (
-                <SettingsOption
-                  key={platform.id}
-                  icon={
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${platform.color}`}
-                    >
-                      <Icon className="h-5 w-5 text-white" />
-                    </div>
-                  }
-                  title={platform.name}
-                  description={
-                    isConnected
-                      ? `Connected • Use /gaia in ${platform.name} to get started`
-                      : platform.description
-                  }
-                  action={
-                    isConnected ? (
-                      <Button
-                        variant="flat"
-                        color="danger"
-                        size="sm"
-                        onPress={() => handleDisconnect(platform.id)}
-                        isDisabled={isLoading}
-                      >
-                        Disconnect
-                      </Button>
+            return (
+              <div
+                key={platform.id}
+                className="flex items-center justify-between py-4 first:pt-0 last:pb-0"
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl"
+                    style={
+                      platform.image
+                        ? undefined
+                        : { backgroundColor: platform.color }
+                    }
+                  >
+                    {platform.image ? (
+                      <Image
+                        src={platform.image}
+                        alt={platform.name}
+                        width={44}
+                        height={44}
+                        className="h-full w-full object-cover"
+                      />
                     ) : (
-                      <Button
-                        variant="flat"
-                        color="primary"
-                        size="sm"
-                        onPress={() => handleConnect(platform.id)}
-                        isLoading={connectingPlatform === platform.id}
-                        isDisabled={isLoading || connectingPlatform != null}
-                      >
-                        Connect
-                      </Button>
-                    )
-                  }
-                />
-              );
-            })}
-          </div>
-        </SettingsCard>
+                      <TelegramIcon className="h-6 w-6 text-white" />
+                    )}
+                  </div>
 
-        <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-          <h4 className="mb-2 text-sm font-medium text-white">
-            How to use connected platforms:
-          </h4>
-          <ul className="space-y-1 text-sm text-zinc-400">
-            <li>• Connect your account using the button above</li>
-            <li>• Use /gaia command in Discord, Slack, or Telegram</li>
-            <li>• All conversations sync with your GAIA account</li>
-            <li>• Disconnect anytime from this page</li>
-          </ul>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-white">
+                        {platform.name}
+                      </span>
+                      {isConnected && (
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-xs font-medium text-emerald-400">
+                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                          Connected
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {isConnected
+                        ? platform.connectedDescription
+                        : platform.description}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="ml-4 shrink-0">
+                  {isConnected ? (
+                    <Button
+                      variant="flat"
+                      color="danger"
+                      size="sm"
+                      onPress={() => handleDisconnect(platform.id)}
+                      isDisabled={isLoading}
+                      className="text-xs"
+                    >
+                      Disconnect
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="flat"
+                      color="primary"
+                      size="sm"
+                      onPress={() => handleConnect(platform.id)}
+                      isLoading={connectingPlatform === platform.id}
+                      isDisabled={isLoading || connectingPlatform != null}
+                      className="text-xs"
+                    >
+                      Connect
+                    </Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
+      </SettingsCard>
+
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 p-4">
+        <h4 className="mb-2 text-xs font-medium uppercase tracking-wider text-zinc-500">
+          How it works
+        </h4>
+        <ul className="space-y-1.5 text-sm text-zinc-400">
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-zinc-600">•</span>
+            Connect your account using the button above
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-zinc-600">•</span>
+            Use{" "}
+            <code className="rounded bg-zinc-800 px-1 py-0.5 text-xs text-zinc-300">
+              /gaia
+            </code>{" "}
+            in Discord or Slack, or just message the Telegram bot
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-zinc-600">•</span>
+            All conversations sync with your GAIA account
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-zinc-600">•</span>
+            Disconnect anytime from this page
+          </li>
+        </ul>
       </div>
     </div>
   );
