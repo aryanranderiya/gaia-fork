@@ -1,45 +1,136 @@
-import { REST, Routes } from "discord.js";
-import { data as authCommand } from "./commands/auth";
-import { data as conversationCommand } from "./commands/conversation";
-import { data as gaiaCommand } from "./commands/gaia";
-import { data as helpCommand } from "./commands/help";
-import { data as newCommand } from "./commands/new";
+/**
+ * Registers Discord slash commands with the Discord API.
+ *
+ * Converts unified {@link BotCommand} definitions from the shared library
+ * into Discord `SlashCommandBuilder` objects and deploys them globally
+ * via the Discord REST API.
+ *
+ * Run with: `pnpm deploy-commands` or `tsx src/deploy-commands.ts`
+ */
 
-import { data as settingsCommand } from "./commands/settings";
-import { data as statusCommand } from "./commands/status";
-import { data as todoCommand } from "./commands/todo";
-import { data as workflowCommand } from "./commands/workflow";
+import { allCommands, type BotCommand } from "@gaia/shared";
+import {
+  REST,
+  Routes,
+  type SlashCommandBooleanOption,
+  SlashCommandBuilder,
+  type SlashCommandIntegerOption,
+  type SlashCommandStringOption,
+} from "discord.js";
 
-const commands = [
-  gaiaCommand.toJSON(),
-  authCommand.toJSON(),
-  statusCommand.toJSON(),
-  helpCommand.toJSON(),
-  settingsCommand.toJSON(),
-  workflowCommand.toJSON(),
-  todoCommand.toJSON(),
-  conversationCommand.toJSON(),
+/**
+ * Converts a unified {@link BotCommand} definition into a Discord
+ * `SlashCommandBuilder` JSON payload.
+ *
+ * Handles three command shapes:
+ * 1. Simple commands with no options (e.g. `/new`, `/help`)
+ * 2. Commands with top-level options (e.g. `/gaia <message>`)
+ * 3. Commands with subcommands (e.g. `/todo list`, `/todo add <title>`)
+ *
+ * @param cmd - The unified command definition.
+ * @returns The Discord slash command JSON payload.
+ */
+function buildSlashCommand(
+  cmd: BotCommand,
+): ReturnType<SlashCommandBuilder["toJSON"]> {
+  const builder = new SlashCommandBuilder()
+    .setName(cmd.name)
+    .setDescription(cmd.description);
 
-  newCommand.toJSON(),
-];
+  if (cmd.subcommands && cmd.subcommands.length > 0) {
+    for (const sub of cmd.subcommands) {
+      builder.addSubcommand((subBuilder) => {
+        subBuilder.setName(sub.name).setDescription(sub.description);
+        if (sub.options) {
+          for (const opt of sub.options) {
+            addOption(subBuilder, opt);
+          }
+        }
+        return subBuilder;
+      });
+    }
+  } else if (cmd.options) {
+    for (const opt of cmd.options) {
+      addOption(builder, opt);
+    }
+  }
 
-const token = process.env.DISCORD_BOT_TOKEN;
-const clientId = process.env.DISCORD_CLIENT_ID;
-
-if (!token || !clientId) {
-  console.error("Missing DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID");
-  process.exit(1);
+  return builder.toJSON();
 }
 
-const rest = new REST().setToken(token);
+/**
+ * Adds a typed option to a Discord slash command or subcommand builder.
+ */
+function addOption(
+  builder: {
+    addStringOption: (
+      fn: (o: SlashCommandStringOption) => SlashCommandStringOption,
+    ) => unknown;
+    addIntegerOption: (
+      fn: (o: SlashCommandIntegerOption) => SlashCommandIntegerOption,
+    ) => unknown;
+    addBooleanOption: (
+      fn: (o: SlashCommandBooleanOption) => SlashCommandBooleanOption,
+    ) => unknown;
+  },
+  opt: NonNullable<BotCommand["options"]>[number],
+): void {
+  if (opt.type === "integer") {
+    builder.addIntegerOption((o) => {
+      o.setName(opt.name).setDescription(opt.description);
+      if (opt.required) o.setRequired(true);
+      return o;
+    });
+  } else if (opt.type === "boolean") {
+    builder.addBooleanOption((o) => {
+      o.setName(opt.name).setDescription(opt.description);
+      if (opt.required) o.setRequired(true);
+      return o;
+    });
+  } else {
+    builder.addStringOption((o) => {
+      o.setName(opt.name).setDescription(opt.description);
+      if (opt.required) o.setRequired(true);
+      if (opt.choices) {
+        o.addChoices(...opt.choices);
+      }
+      return o;
+    });
+  }
+}
 
-(async () => {
-  try {
-    console.log("Registering slash commands...");
-    await rest.put(Routes.applicationCommands(clientId), { body: commands });
-    console.log("Successfully registered slash commands");
-  } catch (error) {
-    console.error("Failed to register commands:", error);
+/** Builds all unified commands into Discord slash command payloads. */
+export function buildAllCommands() {
+  return allCommands.map(buildSlashCommand);
+}
+
+// Only run deployment when executed directly (not imported)
+const isMain =
+  typeof process !== "undefined" &&
+  process.argv[1] &&
+  (process.argv[1].endsWith("deploy-commands.ts") ||
+    process.argv[1].endsWith("deploy-commands.js"));
+
+if (isMain) {
+  const commands = buildAllCommands();
+  const token = process.env.DISCORD_BOT_TOKEN;
+  const clientId = process.env.DISCORD_CLIENT_ID;
+
+  if (!token || !clientId) {
+    console.error("Missing DISCORD_BOT_TOKEN or DISCORD_CLIENT_ID");
     process.exit(1);
   }
-})();
+
+  const rest = new REST().setToken(token);
+
+  (async () => {
+    try {
+      console.log("Registering slash commands...");
+      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      console.log("Successfully registered slash commands");
+    } catch (error) {
+      console.error("Failed to register commands:", error);
+      process.exit(1);
+    }
+  })();
+}

@@ -36,12 +36,21 @@ export class GaiaApiError extends Error {
  *
  * This allows bots to use the same endpoints as the web app.
  */
+/** Session token entry with TTL. */
+interface TokenEntry {
+  token: string;
+  expiresAt: number;
+}
+
+/** Default token TTL: 1 hour. */
+const TOKEN_TTL_MS = 60 * 60 * 1000;
+
 export class GaiaClient {
   private client: AxiosInstance;
   private baseUrl: string;
   private frontendUrl: string;
   private apiKey: string;
-  private sessionTokens: Map<string, string> = new Map();
+  private sessionTokens: Map<string, TokenEntry> = new Map();
 
   constructor(baseUrl: string, apiKey: string, frontendUrl: string) {
     this.baseUrl = baseUrl;
@@ -66,7 +75,10 @@ export class GaiaClient {
    */
   private userHeaders(ctx: BotUserContext) {
     const sessionKey = this.getSessionKey(ctx);
-    const sessionToken = this.sessionTokens.get(sessionKey);
+    const entry = this.sessionTokens.get(sessionKey);
+    const sessionToken =
+      entry && entry.expiresAt > Date.now() ? entry.token : undefined;
+    if (entry && !sessionToken) this.sessionTokens.delete(sessionKey);
 
     const headers: Record<string, string> = {
       "X-Bot-API-Key": this.apiKey,
@@ -253,7 +265,10 @@ export class GaiaClient {
               }
               if (data.session_token) {
                 const sessionKey = this.getSessionKey(ctx);
-                this.sessionTokens.set(sessionKey, data.session_token);
+                this.sessionTokens.set(sessionKey, {
+                  token: data.session_token,
+                  expiresAt: Date.now() + TOKEN_TTL_MS,
+                });
               }
               if (data.text) {
                 fullText += data.text;
@@ -415,7 +430,7 @@ export class GaiaClient {
   ): Promise<Workflow> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.get<{ workflow: Workflow }>(
-        `/api/v1/workflows/${workflowId}`,
+        `/api/v1/workflows/${encodeURIComponent(workflowId)}`,
         { headers: this.userHeaders(ctx) },
       );
       return data.workflow;
@@ -431,7 +446,7 @@ export class GaiaClient {
   ): Promise<WorkflowExecutionResponse> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.post<WorkflowExecutionResponse>(
-        `/api/v1/workflows/${request.workflow_id}/execute`,
+        `/api/v1/workflows/${encodeURIComponent(request.workflow_id)}/execute`,
         { inputs: request.inputs },
         { headers: this.userHeaders(ctx) },
       );
@@ -444,7 +459,7 @@ export class GaiaClient {
    */
   async deleteWorkflow(workflowId: string, ctx: BotUserContext): Promise<void> {
     return this.requestWithAuth(async () => {
-      await this.client.delete(`/api/v1/workflows/${workflowId}`, {
+      await this.client.delete(`/api/v1/workflows/${encodeURIComponent(workflowId)}`, {
         headers: this.userHeaders(ctx),
       });
     }, ctx);
@@ -503,7 +518,7 @@ export class GaiaClient {
    */
   async getTodo(todoId: string, ctx: BotUserContext): Promise<Todo> {
     return this.requestWithAuth(async () => {
-      const { data } = await this.client.get(`/api/v1/todos/${todoId}`, {
+      const { data } = await this.client.get(`/api/v1/todos/${encodeURIComponent(todoId)}`, {
         headers: this.userHeaders(ctx),
       });
       return mapTodoResponse(data);
@@ -520,7 +535,7 @@ export class GaiaClient {
   ): Promise<Todo> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.put(
-        `/api/v1/todos/${todoId}`,
+        `/api/v1/todos/${encodeURIComponent(todoId)}`,
         updates,
         { headers: this.userHeaders(ctx) },
       );
@@ -540,7 +555,7 @@ export class GaiaClient {
    */
   async deleteTodo(todoId: string, ctx: BotUserContext): Promise<void> {
     return this.requestWithAuth(async () => {
-      await this.client.delete(`/api/v1/todos/${todoId}`, {
+      await this.client.delete(`/api/v1/todos/${encodeURIComponent(todoId)}`, {
         headers: this.userHeaders(ctx),
       });
     }, ctx);
@@ -589,7 +604,7 @@ export class GaiaClient {
   ): Promise<Conversation> {
     return this.requestWithAuth(async () => {
       const { data } = await this.client.get(
-        `/api/v1/conversations/${conversationId}`,
+        `/api/v1/conversations/${encodeURIComponent(conversationId)}`,
         { headers: this.userHeaders(ctx) },
       );
       return mapConversationResponse(data);
@@ -687,7 +702,7 @@ function mapConversationResponse(data: Record<string, unknown>): Conversation {
   return {
     conversation_id:
       (data.conversation_id as string) || (data.id as string) || "",
-    title: (data.description as string) || (data.title as string) || undefined,
+    title: (data.title as string) || (data.description as string) || undefined,
     created_at: (data.createdAt as string) || (data.created_at as string) || "",
     updated_at: (data.updatedAt as string) || (data.updated_at as string) || "",
     message_count: data.message_count as number | undefined,

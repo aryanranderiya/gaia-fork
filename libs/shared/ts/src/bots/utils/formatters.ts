@@ -16,7 +16,12 @@ import type { Conversation, Todo, Workflow } from "../types";
  * Formats a workflow for display in a bot message.
  */
 export function formatWorkflow(workflow: Workflow): string {
-  const status = workflow.status === "active" ? "✅" : "⏸️";
+  const status =
+    workflow.status === "active"
+      ? "✅"
+      : workflow.status === "draft"
+        ? "📝"
+        : "⏸️";
   return `${status} **${workflow.name}**\nID: \`${workflow.id}\`\n${workflow.description || "No description"}`;
 }
 
@@ -118,11 +123,10 @@ export const COMMAND_HELP = {
 
 **Quick Commands:**
 • /help - This message
+• /settings - View account settings
 • /new - Fresh conversation
 • /todo - Manage todos
 • /workflow - Run workflows
-• /search - Search data
-• /weather <location> - Weather info
 • /conversations - Chat history
 
 Type /help <command> for details.`,
@@ -136,7 +140,9 @@ Type /help <command> for details.`,
     "Available commands:\n" +
     "/workflow list - List all workflows\n" +
     "/workflow get <id> - Get workflow details\n" +
-    "/workflow execute <id> - Execute a workflow",
+    "/workflow execute <id> - Execute a workflow\n" +
+    "/workflow delete <id> - Delete a workflow\n" +
+    "/workflow create <name> <description> - Create a workflow",
   todoUsage: {
     add: "Usage: /todo add <title>",
     complete: "Usage: /todo complete <todo-id>",
@@ -145,6 +151,7 @@ Type /help <command> for details.`,
   workflowUsage: {
     get: "Usage: /workflow get <workflow-id>",
     execute: "Usage: /workflow execute <workflow-id>",
+    delete: "Usage: /workflow delete <workflow-id>",
   },
 };
 
@@ -169,6 +176,6 @@ export function formatBotError(error: unknown): string {
     return "⏳ You're sending messages too fast. Please wait a moment and try again.";
   }
 
-  const message = error instanceof Error ? error.message : "Unknown error";
-  return `❌ An error occurred: ${message}`;
+  console.error("Unhandled bot error:", error);
+  return "❌ Something went wrong. Please try again later.";
 }

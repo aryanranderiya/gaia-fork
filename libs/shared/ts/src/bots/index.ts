@@ -4,27 +4,29 @@
  * Shared bot library for all GAIA platform integrations (Discord, Slack, Telegram).
  *
  * Architecture overview:
- * - types/    - Shared TypeScript interfaces (ChatRequest, CommandContext, etc.)
- * - api/      - GaiaClient: single HTTP client for all bot-to-backend communication
- * - config/   - Environment variable loader (GAIA_API_URL, GAIA_BOT_API_KEY, etc.)
- * - utils/    - Reusable logic split into three layers:
+ * - adapter/   - BaseBotAdapter abstract class + richMessageToMarkdown renderer
+ * - commands/  - Unified BotCommand definitions (auth, help, settings, gaia, todo, etc.)
+ * - types/     - Shared TypeScript interfaces (ChatRequest, CommandContext, BotCommand, etc.)
+ * - api/       - GaiaClient: single HTTP client for all bot-to-backend communication
+ * - config/    - Environment variable loader (GAIA_API_URL, GAIA_BOT_API_KEY, etc.)
+ * - utils/     - Reusable logic split into three layers:
  *     - formatters.ts  - Pure display functions (formatTodo, formatBotError, etc.)
- *     - commands.ts    - Business-logic handlers (handleTodoList, handleSearch, etc.)
+ *     - commands.ts    - Business-logic handlers (handleTodoList, dispatchTodoSubcommand, etc.)
  *     - streaming.ts   - handleStreamingChat: shared streaming + throttled editing
  *
  * When adding a new bot command:
- * 1. Add types to types/index.ts and API method to api/index.ts (GaiaClient)
- * 2. Add a formatter in formatters.ts if there's display logic
- * 3. Add a shared handler in commands.ts that calls GaiaClient + formatter
- * 4. In each bot, write a thin adapter: extract platform args -> call shared handler -> reply
+ * 1. Create a new BotCommand in commands/<name>.ts
+ * 2. Add it to the allCommands array in commands/index.ts
+ * 3. If needed, add API methods to GaiaClient and formatters to formatters.ts
  *
  * When adding a new platform bot:
  * 1. Create a new directory under apps/bots/<platform>/
- * 2. Import GaiaClient, shared handlers, and STREAMING_DEFAULTS from @gaia/shared
- * 3. Wire up platform-specific command registration and event listeners
- * 4. Use handleStreamingChat for chat commands - just provide editMessage callbacks
+ * 2. Extend BaseBotAdapter and implement the five lifecycle methods
+ * 3. In index.ts: create adapter instance, call adapter.boot(allCommands)
  */
+export * from "./adapter";
 export * from "./api";
+export * from "./commands";
 export * from "./config";
 export * from "./types";
 export * from "./utils";

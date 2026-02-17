@@ -69,11 +69,24 @@ export function truncateResponse(
     : "\n\n... (truncated)";
   const maxLen = limit - suffix.length;
 
-  // Truncate at word boundary
+  // Truncate at word boundary, avoiding cuts inside markdown links
   let truncated = text.slice(0, maxLen);
   const lastSpace = truncated.lastIndexOf(" ");
   if (lastSpace > maxLen * 0.8) {
     truncated = truncated.slice(0, lastSpace);
+  }
+
+  // If we cut inside a markdown link [label](url), backtrack to before the link
+  const lastOpenBracket = truncated.lastIndexOf("[");
+  if (lastOpenBracket > -1) {
+    const closeParen = text.indexOf(")", lastOpenBracket);
+    if (closeParen > -1 && closeParen > truncated.length) {
+      // We're inside an incomplete link — backtrack to before it
+      const beforeLink = truncated.lastIndexOf("\n", lastOpenBracket);
+      if (beforeLink > maxLen * 0.5) {
+        truncated = truncated.slice(0, beforeLink);
+      }
+    }
   }
 
   return truncated + suffix;

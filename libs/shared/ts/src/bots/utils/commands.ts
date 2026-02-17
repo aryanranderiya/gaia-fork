@@ -169,7 +169,7 @@ export async function dispatchTodoSubcommand(
 ): Promise<string> {
   switch (subcommand) {
     case "list":
-      return handleTodoList(gaia, ctx, false);
+      return handleTodoList(gaia, ctx);
     case "add": {
       const title = args.join(" ");
       if (!title) return COMMAND_HELP.todoUsage.add;
@@ -185,6 +185,19 @@ export async function dispatchTodoSubcommand(
     }
     default:
       return COMMAND_HELP.todo;
+  }
+}
+
+export async function handleWorkflowDelete(
+  gaia: GaiaClient,
+  workflowId: string,
+  ctx: CommandContext,
+): Promise<string> {
+  try {
+    await gaia.deleteWorkflow(workflowId, ctx);
+    return "✅ Workflow deleted successfully";
+  } catch (error: unknown) {
+    return formatBotError(error);
   }
 }
 
@@ -204,6 +217,10 @@ export async function dispatchWorkflowSubcommand(
     case "execute": {
       if (!args[0]) return COMMAND_HELP.workflowUsage.execute;
       return handleWorkflowExecute(gaia, args[0], ctx);
+    }
+    case "delete": {
+      if (!args[0]) return COMMAND_HELP.workflowUsage.delete;
+      return handleWorkflowDelete(gaia, args[0], ctx);
     }
     default:
       return COMMAND_HELP.workflow;

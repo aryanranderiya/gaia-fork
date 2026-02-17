@@ -32,7 +32,10 @@ export interface StreamingOptions {
 export type MessageEditor = (text: string) => Promise<void>;
 export type NewMessageSender = (text: string) => Promise<MessageEditor>;
 
-export const STREAMING_DEFAULTS: Record<string, StreamingOptions> = {
+export const STREAMING_DEFAULTS: Record<
+  "discord" | "slack" | "telegram",
+  StreamingOptions
+> = {
   discord: {
     editIntervalMs: 1200,
     streaming: false,
@@ -117,16 +120,13 @@ async function _handleStream(
           lastEditTime = now;
           await updateDisplay(fullText);
         } else if (!editTimer) {
-          editTimer = setTimeout(
-            async () => {
-              editTimer = null;
-              if (!streamDone) {
-                lastEditTime = Date.now();
-                await updateDisplay(fullText);
-              }
-            },
-            editIntervalMs - (now - lastEditTime),
-          );
+          editTimer = setTimeout(() => {
+            editTimer = null;
+            if (!streamDone) {
+              lastEditTime = Date.now();
+              updateDisplay(fullText).catch(() => {});
+            }
+          }, editIntervalMs - (now - lastEditTime));
         }
       },
       async (finalText) => {
