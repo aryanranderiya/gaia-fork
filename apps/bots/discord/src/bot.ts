@@ -64,7 +64,7 @@ export async function createBot() {
     // In guilds, only respond to mentions; in DMs, respond to all messages
     if (!isDM && !message.mentions.has(client.user)) return;
 
-    await handleMention(message, gaia);
+    await handleMention(message, gaia, client.user.id);
   });
 
   await client.login(token);

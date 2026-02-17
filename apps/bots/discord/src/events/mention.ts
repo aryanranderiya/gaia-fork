@@ -6,8 +6,15 @@ import {
   formatBotError,
 } from "@gaia/shared";
 
-export async function handleMention(message: Message, gaia: GaiaClient) {
-  const content = message.content.trim();
+export async function handleMention(
+  message: Message,
+  gaia: GaiaClient,
+  botId: string,
+) {
+  // Strip only the bot's own mention tag so user references remain intact
+  const content = message.content
+    .replace(new RegExp(`<@!?${botId}>`, "g"), "")
+    .trim();
 
   if (!content) {
     await message.reply("How can I help you?");

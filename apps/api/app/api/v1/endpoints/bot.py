@@ -250,10 +250,20 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
             "auth_provider": f"bot:{body.platform}:anonymous",
         }
 
-    history.append({"role": "user", "content": body.message})
+    # Prepend public context restriction so the LLM avoids accessing personal
+    # data in group/mention contexts (reaches the LLM via messages[-1]["content"])
+    mention_message = (
+        "[SYSTEM: This message is from a public channel mention. "
+        "Do NOT access personal data. Do not use tools for "
+        "email, calendar, files, todos, notes, reminders, "
+        "goals, or workflows. Only respond with general "
+        "knowledge and conversation.]\n\n" + body.message
+    )
+
+    history.append({"role": "user", "content": mention_message})
 
     message_request = MessageRequestWithHistory(
-        message=body.message,
+        message=mention_message,
         conversation_id=conversation_id,
         messages=history,
     )

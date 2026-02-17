@@ -3,8 +3,14 @@ import type { GaiaClient } from "@gaia/shared";
 import { handleStreamingChat, STREAMING_DEFAULTS } from "@gaia/shared";
 
 export function registerMentionEvent(app: App, gaia: GaiaClient) {
-  app.event("app_mention", async ({ event, client }) => {
-    const content = event.text.replace(/<@[^>]+>/g, "").trim();
+  app.event("app_mention", async ({ event, client, context }) => {
+    // Strip only the bot's own mention tag so user references remain intact
+    const botMention = context.botUserId
+      ? new RegExp(`<@${context.botUserId}>`, "g")
+      : null;
+    const content = botMention
+      ? event.text.replace(botMention, "").trim()
+      : event.text.trim();
     const userId = event.user;
     const channelId = event.channel;
 

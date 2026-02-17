@@ -165,6 +165,10 @@ export function formatBotError(error: unknown): string {
     return "❌ Not found. Please check the ID and try again.";
   }
 
+  if (status === 429) {
+    return "⏳ You're sending messages too fast. Please wait a moment and try again.";
+  }
+
   const message = error instanceof Error ? error.message : "Unknown error";
   return `❌ An error occurred: ${message}`;
 }
