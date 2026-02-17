@@ -42,10 +42,7 @@
               "developers/introduction",
               "developers/development-setup",
               "developers/commands",
-              "developers/contributing",
-              "developers/code-style",
-              "developers/pull-requests",
-              "developers/conventional-commits"
+              "developers/contributing"
             ]
           },
 
@@ -60,12 +57,14 @@
             ]
           },
           {
-            "group": "Configuration",
+            "group": "Extra Developer Config",
             "pages": [
               "configuration/environment-variables",
               "configuration/docker",
               "configuration/profiling",
-              "configuration/logging"
+              "configuration/code-style",
+              "configuration/pull-requests",
+              "configuration/conventional-commits"
             ]
           }
         ]
