@@ -50,6 +50,16 @@
           },
 
           {
+            "group": "Bots & Messaging",
+            "pages": [
+              "bots/overview",
+              "bots/discord",
+              "bots/slack",
+              "bots/telegram",
+              "bots/commands"
+            ]
+          },
+          {
             "group": "Configuration",
             "pages": [
               "configuration/environment-variables",

@@ -1,0 +1,150 @@
+---
+title: "Discord Bot"
+description: "Use GAIA directly inside Discord with slash commands and mentions"
+---
+
+# GAIA on Discord
+
+Chat with your AI assistant, manage todos, and run workflows without leaving Discord. GAIA's Discord bot supports slash commands with autocomplete, DMs, and `@mention` responses in any channel.
+
+## Getting Started (Users)
+
+If someone has already set up the GAIA Discord bot in your server, you can start using it right away.
+
+### 1. Link Your GAIA Account
+
+Before using most commands, link your Discord account to GAIA:
+
+```
+/auth
+```
+
+You'll receive a link — click it, log in to your GAIA account, and your Discord identity will be connected automatically.
+
+### 2. Start Chatting
+
+```
+/gaia What's on my schedule today?
+```
+
+Or simply mention the bot in any channel:
+
+```
+@GAIA Summarize my pending todos
+```
+
+You can also DM the bot directly — no mention needed.
+
+### Available Commands
+
+#### Chat
+
+| Command | Description |
+|---|---|
+| `/gaia <message>` | Send a message to GAIA |
+| `@GAIA <message>` | Mention the bot in any channel |
+
+#### Todos
+
+| Command | Description |
+|---|---|
+| `/todo list` | Show all active todos |
+| `/todo add <title> [priority] [description]` | Create a todo (priority: low / medium / high) |
+| `/todo complete <id>` | Mark a todo as done |
+| `/todo delete <id>` | Delete a todo |
+
+#### Workflows
+
+| Command | Description |
+|---|---|
+| `/workflow list` | List all your workflows |
+| `/workflow get <id>` | View workflow details |
+| `/workflow execute <id>` | Trigger a workflow manually |
+| `/workflow create <name> <description>` | Create a new workflow |
+
+#### Conversations & Utilities
+
+| Command | Description |
+|---|---|
+| `/conversations [page]` | Browse your GAIA conversation history |
+| `/new` | Start a fresh conversation |
+| `/status` | Check if the bot and API are online |
+| `/settings` | View your account settings |
+| `/help` | Show all available commands |
+
+### Notes
+
+- All slash command responses are **ephemeral** (only visible to you) by default
+- Responses are streamed — a typing indicator appears while GAIA is thinking
+- Long responses are automatically truncated to Discord's 2000 character limit
+- `/workflow create` is Discord-only; other platforms support list/get/execute
+
+---
+
+## Developer Setup
+
+This section is for developers who want to self-host the GAIA Discord bot.
+
+### Prerequisites
+
+- Node.js 18+ and pnpm
+- A [Discord Developer Account](https://discord.com/developers/applications)
+- GAIA API running (see [Self-Hosting Guide](/self-hosting/overview))
+
+### Step 1: Create a Discord Application
+
+1. Go to the [Discord Developer Portal](https://discord.com/developers/applications)
+2. Click **New Application** and give it a name
+3. Navigate to the **Bot** section and click **Add Bot**
+4. Under **Privileged Gateway Intents**, enable:
+   - **Message Content Intent**
+   - **Server Members Intent** (optional)
+5. Copy the **Bot Token**
+
+### Step 2: Configure OAuth2 Scopes
+
+1. Go to **OAuth2 → URL Generator**
+2. Select scopes: `bot` and `applications.commands`
+3. Select bot permissions: **Send Messages**, **Use Slash Commands**, **Read Message History**
+4. Copy the generated URL and use it to invite the bot to your server
+
+### Step 3: Configure Environment Variables
+
+Create a `.env` file in `apps/bots/discord/`:
+
+```bash
+DISCORD_BOT_TOKEN=your_discord_bot_token
+DISCORD_CLIENT_ID=your_discord_client_id
+GAIA_API_URL=http://localhost:8000
+GAIA_BOT_API_KEY=your_secure_bot_api_key
+```
+
+`GAIA_BOT_API_KEY` must match the value configured in your GAIA API.
+
+### Step 4: Deploy Slash Commands
+
+Register the bot's slash commands with Discord:
+
+```bash
+nx run bot-discord:deploy-commands
+```
+
+This only needs to be run once (or whenever commands change).
+
+### Step 5: Start the Bot
+
+```bash
+# Development (hot reload)
+nx dev bot-discord
+
+# Production
+nx build bot-discord && nx start bot-discord
+```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| Bot doesn't respond to commands | Run `nx run bot-discord:deploy-commands`, check bot permissions |
+| Authentication link doesn't work | Verify `GAIA_BOT_API_KEY` matches API config |
+| Bot offline | Check that the process is running and `DISCORD_BOT_TOKEN` is valid |

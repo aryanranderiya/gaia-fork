@@ -37,6 +37,7 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 - **Graph-Based Memory**: Builds a living knowledge graph of your work - tasks link to projects, meetings link to documents, everything connects
 - **Integration Marketplace**: Choose from hundreds of integrations, built by us and the community, to connect GAIA with your favorite tools like Gmail, Slack, Notion, Linear, GitHub, and more!
 - **Multi-Platform**: Web | Desktop - macOS, Windows, Linux | Mobile
+- **Messaging Platform Integrations**: Talk to GAIA on Discord, Slack, and Telegram
 - **Open Source & Self-Hostable**: Full transparency with the ability to self-host on your own infrastructure
 
 <div align="center">
@@ -66,6 +67,18 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
   </table>
 </div>
 
+## Chat with GAIA on Your Favorite Platforms
+
+Use GAIA directly inside the tools you're already in!
+
+| Platform | How to Use |
+|---|---|
+| <img src="https://cdn.simpleicons.org/discord/5865F2" alt="Discord" width="16" /> **Discord** | Invite the bot to your server, then use `/gaia` slash commands or `@mention` GAIA in any channel |
+| <img src="apps/web/public/images/icons/slack.svg" alt="Slack" width="16" /> **Slack** | Install the Slack app in your workspace and use `/gaia` and other slash commands |
+|<img src="https://cdn.simpleicons.org/telegram/26A5E4" alt="Telegram" width="16" /> **Telegram** | Start a chat with the GAIA bot and send messages or use `/gaia` commands |
+
+See the [Bot Integrations Guide](https://docs.heygaia.io/bots/overview) for setup and usage details.
+
 ## Quick Start
 
 Choose how you'd like to use GAIA:
@@ -79,6 +92,7 @@ Choose how you'd like to use GAIA:
 Our comprehensive documentation is available at [docs.heygaia.io](https://docs.heygaia.io):
 
 - **[Quick Start](https://docs.heygaia.io/quick-start)** - Get up and running in minutes
+- **[Bot Integrations](https://docs.heygaia.io/bots/overview)** - Use GAIA on Discord, Slack, and Telegram
 - **[Self-Hosting](https://docs.heygaia.io/self-hosting/overview)** - Deploy GAIA on your infrastructure
 - **[For Developers](https://docs.heygaia.io/developers/introduction)** - Contribute and extend GAIA
 
