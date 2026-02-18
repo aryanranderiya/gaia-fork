@@ -174,6 +174,11 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
                 try:
                     data = json.loads(raw)
 
+                    # Forward keepalives so bot clients reset inactivity timers
+                    if data.get("keepalive"):
+                        yield f"data: {json.dumps({'keepalive': True})}\n\n"
+                        continue
+
                     # Skip web-only fields
                     if any(
                         key in data
@@ -267,7 +272,7 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
     async def event_generator():
         complete_message = ""
         # Send initial keepalive to establish connection
-        yield ": keepalive\n\n"
+        yield f"data: {json.dumps({'keepalive': True})}\n\n"
 
         try:
             stream = await call_agent(
@@ -287,7 +292,7 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
                         {next_task}, timeout=_MENTION_KEEPALIVE_INTERVAL
                     )
                     if not done:
-                        yield ": keepalive\n\n"
+                        yield f"data: {json.dumps({'keepalive': True})}\n\n"
                         continue
 
                     chunk = next_task.result()
@@ -475,3 +480,29 @@ async def get_settings(
         selected_model_icon_url=selected_model_icon_url,
         connected_integrations=connected_integrations_list,
     )
+
+
+@router.post(
+    "/unlink",
+    status_code=200,
+    summary="Unlink Platform Account",
+    description="Disconnect a platform account from the linked GAIA user.",
+)
+async def unlink_account(request: Request) -> dict:
+    """Unlink a platform user from their GAIA account."""
+    await require_bot_api_key(request)
+
+    platform = request.headers.get("X-Bot-Platform")
+    platform_user_id = request.headers.get("X-Bot-Platform-User-Id")
+
+    if not platform or not platform_user_id:
+        raise HTTPException(status_code=400, detail="Missing platform headers")
+
+    user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Account not linked")
+
+    user_id = user.get("user_id") or str(user.get("_id", ""))
+    await PlatformLinkService.unlink_account(user_id, platform)
+
+    return {"success": True}

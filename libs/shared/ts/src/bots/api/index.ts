@@ -761,6 +761,29 @@ export class GaiaClient {
   }
 
   /**
+   * Unlinks a platform account from the GAIA user.
+   */
+  async unlinkAccount(
+    platform: string,
+    platformUserId: string,
+  ): Promise<void> {
+    return this.request(async () => {
+      await this.client.post(
+        "/api/v1/bot/unlink",
+        {},
+        {
+          headers: {
+            "X-Bot-API-Key": this.apiKey,
+            "X-Bot-Platform": platform,
+            "X-Bot-Platform-User-Id": platformUserId,
+          },
+        },
+      );
+      this.sessionTokens.delete(`${platform}:${platformUserId}`);
+    });
+  }
+
+  /**
    * Creates a secure, time-limited link token for platform account linking.
    * The token is stored in Redis and expires after 10 minutes.
    */

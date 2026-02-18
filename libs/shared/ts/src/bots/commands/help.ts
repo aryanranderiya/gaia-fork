@@ -38,8 +38,10 @@ export const helpCommand: BotCommand = {
             "`/gaia <message>` - Chat with GAIA (private)",
             "`/conversations` - View conversation history",
             "`/new` - Start a new conversation",
+            "`/stop` - Stop the current response and start fresh",
             "`/todo` - Manage your tasks",
             "`/workflow` - Manage workflows",
+            "`/unlink` - Disconnect your account from GAIA",
           ].join("\n"),
         },
         {

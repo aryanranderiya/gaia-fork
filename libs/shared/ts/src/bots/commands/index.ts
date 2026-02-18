@@ -17,7 +17,9 @@ export { helpCommand } from "./help";
 export { newCommand } from "./new";
 export { settingsCommand } from "./settings";
 export { statusCommand } from "./status";
+export { stopCommand } from "./stop";
 export { todoCommand } from "./todo";
+export { unlinkCommand } from "./unlink";
 export { workflowCommand } from "./workflow";
 
 import { authCommand } from "./auth";
@@ -27,7 +29,9 @@ import { helpCommand } from "./help";
 import { newCommand } from "./new";
 import { settingsCommand } from "./settings";
 import { statusCommand } from "./status";
+import { stopCommand } from "./stop";
 import { todoCommand } from "./todo";
+import { unlinkCommand } from "./unlink";
 import { workflowCommand } from "./workflow";
 import type { BotCommand } from "../types";
 
@@ -47,4 +51,6 @@ export const allCommands: BotCommand[] = [
   workflowCommand,
   conversationsCommand,
   newCommand,
+  stopCommand,
+  unlinkCommand,
 ];

@@ -34,8 +34,8 @@ import {
   type SentMessage,
   STREAMING_DEFAULTS,
 } from "@gaia/shared";
-import { Bot, type Context } from "grammy";
 import type { Message } from "@grammyjs/types";
+import { Bot, type Context } from "grammy";
 
 /**
  * Telegram-specific implementation of the GAIA bot adapter.
@@ -255,11 +255,7 @@ export class TelegramAdapter extends BaseBotAdapter {
               e.message.includes("can't parse entities")
             ) {
               try {
-                await ctx.api.editMessageText(
-                  chatId,
-                  currentMessageId,
-                  text,
-                );
+                await ctx.api.editMessageText(chatId, currentMessageId, text);
               } catch {}
               return;
             }
@@ -404,11 +400,7 @@ export class TelegramAdapter extends BaseBotAdapter {
               e.message.includes("can't parse entities")
             ) {
               try {
-                await ctx.api.editMessageText(
-                  chatId,
-                  currentMessageId,
-                  text,
-                );
+                await ctx.api.editMessageText(chatId, currentMessageId, text);
               } catch {}
               return;
             }
