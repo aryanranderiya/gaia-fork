@@ -17,8 +17,6 @@ from fastapi import HTTPException
 # Constants
 BOT_RATE_LIMIT = 20  # requests per minute per user
 BOT_RATE_WINDOW = 60  # seconds
-GUILD_RATE_LIMIT = 10  # requests per minute per guild (stricter for unauthenticated)
-GUILD_RATE_WINDOW = 60  # seconds
 
 
 class BotService:
@@ -58,58 +56,6 @@ class BotService:
                 f"Rate limit check failed for {platform}:{platform_user_id}, "
                 f"failing open: {e!r}"
             )
-
-    @staticmethod
-    async def enforce_guild_rate_limit(guild_id: str) -> None:
-        """Enforce stricter rate limiting for unauthenticated mention requests per guild."""
-        key = f"bot_guild_ratelimit:{guild_id}"
-        try:
-            if redis_cache.redis:
-                count = await redis_cache.redis.incr(key)
-                if count == 1:
-                    await redis_cache.redis.expire(key, GUILD_RATE_WINDOW)
-                if count > GUILD_RATE_LIMIT:
-                    raise HTTPException(
-                        status_code=429,
-                        detail="Guild rate limit exceeded. Please wait before sending more messages.",
-                    )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.warning(f"Guild rate limit check failed for {guild_id}: {e!r}")
-
-    @staticmethod
-    async def get_or_create_anonymous_session(
-        platform: str, platform_user_id: str, channel_id: Optional[str]
-    ) -> str:
-        """Create an anonymous session for unauthenticated mention chats."""
-        session_key = f"anon:{platform}:{platform_user_id}:{channel_id or 'dm'}"
-
-        existing = await bot_sessions_collection.find_one({"session_key": session_key})
-        if existing:
-            return existing["conversation_id"]
-
-        conversation_id = str(uuid4())
-        now = datetime.now(timezone.utc).isoformat()
-
-        await bot_sessions_collection.update_one(
-            {"session_key": session_key},
-            {
-                "$set": {
-                    "session_key": session_key,
-                    "conversation_id": conversation_id,
-                    "platform": platform,
-                    "platform_user_id": platform_user_id,
-                    "channel_id": channel_id,
-                    "anonymous": True,
-                    "updated_at": now,
-                },
-                "$setOnInsert": {"created_at": now},
-            },
-            upsert=True,
-        )
-
-        return conversation_id
 
     @staticmethod
     def build_session_key(

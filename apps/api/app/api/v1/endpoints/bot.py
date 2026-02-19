@@ -4,13 +4,11 @@ import secrets
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from app.agents.core.agent import call_agent
 from app.config.loggers import chat_logger as logger
 from app.config.settings import settings
 from app.constants.cache import PLATFORM_LINK_TOKEN_PREFIX, PLATFORM_LINK_TOKEN_TTL
 from app.core.stream_manager import stream_manager
 from app.db.redis import redis_cache
-from app.db.mongodb.collections import conversations_collection
 from app.models.bot_models import (
     BotAuthStatusResponse,
     BotChatRequest,
@@ -210,156 +208,6 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
             yield f"data: {json.dumps({'error': 'Stream error occurred'})}\n\n"
 
     return StreamingResponse(stream_from_redis(), media_type="text/event-stream")
-
-
-@router.post(
-    "/chat-mention",
-    status_code=200,
-    summary="Unauthenticated Bot Mention Chat",
-    description="Stream a chat response for @mentions. Does not require user auth. Rate limited by guild.",
-)
-async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingResponse:
-    """Unauthenticated mention chat with guild-based rate limiting."""
-    await require_bot_api_key(request)
-
-    # Use guild_id (channel_id) for rate limiting, much stricter
-    guild_id = body.channel_id or "unknown"
-    await BotService.enforce_guild_rate_limit(guild_id)
-
-    # Try to resolve user - if linked, use their context; if not, use anonymous
-    user = await PlatformLinkService.get_user_by_platform_id(
-        body.platform, body.platform_user_id
-    )
-
-    if user:
-        user_id = user.get("user_id") or str(user.get("_id", ""))
-        user["user_id"] = user_id  # Ensure user_id is always set in the dict
-        conversation_id = await BotService.get_or_create_session(
-            body.platform, body.platform_user_id, body.channel_id, user
-        )
-        history = await BotService.load_conversation_history(conversation_id, user_id)
-    else:
-        # Anonymous session - no history, fresh conversation each time
-        user_id = f"anon:{body.platform}:{body.platform_user_id}"
-        conversation_id = await BotService.get_or_create_anonymous_session(
-            body.platform, body.platform_user_id, body.channel_id
-        )
-        history = []
-        user = {
-            "user_id": user_id,
-            "name": "Anonymous",
-            "auth_provider": f"bot:{body.platform}:anonymous",
-        }
-
-    # Prepend public context restriction so the LLM avoids accessing personal
-    # data in group/mention contexts (reaches the LLM via messages[-1]["content"])
-    mention_message = (
-        "[SYSTEM: This message is from a public channel mention. "
-        "Do NOT access personal data. Do not use tools for "
-        "email, calendar, files, todos, notes, reminders, "
-        "goals, or workflows. Only respond with general "
-        "knowledge and conversation.]\n\n" + body.message
-    )
-
-    history.append({"role": "user", "content": mention_message})
-
-    message_request = MessageRequestWithHistory(
-        message=mention_message,
-        conversation_id=conversation_id,
-        messages=history,
-    )
-
-    is_anonymous = user_id.startswith("anon:") if user_id else True
-    _MENTION_KEEPALIVE_INTERVAL = 15  # seconds
-
-    async def event_generator():
-        complete_message = ""
-        # Send initial keepalive to establish connection
-        yield f"data: {json.dumps({'keepalive': True})}\n\n"
-
-        try:
-            stream = await call_agent(
-                request=message_request,
-                conversation_id=conversation_id,
-                user=user,
-                user_time=datetime.now(timezone.utc),
-            )
-
-            # Use asyncio.Task + wait to avoid cancelling the generator on timeout
-            next_task: asyncio.Task | None = None
-            try:
-                while True:
-                    if next_task is None:
-                        next_task = asyncio.ensure_future(stream.__anext__())
-                    done, _ = await asyncio.wait(
-                        {next_task}, timeout=_MENTION_KEEPALIVE_INTERVAL
-                    )
-                    if not done:
-                        yield f"data: {json.dumps({'keepalive': True})}\n\n"
-                        continue
-
-                    chunk = next_task.result()
-                    next_task = None
-
-                    if chunk.startswith("nostream:"):
-                        payload = json.loads(chunk[len("nostream:") :].strip())
-                        complete_message = payload.get(
-                            "complete_message", complete_message
-                        )
-                        continue
-
-                    if chunk.startswith("data: "):
-                        raw = chunk[len("data: ") :].strip()
-                        if raw == "[DONE]":
-                            break
-
-                        try:
-                            data = json.loads(raw)
-                            if "response" in data:
-                                complete_message += data["response"]
-                                yield f"data: {json.dumps({'text': data['response']})}\n\n"
-                        except json.JSONDecodeError:
-                            continue
-            except StopAsyncIteration:
-                pass
-        except Exception as e:
-            logger.error(f"Bot mention stream error: {e}", exc_info=True)
-            yield f"data: {json.dumps({'error': 'An internal error occurred'})}\n\n"
-
-        # Persist messages for authenticated users after stream completes
-        if not is_anonymous and complete_message and user_id:
-            try:
-                now = datetime.now(timezone.utc).isoformat()
-                await conversations_collection.update_one(
-                    {"user_id": user_id, "conversation_id": conversation_id},
-                    {
-                        "$push": {
-                            "messages": {
-                                "$each": [
-                                    {
-                                        "type": "user",
-                                        "response": body.message,
-                                        "date": now,
-                                        "message_id": str(uuid4()),
-                                    },
-                                    {
-                                        "type": "bot",
-                                        "response": complete_message,
-                                        "date": now,
-                                        "message_id": str(uuid4()),
-                                    },
-                                ]
-                            }
-                        },
-                        "$currentDate": {"updatedAt": True},
-                    },
-                )
-            except Exception as e:
-                logger.error(f"Failed to save mention messages: {e}")
-
-        yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
-
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 @router.post(

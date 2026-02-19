@@ -151,25 +151,6 @@ export class GaiaClient {
   }
 
   /**
-   * Streams a chat response for unauthenticated @mentions.
-   * Uses guild-based rate limiting instead of user auth.
-   */
-  async chatMention(
-    request: ChatRequest,
-    onChunk: (text: string) => void | Promise<void>,
-    onDone: (fullText: string, conversationId: string) => void | Promise<void>,
-    onError: (error: Error) => void | Promise<void>,
-  ): Promise<string> {
-    return this._chatStreamWithRetry(
-      request,
-      onChunk,
-      onDone,
-      onError,
-      "/api/v1/bot/chat-mention",
-    );
-  }
-
-  /**
    * Wrapper that adds retry logic for transient failures.
    */
   private async _chatStreamWithRetry(

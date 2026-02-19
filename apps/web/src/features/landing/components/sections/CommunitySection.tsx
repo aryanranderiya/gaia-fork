@@ -32,7 +32,7 @@ export default function CommunitySection() {
             >
               <RaisedButton
                 color={buttonProps.color}
-                className={`flex h-auto w-32 sm:w-40 flex-row items-center justify-center gap-2  ${label === "GitHub" ? "text-white" : "text-black!"}`}
+                className={`flex h-auto w-32 sm:w-40 flex-row items-center justify-center gap-2  text-white`}
               >
                 {icon &&
                   React.cloneElement(icon, {
