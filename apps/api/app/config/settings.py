@@ -140,8 +140,7 @@ class CommonSettings(BaseAppSettings):
     @property
     def SLACK_OAUTH_REDIRECT_URI(self) -> str:
         """Slack OAuth callback URL."""
-        # TODO: remove redirectmeto proxy once local HTTPS tunnel is set up
-        return "https://redirectmeto.com/http://localhost:8000/api/v1/platform-auth/slack/callback"
+        return f"{self.HOST}/api/v1/platform-auth/slack/callback"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -458,6 +457,12 @@ class DevelopmentSettings(CommonSettings):
     # ----------------------------------------------
     BOT_SESSION_TOKEN_SECRET: Optional[str] = None  # Falls back to GAIA_BOT_API_KEY
     BOT_SESSION_TOKEN_EXPIRY_MINUTES: int = 15
+
+    @computed_field  # type: ignore
+    @property
+    def SLACK_OAUTH_REDIRECT_URI(self) -> str:
+        """Slack OAuth callback URL using redirectmeto proxy for local development."""
+        return "https://redirectmeto.com/http://localhost:8000/api/v1/platform-auth/slack/callback"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

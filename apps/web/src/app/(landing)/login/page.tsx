@@ -12,12 +12,12 @@ export const metadata: Metadata = generatePageMetadata({
   keywords: ["GAIA Login", "Sign In", "Account Access", "User Login"],
 });
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { return_url?: string };
+  searchParams: Promise<{ return_url?: string }>;
 }) {
-  const returnUrl = searchParams.return_url;
+  const { return_url: returnUrl } = await searchParams;
   const oauthUrl = `${apiauth.getUri()}oauth/login/workos${returnUrl ? `?return_url=${encodeURIComponent(returnUrl)}` : ""}`;
 
   return (

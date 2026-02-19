@@ -16,7 +16,7 @@ run = "pnpm tsc"
 
 [tasks.test]
 description = "Run Slack bot tests"
-run = "pnpm vitest run --config ../../vitest.config.ts"
+run = "pnpm vitest run --config ../vitest.config.ts"
 
 [tasks.deps]
 description = "Install dependencies"
