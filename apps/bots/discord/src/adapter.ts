@@ -18,7 +18,6 @@ import {
   BaseBotAdapter,
   type BotCommand,
   formatBotError,
-  handleMentionChat,
   handleStreamingChat,
   type PlatformName,
   type RichMessage,
@@ -321,7 +320,7 @@ export class DiscordAdapter extends BaseBotAdapter {
    * Handles @mention messages in guild channels.
    *
    * Strips the bot's own mention tag, sends a typing indicator, and
-   * delegates to `handleMentionChat` for unauthenticated guild-scoped streaming.
+   * delegates to `handleStreamingChat` for authenticated guild-scoped streaming.
    */
   private async handleMentionMessage(
     message: Message,
@@ -378,7 +377,7 @@ export class DiscordAdapter extends BaseBotAdapter {
         }
       };
 
-      await handleMentionChat(
+      await handleStreamingChat(
         this.gaia,
         {
           message: content,
@@ -393,6 +392,12 @@ export class DiscordAdapter extends BaseBotAdapter {
           return async (updatedText: string) => {
             await currentMsg?.edit(updatedText);
           };
+        },
+        async (authUrl: string) => {
+          clearTyping();
+          await sendOrEdit(
+            `Please link your GAIA account to use me here: ${authUrl}`,
+          );
         },
         async (errMsg: string) => {
           clearTyping();

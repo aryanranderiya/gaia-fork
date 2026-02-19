@@ -159,11 +159,20 @@ async def create_user_indexes():
             users_collection.create_index("last_active_at", sparse=True),
             # Inactive email tracking index (sparse since not all users have this field)
             users_collection.create_index("last_inactive_email_sent", sparse=True),
-            # Platform links indexes for bot authentication (sparse since only bot users have these)
-            users_collection.create_index("platform_links.discord.id", sparse=True),
-            users_collection.create_index("platform_links.slack.id", sparse=True),
-            users_collection.create_index("platform_links.telegram.id", sparse=True),
-            users_collection.create_index("platform_links.whatsapp.id", sparse=True),
+            # Platform links indexes for bot authentication (unique + sparse: only bot users have these,
+            # and a single platform account must not be linked to multiple GAIA users)
+            users_collection.create_index(
+                "platform_links.discord.id", unique=True, sparse=True
+            ),
+            users_collection.create_index(
+                "platform_links.slack.id", unique=True, sparse=True
+            ),
+            users_collection.create_index(
+                "platform_links.telegram.id", unique=True, sparse=True
+            ),
+            users_collection.create_index(
+                "platform_links.whatsapp.id", unique=True, sparse=True
+            ),
         )
 
     except Exception as e:

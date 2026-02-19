@@ -246,28 +246,3 @@ export async function handleStreamingChat(
   );
 }
 
-/**
- * Handles streaming chat for unauthenticated @mentions.
- * Uses guild-based rate limiting instead of requiring user auth.
- * Does not trigger auth error - just shows generic error on failure.
- */
-export async function handleMentionChat(
-  gaia: GaiaClient,
-  request: ChatRequest,
-  editMessage: MessageEditor,
-  sendNewMessage: NewMessageSender | null,
-  onGenericError: (formattedError: string) => Promise<void>,
-  options: StreamingOptions,
-): Promise<void> {
-  return _handleStream(
-    (onChunk, onDone, onError) =>
-      gaia.chatMention(request, onChunk, onDone, onError),
-    request,
-    gaia,
-    editMessage,
-    sendNewMessage,
-    null,
-    onGenericError,
-    options,
-  );
-}

@@ -25,7 +25,6 @@ import {
   BaseBotAdapter,
   type BotCommand,
   convertToTelegramMarkdown,
-  handleMentionChat,
   handleStreamingChat,
   type PlatformName,
   parseTextArgs,
@@ -168,7 +167,7 @@ export class TelegramAdapter extends BaseBotAdapter {
         return;
       }
 
-      await this.handleTelegramMention(ctx, userId, content);
+      await this.handleTelegramStreaming(ctx, userId, content);
     });
   }
 
@@ -348,138 +347,6 @@ export class TelegramAdapter extends BaseBotAdapter {
           try {
             await ctx.api.editMessageText(chatId, currentMessageId, errMsg);
           } catch (e) {
-            console.error("Telegram editMessageText error:", e);
-          }
-        },
-        STREAMING_DEFAULTS.telegram,
-      );
-    } finally {
-      clearTyping();
-    }
-  }
-
-  /**
-   * Handles group @mention messages with unauthenticated streaming.
-   *
-   * Uses `handleMentionChat` (guild-based rate limiting, no auth required)
-   * matching the pattern used by the Discord adapter for @mentions.
-   */
-  private async handleTelegramMention(
-    ctx: Context,
-    userId: string,
-    message: string,
-  ): Promise<void> {
-    const chatId = ctx.chat?.id;
-    if (!chatId) return;
-
-    const loading = await ctx.reply("Thinking...");
-    let currentMessageId = loading.message_id;
-
-    let typingInterval: ReturnType<typeof setInterval> | null = setInterval(
-      async () => {
-        try {
-          await ctx.api.sendChatAction(chatId, "typing");
-        } catch {}
-      },
-      5000,
-    );
-    try {
-      await ctx.api.sendChatAction(chatId, "typing");
-    } catch {}
-
-    const clearTyping = () => {
-      if (typingInterval) {
-        clearInterval(typingInterval);
-        typingInterval = null;
-      }
-    };
-
-    try {
-      await handleMentionChat(
-        this.gaia,
-        {
-          message,
-          platform: "telegram",
-          platformUserId: userId,
-          channelId: chatId.toString(),
-        },
-        async (text: string) => {
-          const converted = convertToTelegramMarkdown(text);
-          try {
-            await ctx.api.editMessageText(chatId, currentMessageId, converted, {
-              parse_mode: "Markdown",
-            });
-          } catch (e) {
-            if (
-              e instanceof Error &&
-              e.message.includes("message is not modified")
-            )
-              return;
-            if (
-              e instanceof Error &&
-              e.message.includes("can't parse entities")
-            ) {
-              try {
-                await ctx.api.editMessageText(chatId, currentMessageId, text);
-              } catch {}
-              return;
-            }
-            console.error("Telegram editMessageText error:", e);
-          }
-        },
-        async (text: string) => {
-          const converted = convertToTelegramMarkdown(text);
-          let newMessage: Message.TextMessage;
-          try {
-            newMessage = await ctx.reply(converted, {
-              parse_mode: "Markdown",
-            });
-          } catch {
-            newMessage = await ctx.reply(text);
-          }
-          currentMessageId = newMessage.message_id;
-          return async (updatedText: string) => {
-            const convertedUpdate = convertToTelegramMarkdown(updatedText);
-            try {
-              await ctx.api.editMessageText(
-                chatId,
-                newMessage.message_id,
-                convertedUpdate,
-                { parse_mode: "Markdown" },
-              );
-            } catch (e) {
-              if (
-                e instanceof Error &&
-                e.message.includes("message is not modified")
-              )
-                return;
-              if (
-                e instanceof Error &&
-                e.message.includes("can't parse entities")
-              ) {
-                try {
-                  await ctx.api.editMessageText(
-                    chatId,
-                    newMessage.message_id,
-                    updatedText,
-                  );
-                } catch {}
-                return;
-              }
-              console.error("Telegram editMessageText error:", e);
-            }
-          };
-        },
-        async (errMsg: string) => {
-          clearTyping();
-          try {
-            await ctx.api.editMessageText(chatId, currentMessageId, errMsg);
-          } catch (e) {
-            if (
-              e instanceof Error &&
-              e.message.includes("message is not modified")
-            )
-              return;
             console.error("Telegram editMessageText error:", e);
           }
         },

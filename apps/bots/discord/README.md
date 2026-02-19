@@ -2,6 +2,12 @@
 
 The official Discord bot for GAIA - your proactive personal AI assistant.
 
+## Add to Your Server
+
+**[➕ Add GAIA to Discord](https://discord.com/oauth2/authorize?client_id=1388905575399559370)**
+
+Or visit: https://heygaia.io/discord-bot
+
 ## Features
 
 - 🤖 Chat with GAIA using slash commands or mentions

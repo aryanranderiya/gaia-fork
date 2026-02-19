@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "almond",
   "name": "GAIA Documentation",
   "colors": {
     "primary": "#00bbff",
@@ -47,13 +47,13 @@
           },
 
           {
-            "group": "Bots & Messaging",
+            "group": "Messaging Platforms (Bots)",
             "pages": [
               "bots/overview",
+              "bots/commands",
               "bots/discord",
               "bots/slack",
-              "bots/telegram",
-              "bots/commands"
+              "bots/telegram"
             ]
           },
           {
@@ -337,16 +337,11 @@
     ]
   },
   "logo": {
-    "light": "/logo/logo.png",
-    "dark": "/logo/logo.png"
+    "dark": "/logo/text_white.webp",
+    "light": "/logo/text_black.webp"
   },
   "navbar": {
     "links": [
-      {
-        "label": "Discord",
-        "href": "https://discord.heygaia.io",
-        "icon": "discord"
-      },
       {
         "label": "GitHub",
         "href": "https://github.com/theexperiencecompany/gaia",

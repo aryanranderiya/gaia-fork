@@ -1,4 +1,5 @@
 from typing import Callable, Optional
+from urllib.parse import urlencode
 
 import httpx
 from app.config.loggers import app_logger as logger
@@ -86,7 +87,7 @@ router = APIRouter()
 def _redirect_url(base: str, path: str, **params: str) -> str:
     """Build a redirect URL, correctly appending query params to a path that may already have them."""
     separator = "&" if "?" in path else "?"
-    query = "&".join(f"{k}={v}" for k, v in params.items())
+    query = urlencode(params)
     return f"{base}{path}{separator}{query}"
 
 

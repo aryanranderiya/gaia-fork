@@ -5,18 +5,31 @@ Pydantic models for bot chat, sessions, and related operations.
 
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.services.platform_link_service import Platform
 
 
 class BotChatRequest(BaseModel):
     """Request model for bot chat messages."""
 
-    message: str = Field(..., description="User's message text")
+    message: str = Field(
+        ..., description="User's message text", min_length=1, max_length=32768
+    )
     platform: str = Field(..., description="Platform name (discord, slack, etc.)")
-    platform_user_id: str = Field(..., description="User's ID on the platform")
+    platform_user_id: str = Field(
+        ..., description="User's ID on the platform", min_length=1
+    )
     channel_id: Optional[str] = Field(
         None, description="Channel/group ID (None for DM)"
     )
+
+    @field_validator("platform")
+    @classmethod
+    def validate_platform(cls, v: str) -> str:
+        if not Platform.is_valid(v):
+            raise ValueError(f"Invalid platform '{v}'")
+        return v
 
 
 class BotAuthStatusResponse(BaseModel):
@@ -31,11 +44,20 @@ class CreateLinkTokenRequest(BaseModel):
     """Request model for creating a secure platform link token."""
 
     platform: str = Field(..., description="Platform name (discord, telegram, etc.)")
-    platform_user_id: str = Field(..., description="User's ID on the platform")
+    platform_user_id: str = Field(
+        ..., description="User's ID on the platform", min_length=1
+    )
     username: Optional[str] = Field(None, description="Username on the platform")
     display_name: Optional[str] = Field(
         None, description="Display name on the platform"
     )
+
+    @field_validator("platform")
+    @classmethod
+    def validate_platform(cls, v: str) -> str:
+        if not Platform.is_valid(v):
+            raise ValueError(f"Invalid platform '{v}'")
+        return v
 
 
 class CreateLinkTokenResponse(BaseModel):
@@ -75,10 +97,19 @@ class ResetSessionRequest(BaseModel):
     """Request model for resetting a bot session (starting a new conversation)."""
 
     platform: str = Field(..., description="Platform name (discord, slack, etc.)")
-    platform_user_id: str = Field(..., description="User's ID on the platform")
+    platform_user_id: str = Field(
+        ..., description="User's ID on the platform", min_length=1
+    )
     channel_id: Optional[str] = Field(
         None, description="Channel/group ID (None for DM)"
     )
+
+    @field_validator("platform")
+    @classmethod
+    def validate_platform(cls, v: str) -> str:
+        if not Platform.is_valid(v):
+            raise ValueError(f"Invalid platform '{v}'")
+        return v
 
 
 class IntegrationInfo(BaseModel):

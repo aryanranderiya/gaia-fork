@@ -307,110 +307,129 @@ export class GaiaClient {
 
         stream.on("data", async (rawChunk: Buffer) => {
           if (finished) return;
-          resetInactivityTimer(resolve);
-          buffer += rawChunk.toString();
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
+          try {
+            resetInactivityTimer(resolve);
+            buffer += rawChunk.toString();
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
 
-          for (const line of lines) {
-            if (finished) return;
-            const trimmed = line.trim();
+            for (const line of lines) {
+              if (finished) return;
+              const trimmed = line.trim();
 
-            if (!trimmed || !trimmed.startsWith("data: ")) continue;
-            const raw = trimmed.slice(6);
-            if (raw === "[DONE]") continue;
+              if (!trimmed || !trimmed.startsWith("data: ")) continue;
+              const raw = trimmed.slice(6);
+              if (raw === "[DONE]") continue;
 
-            try {
-              const data = JSON.parse(raw);
-              if (data.keepalive) {
-                // Server keepalive ping to keep the connection alive
-                receivedKeepalive = true;
-                continue;
+              try {
+                const data = JSON.parse(raw);
+                if (data.keepalive) {
+                  // Server keepalive ping to keep the connection alive
+                  receivedKeepalive = true;
+                  continue;
+                }
+                if (data.error === "not_authenticated") {
+                  finished = true;
+                  if (inactivityTimer) clearTimeout(inactivityTimer);
+                  await onError(new Error("not_authenticated"));
+                  resolve();
+                  return;
+                }
+                if (data.error) {
+                  finished = true;
+                  if (inactivityTimer) clearTimeout(inactivityTimer);
+                  await onError(new Error(data.error));
+                  resolve();
+                  return;
+                }
+                if (data.session_token) {
+                  const sessionKey = this.getSessionKey(ctx);
+                  this.sessionTokens.set(sessionKey, {
+                    token: data.session_token,
+                    expiresAt: Date.now() + TOKEN_TTL_MS,
+                  });
+                }
+                if (data.text) {
+                  fullText += data.text;
+                  onChunk(data.text);
+                }
+                if (data.done) {
+                  finished = true;
+                  if (inactivityTimer) clearTimeout(inactivityTimer);
+                  conversationId = data.conversation_id || "";
+                  await onDone(fullText, conversationId);
+                  resolve();
+                  return;
+                }
+              } catch (parseErr) {
+                if (!(parseErr instanceof SyntaxError)) {
+                  finished = true;
+                  if (inactivityTimer) clearTimeout(inactivityTimer);
+                  await onError(
+                    parseErr instanceof Error
+                      ? parseErr
+                      : new Error("Stream processing failed"),
+                  );
+                  resolve();
+                  return;
+                }
               }
-              if (data.error === "not_authenticated") {
-                finished = true;
-                if (inactivityTimer) clearTimeout(inactivityTimer);
-                await onError(new Error("not_authenticated"));
-                resolve();
-                return;
-              }
-              if (data.error) {
-                finished = true;
-                if (inactivityTimer) clearTimeout(inactivityTimer);
-                await onError(new Error(data.error));
-                resolve();
-                return;
-              }
-              if (data.session_token) {
-                const sessionKey = this.getSessionKey(ctx);
-                this.sessionTokens.set(sessionKey, {
-                  token: data.session_token,
-                  expiresAt: Date.now() + TOKEN_TTL_MS,
-                });
-              }
-              if (data.text) {
-                fullText += data.text;
-                onChunk(data.text);
-              }
-              if (data.done) {
-                finished = true;
-                if (inactivityTimer) clearTimeout(inactivityTimer);
-                conversationId = data.conversation_id || "";
-                await onDone(fullText, conversationId);
-                resolve();
-                return;
-              }
-            } catch (parseErr) {
-              if (!(parseErr instanceof SyntaxError)) {
-                finished = true;
-                if (inactivityTimer) clearTimeout(inactivityTimer);
-                await onError(
-                  parseErr instanceof Error
-                    ? parseErr
-                    : new Error("Stream processing failed"),
-                );
-                resolve();
-                return;
-              }
+            }
+          } catch {
+            // Prevent unhandled rejection if a callback throws
+            if (!finished) {
+              finished = true;
+              if (inactivityTimer) clearTimeout(inactivityTimer);
+              resolve();
             }
           }
         });
 
         stream.on("end", async () => {
           if (inactivityTimer) clearTimeout(inactivityTimer);
-          if (!finished) {
-            finished = true;
-            if (fullText) {
-              // Got partial response - return what we have
-              await onDone(fullText, conversationId);
-            } else if (receivedKeepalive) {
-              // Received keepalive but no content - server is working but slow
-              await onError(
-                new Error("The AI is processing your request but hasn't responded yet. Please try again."),
-              );
-            } else {
-              // No keepalive, no content - connection issue
-              await onError(
-                new Error("Connection lost before receiving a response. Please try again."),
-              );
+          try {
+            if (!finished) {
+              finished = true;
+              if (fullText) {
+                // Got partial response - return what we have
+                await onDone(fullText, conversationId);
+              } else if (receivedKeepalive) {
+                // Received keepalive but no content - server is working but slow
+                await onError(
+                  new Error("The AI is processing your request but hasn't responded yet. Please try again."),
+                );
+              } else {
+                // No keepalive, no content - connection issue
+                await onError(
+                  new Error("Connection lost before receiving a response. Please try again."),
+                );
+              }
             }
+          } catch {
+            // Prevent unhandled rejection if a callback throws
+          } finally {
+            resolve();
           }
-          resolve();
         });
 
         stream.on("error", async (err: Error) => {
           if (inactivityTimer) clearTimeout(inactivityTimer);
-          if (!finished) {
-            finished = true;
-            // Provide more helpful error messages
-            const errorMsg = err.message.includes("ECONNRESET") || err.message.includes("socket hang up")
-              ? "Connection interrupted. Please try again."
-              : err.message.includes("timeout")
-              ? "Request timed out. The server may be busy - please try again."
-              : err.message;
-            await onError(new Error(errorMsg));
+          try {
+            if (!finished) {
+              finished = true;
+              // Provide more helpful error messages
+              const errorMsg = err.message.includes("ECONNRESET") || err.message.includes("socket hang up")
+                ? "Connection interrupted. Please try again."
+                : err.message.includes("timeout")
+                ? "Request timed out. The server may be busy - please try again."
+                : err.message;
+              await onError(new Error(errorMsg));
+            }
+          } catch {
+            // Prevent unhandled rejection if callback throws
+          } finally {
+            resolve();
           }
-          resolve();
         });
       });
     } catch (error: unknown) {
@@ -429,8 +448,8 @@ export class GaiaClient {
         );
       }
 
-      const message = error instanceof Error ? error.message : "Unknown error";
-      await onError(new Error(message));
+      // Re-throw so _chatStreamWithRetry can classify the error and retry if appropriate
+      throw error;
     }
 
     return conversationId;

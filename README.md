@@ -73,7 +73,7 @@ Use GAIA directly inside the tools you're already in!
 
 |&emsp;&emsp;&emsp;&emsp; | Platform | How to Use |
 |---|---|---|
-| <img src="/apps/web/public/images/icons/macos/discord.webp" alt="Discord" width="50" height="50"/>| **Discord** | Invite the bot to your server, then use `/gaia` slash commands or `@mention` GAIA in any channel |
+| <img src="/apps/web/public/images/icons/macos/discord.webp" alt="Discord" width="50" height="50"/>| **Discord** | [Add the bot](https://heygaia.io/discord-bot) or [join the server](https://discord.heygaia.io) — use `/gaia` or `@mention` GAIA in any channel |
 | <img src="/apps/web/public/images/icons/macos/slack.webp"  alt="Slack" width="50" height="50" /> | **Slack** | Install the Slack app in your workspace and use `/gaia` and other slash commands |
 |<img src="/apps/web/public/images/icons/macos/telegram.webp" alt="Telegram" width="50" height="50" />|  **Telegram** | Start a chat with the GAIA bot and send messages or use `/gaia` commands |
 <!-- |<img src="/apps/web/public/images/icons/macos/whatsapp.webp" alt="WhatsApp" width="50" height="50" />|  **WhatsApp** | Start a chat with the GAIA bot and send messages or use `/gaia` commands | -->

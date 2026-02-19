@@ -175,8 +175,8 @@ description = "Run ALL bots (Discord, Telegram, Slack, WhatsApp) in parallel"
 run = "nx run-many -t dev --projects=bot-discord,bot-telegram,bot-slack,bot-whatsapp --parallel=4"
 
 [tasks."dev:full"]
-description = "Run API + web + arq worker + voice agent + all bots in parallel"
-run = "nx run docker:docker:up && nx run-many -t dev,worker --projects=api,web,voice-agent,bot-discord,bot-telegram,bot-slack,bot-whatsapp --parallel=8"
+description = "Run API + web + arq worker + voice agent + all bots + docs in parallel"
+run = "nx run docker:docker:up && nx run-many -t dev,worker --projects=api,web,docs,voice-agent,bot-discord,bot-telegram,bot-slack,bot-whatsapp --parallel=9"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BUILD COMMANDS

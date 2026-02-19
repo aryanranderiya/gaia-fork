@@ -27,7 +27,7 @@ from app.services.chat_service import run_chat_stream_background
 from app.services.integrations.marketplace import get_integration_details
 from app.services.integrations.user_integrations import get_user_connected_integrations
 from app.services.model_service import get_user_selected_model
-from app.services.platform_link_service import PlatformLinkService
+from app.services.platform_link_service import Platform, PlatformLinkService
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
@@ -324,7 +324,7 @@ async def bot_chat_mention(request: Request, body: BotChatRequest) -> StreamingR
                 pass
         except Exception as e:
             logger.error(f"Bot mention stream error: {e}", exc_info=True)
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield f"data: {json.dumps({'error': 'An internal error occurred'})}\n\n"
 
         # Persist messages for authenticated users after stream completes
         if not is_anonymous and complete_message and user_id:
@@ -402,6 +402,8 @@ async def check_auth_status(
     platform_user_id: str,
 ) -> BotAuthStatusResponse:
     await require_bot_api_key(request)
+    if not Platform.is_valid(platform):
+        raise HTTPException(status_code=400, detail="Invalid platform")
     user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
     return BotAuthStatusResponse(
         authenticated=user is not None,
@@ -423,6 +425,8 @@ async def get_settings(
     platform_user_id: str,
 ) -> BotSettingsResponse:
     await require_bot_api_key(request)
+    if not Platform.is_valid(platform):
+        raise HTTPException(status_code=400, detail="Invalid platform")
     user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
 
     if not user:
@@ -500,6 +504,9 @@ async def unlink_account(request: Request) -> dict:
 
     if not platform or not platform_user_id:
         raise HTTPException(status_code=400, detail="Missing platform headers")
+
+    if not Platform.is_valid(platform):
+        raise HTTPException(status_code=400, detail="Invalid platform")
 
     user = await PlatformLinkService.get_user_by_platform_id(platform, platform_user_id)
     if not user:
