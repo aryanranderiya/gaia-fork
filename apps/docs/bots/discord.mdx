@@ -36,51 +36,13 @@ Or simply mention the bot in any channel:
 
 You can also DM the bot directly — no mention needed.
 
-### Available Commands
-
-#### Chat
-
-| Command | Description |
-|---|---|
-| `/gaia <message>` | Send a message to GAIA |
-| `@GAIA <message>` | Mention the bot in any channel |
-
-#### Todos
-
-| Command | Description |
-|---|---|
-| `/todo list` | Show all active todos |
-| `/todo add <title> [priority] [description]` | Create a todo (priority: low / medium / high) |
-| `/todo complete <id>` | Mark a todo as done |
-| `/todo delete <id>` | Delete a todo |
-
-#### Workflows
-
-| Command | Description |
-|---|---|
-| `/workflow list` | List all your workflows |
-| `/workflow get <id>` | View workflow details |
-| `/workflow execute <id>` | Trigger a workflow manually |
-| `/workflow create <name> <description>` | Create a new workflow |
-
-#### Conversations & Utilities
-
-| Command | Description |
-|---|---|
-| `/conversations [page]` | Browse your GAIA conversation history |
-| `/new` | Start a fresh conversation |
-| `/stop` | Stop the current response and start fresh |
-| `/status` | Check if the bot and API are online |
-| `/settings` | View your account settings |
-| `/help` | Show all available commands |
-| `/unlink` | Disconnect your account from GAIA |
+For the full list of available commands, see the [Commands Reference](/bots/commands).
 
 ### Notes
 
 - All slash command responses are **ephemeral** (only visible to you) by default
 - Responses are streamed — a typing indicator appears while GAIA is thinking
 - Long responses are automatically truncated to Discord's 2000 character limit
-- `/workflow create` is Discord-only; other platforms support list/get/execute
 
 ---
 
@@ -111,7 +73,31 @@ This section is for developers who want to self-host the GAIA Discord bot.
 3. Select bot permissions: **Send Messages**, **Use Slash Commands**, **Read Message History**
 4. Copy the generated URL and use it to invite the bot to your server
 
-### Step 3: Configure Environment Variables
+### Step 3: Set Up OAuth for Account Linking
+
+This enables users to link their Discord account from the GAIA web app via OAuth instead of the `/auth` bot command.
+
+1. In your Discord application, go to **OAuth2**
+2. Under **Redirects**, add:
+   ```
+   http://localhost:8000/api/v1/platform-auth/discord/callback
+   https://your-api-domain.com/api/v1/platform-auth/discord/callback
+   ```
+3. Copy your **Client ID** (shown at the top of the OAuth2 page)
+4. Click **Reset Secret** to generate a **Client Secret** and copy it
+
+Add to `apps/api/.env`:
+
+```bash
+DISCORD_OAUTH_CLIENT_ID=your_client_id
+DISCORD_OAUTH_CLIENT_SECRET=your_client_secret
+```
+
+<Note>
+  The Client ID here is the same as your `DISCORD_CLIENT_ID` used by the bot — it's the application ID, not a separate credential.
+</Note>
+
+### Step 4: Configure Environment Variables
 
 Create a `.env` file in `apps/bots/discord/`:
 
@@ -124,7 +110,7 @@ GAIA_BOT_API_KEY=your_secure_bot_api_key
 
 `GAIA_BOT_API_KEY` must match the value configured in your GAIA API.
 
-### Step 4: Deploy Slash Commands
+### Step 5: Deploy Slash Commands
 
 Register the bot's slash commands with Discord:
 
@@ -134,7 +120,7 @@ nx run bot-discord:deploy-commands
 
 This only needs to be run once (or whenever commands change).
 
-### Step 5: Start the Bot
+### Step 6: Start the Bot
 
 ```bash
 # Development (hot reload)

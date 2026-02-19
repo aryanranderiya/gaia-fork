@@ -1,7 +1,11 @@
 """Platform Link Service
 
 Centralized service for managing platform account linking (Discord, Slack, Telegram, WhatsApp).
-Consolidates duplicate logic from bot.py, bot_auth.py, and platform_auth.py.
+
+Storage contract: platform_links.{platform} is always a dict with at minimum an "id" key
+containing the platform user ID as a non-empty plain string. Optional keys: "username",
+"display_name". Any document storing a non-dict value (legacy string/int) is treated as
+unlinked.
 """
 
 from datetime import datetime, timezone
@@ -43,23 +47,25 @@ class PlatformLinkService:
         platform: str, platform_user_id: str
     ) -> Optional[dict]:
         """
-        Find GAIA user by platform account ID.
+        Find a GAIA user by their platform account ID.
+
+        Queries by the nested .id field (new dict format only).
 
         Args:
-            platform: Platform name (discord, slack, etc.)
-            platform_user_id: User's ID on the platform
+            platform: Platform name (discord, slack, telegram, whatsapp)
+            platform_user_id: User's ID on the platform (plain string)
 
         Returns:
             User document if found, None otherwise
         """
         return await users_collection.find_one(
-            {f"platform_links.{platform}": platform_user_id}
+            {f"platform_links.{platform}.id": platform_user_id}
         )
 
     @staticmethod
     async def is_authenticated(platform: str, platform_user_id: str) -> bool:
         """
-        Check if platform user is linked to a GAIA account.
+        Check if a platform user is linked to a GAIA account.
 
         Args:
             platform: Platform name
@@ -79,56 +85,71 @@ class PlatformLinkService:
         platform: str,
         platform_user_id: str,
         use_object_id: bool = False,
+        profile: Optional[dict] = None,
     ) -> dict:
         """
         Link a platform account to a GAIA user.
+
+        Stores platform_user_id as a dict: {"id": "...", "username": "...", "display_name": "..."}.
+        The "username" and "display_name" keys are optional.
 
         Args:
             user_id: GAIA user ID (string representation of MongoDB _id)
             platform: Platform name
             platform_user_id: User's ID on the platform
             use_object_id: Deprecated - no longer used
+            profile: Optional dict with "username" and/or "display_name" keys
 
         Returns:
             Result dict with status and details
 
         Raises:
-            ValueError: If platform account already linked to different user
-            ValueError: If user already has different platform account linked
+            ValueError: If platform_user_id is empty
+            ValueError: If platform account already linked to a different user
+            ValueError: If user already has a different platform account linked
+            ValueError: If user not found
         """
-        # Check if this platform ID is already linked to another user
-        existing = await users_collection.find_one(
-            {f"platform_links.{platform}": platform_user_id}
-        )
+        platform_user_id = str(platform_user_id).strip()
+        if not platform_user_id:
+            raise ValueError("platform_user_id must not be empty")
 
-        # user_id is always the string representation of MongoDB _id
-        # We always need to convert it to ObjectId for querying
-        query_field = "_id"
         query_value = ObjectId(user_id)
 
-        if existing:
-            existing_id = str(existing.get("_id"))
-            if existing_id != user_id:
-                raise ValueError(
-                    f"This {platform} account is already linked to another GAIA user"
-                )
+        # Reject if this platform ID is already linked to a different user
+        existing = await users_collection.find_one(
+            {f"platform_links.{platform}.id": platform_user_id}
+        )
+        if existing and str(existing.get("_id")) != user_id:
+            raise ValueError(
+                f"This {platform} account is already linked to another GAIA user"
+            )
 
-        # Check if user already has a different platform ID linked
-        user = await users_collection.find_one({query_field: query_value})
+        # Reject if the user already has a different platform ID stored
+        user = await users_collection.find_one({"_id": query_value})
         if user:
             current_link = user.get("platform_links", {}).get(platform)
-            if current_link and current_link != platform_user_id:
-                raise ValueError(
-                    f"Your account already has a different {platform} account linked"
-                )
+            if isinstance(current_link, dict):
+                current_id = current_link.get("id", "")
+                if current_id and current_id != platform_user_id:
+                    raise ValueError(
+                        f"Your account already has a different {platform} account linked"
+                    )
 
-        # Link the account
         now = datetime.now(timezone.utc).isoformat()
+
+        # Build the stored dict value
+        link_value: dict = {"id": platform_user_id}
+        if profile:
+            if profile.get("username"):
+                link_value["username"] = str(profile["username"])
+            if profile.get("display_name"):
+                link_value["display_name"] = str(profile["display_name"])
+
         result = await users_collection.update_one(
-            {query_field: query_value},
+            {"_id": query_value},
             {
                 "$set": {
-                    f"platform_links.{platform}": platform_user_id,
+                    f"platform_links.{platform}": link_value,
                     f"platform_links_connected_at.{platform}": now,
                 }
             },
@@ -162,12 +183,8 @@ class PlatformLinkService:
         Raises:
             ValueError: If user not found
         """
-        # user_id is always the string representation of MongoDB _id
-        query_field = "_id"
-        query_value = ObjectId(user_id)
-
         result = await users_collection.update_one(
-            {query_field: query_value},
+            {"_id": ObjectId(user_id)},
             {
                 "$unset": {
                     f"platform_links.{platform}": "",
@@ -186,11 +203,14 @@ class PlatformLinkService:
         """
         Get all linked platforms for a user.
 
+        Only returns platforms where the stored value is a dict with a non-empty "id" key.
+        Legacy string/int values are skipped.
+
         Args:
             user_id: GAIA user ID (string representation of MongoDB _id)
 
         Returns:
-            Dict mapping platform names to connection details
+            Dict mapping platform name to connection details
         """
         user = await users_collection.find_one({"_id": ObjectId(user_id)})
 
@@ -202,10 +222,13 @@ class PlatformLinkService:
 
         result = {}
         for platform in Platform.values():
-            if platform_links.get(platform):
+            stored = platform_links.get(platform)
+            if isinstance(stored, dict) and stored.get("id"):
                 result[platform] = {
                     "platform": platform,
-                    "platformUserId": platform_links.get(platform),
+                    "platformUserId": stored["id"],
+                    "username": stored.get("username"),
+                    "displayName": stored.get("display_name"),
                     "connectedAt": connected_at.get(platform),
                 }
 

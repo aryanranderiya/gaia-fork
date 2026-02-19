@@ -83,9 +83,15 @@ async def link_platform(
     if not isinstance(user_id, str):
         raise ValueError("user_id must be a string")
 
+    profile: dict = {}
+    if token_data.get("username"):
+        profile["username"] = token_data["username"]
+    if token_data.get("display_name"):
+        profile["display_name"] = token_data["display_name"]
+
     try:
         result = await PlatformLinkService.link_account(
-            user_id, platform, platform_user_id
+            user_id, platform, platform_user_id, profile=profile or None
         )
         return LinkPlatformResponse(**result)
     except ValueError as e:
@@ -108,14 +114,24 @@ async def disconnect_platform(
     if not isinstance(user_id, str):
         raise ValueError("user_id must be a string")
 
+    # Read platform_user_id before unlinking so we can clear the bot auth cache
+    existing = await PlatformLinkService.get_linked_platforms(user_id)
+    platform_entry = existing.get(platform)
+    platform_user_id = platform_entry["platformUserId"] if platform_entry else None
+
     try:
         result = await PlatformLinkService.unlink_account(user_id, platform)
-        return DisconnectPlatformResponse(**result)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
 
+    if platform_user_id:
+        cache_key = f"bot_user:{platform}:{platform_user_id}"
+        await redis_cache.client.delete(cache_key)
 
-@router.post("/{platform}/connect", response_model=InitiatePlatformConnectResponse)
+    return DisconnectPlatformResponse(**result)
+
+
+@router.get("/{platform}/connect", response_model=InitiatePlatformConnectResponse)
 async def initiate_platform_connect(
     platform: str,
     current_user: Optional[dict] = Depends(get_current_user),
@@ -140,7 +156,7 @@ async def initiate_platform_connect(
     if platform == "discord" and settings.DISCORD_OAUTH_CLIENT_ID:
         state = await create_oauth_state(
             user_id=user_id,
-            redirect_path="/settings/linked-accounts",
+            redirect_path="/settings?section=linked-accounts",
             integration_id="discord",
         )
 
@@ -158,7 +174,7 @@ async def initiate_platform_connect(
     if platform == "slack" and settings.SLACK_OAUTH_CLIENT_ID:
         state = await create_oauth_state(
             user_id=user_id,
-            redirect_path="/settings/linked-accounts",
+            redirect_path="/settings?section=linked-accounts",
             integration_id="slack",
         )
 
@@ -166,7 +182,7 @@ async def initiate_platform_connect(
             f"https://slack.com/oauth/v2/authorize"
             f"?client_id={settings.SLACK_OAUTH_CLIENT_ID}"
             f"&redirect_uri={quote(settings.SLACK_OAUTH_REDIRECT_URI)}"
-            f"&scope=users:read"
+            f"&user_scope=identity.basic"
             f"&state={state}"
         )
         return InitiatePlatformConnectResponse(auth_url=auth_url, auth_type="oauth")
@@ -177,29 +193,7 @@ async def initiate_platform_connect(
         return InitiatePlatformConnectResponse(
             auth_url=None,
             auth_type="manual",
-            instructions=f"Open Telegram and message @{bot_username} with /start to link your account.",
+            instructions=f"Open Telegram and message @{bot_username} with /auth to link your account.",
         )
 
-    # Fallback: manual instructions for Discord/Slack without OAuth
-    if platform == "discord":
-        return InitiatePlatformConnectResponse(
-            auth_url=None,
-            auth_type="manual",
-            instructions="Add the GAIA bot to your Discord server and use /auth to link your account.",
-        )
-
-    if platform == "slack":
-        return InitiatePlatformConnectResponse(
-            auth_url=None,
-            auth_type="manual",
-            instructions="Add the GAIA app to your Slack workspace and use /auth to link your account.",
-        )
-
-    if platform == "whatsapp":
-        return InitiatePlatformConnectResponse(
-            auth_url=None,
-            auth_type="manual",
-            instructions="WhatsApp integration coming soon.",
-        )
-
-    raise HTTPException(status_code=501, detail=f"{platform} not yet implemented")
+    raise HTTPException(status_code=501, detail=f"{platform} OAuth not configured")

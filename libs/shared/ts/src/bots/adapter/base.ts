@@ -196,7 +196,7 @@ export abstract class BaseBotAdapter {
       return;
     }
 
-    const ctx = this.buildContext(target.userId, target.channelId);
+    const ctx = this.buildContext(target.userId, target.channelId, target.profile);
 
     try {
       await command.execute({
@@ -227,11 +227,16 @@ export abstract class BaseBotAdapter {
    * @param channelId - The channel/conversation ID (optional).
    * @returns A {@link CommandContext} with the adapter's platform set.
    */
-  protected buildContext(userId: string, channelId?: string): CommandContext {
+  protected buildContext(
+    userId: string,
+    channelId?: string,
+    profile?: { username?: string; displayName?: string },
+  ): CommandContext {
     return {
       platform: this.platform,
       platformUserId: userId,
       channelId,
+      profile,
     };
   }
 

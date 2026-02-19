@@ -20,7 +20,8 @@ import type { PlatformName, RichMessage } from "../types";
  * @returns The bold-formatted text.
  */
 function bold(text: string, platform: PlatformName): string {
-  return platform === "slack" ? `*${text}*` : `**${text}**`;
+  // Slack mrkdwn: *bold*, Telegram legacy Markdown: *bold*, Discord: **bold**
+  return platform === "discord" ? `**${text}**` : `*${text}*`;
 }
 
 /**

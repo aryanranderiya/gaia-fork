@@ -29,6 +29,7 @@ export const authCommand: BotCommand = {
       const { authUrl } = await gaia.createLinkToken(
         ctx.platform,
         ctx.platformUserId,
+        ctx.profile,
       );
       await target.sendEphemeral(
         "🔗 **Link your account to GAIA**\n\n" +

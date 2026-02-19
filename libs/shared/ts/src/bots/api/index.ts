@@ -790,6 +790,7 @@ export class GaiaClient {
   async createLinkToken(
     platform: string,
     platformUserId: string,
+    profile?: { username?: string; displayName?: string },
   ): Promise<{ token: string; authUrl: string }> {
     return this.request(async () => {
       const { data } = await this.client.post(
@@ -797,6 +798,8 @@ export class GaiaClient {
         {
           platform,
           platform_user_id: platformUserId,
+          ...(profile?.username && { username: profile.username }),
+          ...(profile?.displayName && { display_name: profile.displayName }),
         },
         {
           headers: {

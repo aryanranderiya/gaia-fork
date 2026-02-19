@@ -160,10 +160,10 @@ async def create_user_indexes():
             # Inactive email tracking index (sparse since not all users have this field)
             users_collection.create_index("last_inactive_email_sent", sparse=True),
             # Platform links indexes for bot authentication (sparse since only bot users have these)
-            users_collection.create_index("platform_links.discord", sparse=True),
-            users_collection.create_index("platform_links.slack", sparse=True),
-            users_collection.create_index("platform_links.telegram", sparse=True),
-            users_collection.create_index("platform_links.whatsapp", sparse=True),
+            users_collection.create_index("platform_links.discord.id", sparse=True),
+            users_collection.create_index("platform_links.slack.id", sparse=True),
+            users_collection.create_index("platform_links.telegram.id", sparse=True),
+            users_collection.create_index("platform_links.whatsapp.id", sparse=True),
         )
 
     except Exception as e:

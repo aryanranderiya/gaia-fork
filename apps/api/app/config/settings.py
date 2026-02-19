@@ -140,7 +140,8 @@ class CommonSettings(BaseAppSettings):
     @property
     def SLACK_OAUTH_REDIRECT_URI(self) -> str:
         """Slack OAuth callback URL."""
-        return f"{self.HOST}/api/v1/platform-auth/slack/callback"
+        # TODO: remove redirectmeto proxy once local HTTPS tunnel is set up
+        return "https://redirectmeto.com/http://localhost:8000/api/v1/platform-auth/slack/callback"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

@@ -24,6 +24,7 @@
 import {
   BaseBotAdapter,
   type BotCommand,
+  convertToTelegramMarkdown,
   handleMentionChat,
   handleStreamingChat,
   type PlatformName,
@@ -116,6 +117,21 @@ export class TelegramAdapter extends BaseBotAdapter {
           rawText || undefined,
         );
       });
+    }
+
+    // Register command list with Telegram so the "/" suggestion menu is populated.
+    // /start is added manually since it's a Telegram convention not in allCommands.
+    const telegramCommands = [
+      { command: "start", description: "Get started with GAIA" },
+      ...commands.map((cmd) => ({
+        command: cmd.name,
+        description: cmd.description,
+      })),
+    ];
+    try {
+      await this.bot.api.setMyCommands(telegramCommands);
+    } catch (e) {
+      console.error("Failed to register Telegram bot commands:", e);
     }
   }
 
@@ -238,8 +254,9 @@ export class TelegramAdapter extends BaseBotAdapter {
           channelId: chatId.toString(),
         },
         async (text: string) => {
+          const converted = convertToTelegramMarkdown(text);
           try {
-            await ctx.api.editMessageText(chatId, currentMessageId, text, {
+            await ctx.api.editMessageText(chatId, currentMessageId, converted, {
               parse_mode: "Markdown",
             });
           } catch (e) {
@@ -263,9 +280,10 @@ export class TelegramAdapter extends BaseBotAdapter {
           }
         },
         async (text: string) => {
+          const converted = convertToTelegramMarkdown(text);
           let newMessage: Message.TextMessage;
           try {
-            newMessage = await ctx.reply(text, {
+            newMessage = await ctx.reply(converted, {
               parse_mode: "Markdown",
             });
           } catch {
@@ -274,11 +292,12 @@ export class TelegramAdapter extends BaseBotAdapter {
           }
           currentMessageId = newMessage.message_id;
           return async (updatedText: string) => {
+            const convertedUpdate = convertToTelegramMarkdown(updatedText);
             try {
               await ctx.api.editMessageText(
                 chatId,
                 newMessage.message_id,
-                updatedText,
+                convertedUpdate,
                 { parse_mode: "Markdown" },
               );
             } catch (e) {
@@ -385,8 +404,9 @@ export class TelegramAdapter extends BaseBotAdapter {
           channelId: chatId.toString(),
         },
         async (text: string) => {
+          const converted = convertToTelegramMarkdown(text);
           try {
-            await ctx.api.editMessageText(chatId, currentMessageId, text, {
+            await ctx.api.editMessageText(chatId, currentMessageId, converted, {
               parse_mode: "Markdown",
             });
           } catch (e) {
@@ -408,9 +428,10 @@ export class TelegramAdapter extends BaseBotAdapter {
           }
         },
         async (text: string) => {
+          const converted = convertToTelegramMarkdown(text);
           let newMessage: Message.TextMessage;
           try {
-            newMessage = await ctx.reply(text, {
+            newMessage = await ctx.reply(converted, {
               parse_mode: "Markdown",
             });
           } catch {
@@ -418,11 +439,12 @@ export class TelegramAdapter extends BaseBotAdapter {
           }
           currentMessageId = newMessage.message_id;
           return async (updatedText: string) => {
+            const convertedUpdate = convertToTelegramMarkdown(updatedText);
             try {
               await ctx.api.editMessageText(
                 chatId,
                 newMessage.message_id,
-                updatedText,
+                convertedUpdate,
                 { parse_mode: "Markdown" },
               );
             } catch (e) {
@@ -486,21 +508,45 @@ export class TelegramAdapter extends BaseBotAdapter {
     const api = ctx.api;
     const isGroup = ctx.chat?.type !== "private";
 
+    const displayName =
+      [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ") ||
+      undefined;
+    const profile =
+      ctx.from?.username || displayName
+        ? { username: ctx.from?.username, displayName }
+        : undefined;
+
     return {
       platform: "telegram",
       userId,
       channelId: chatId?.toString(),
+      profile,
 
       send: async (text: string): Promise<SentMessage> => {
         if (!chatId) throw new Error("No chat ID");
-        const msg = await api.sendMessage(chatId, text);
+        const converted = convertToTelegramMarkdown(text);
+        let msg: { message_id: number };
+        try {
+          msg = await api.sendMessage(chatId, converted, {
+            parse_mode: "Markdown",
+          });
+        } catch {
+          msg = await api.sendMessage(chatId, text);
+        }
         return {
           id: msg.message_id.toString(),
           edit: async (t: string) => {
+            const c = convertToTelegramMarkdown(t);
             try {
-              await api.editMessageText(chatId, msg.message_id, t);
-            } catch (e) {
-              console.error("Telegram editMessageText error:", e);
+              await api.editMessageText(chatId, msg.message_id, c, {
+                parse_mode: "Markdown",
+              });
+            } catch {
+              try {
+                await api.editMessageText(chatId, msg.message_id, t);
+              } catch (e) {
+                console.error("Telegram editMessageText error:", e);
+              }
             }
           },
         };
@@ -510,17 +556,32 @@ export class TelegramAdapter extends BaseBotAdapter {
         if (!chatId) throw new Error("No chat ID");
         // In groups, DM the user for privacy; in private chats, send normally
         const targetChat = isGroup ? Number(userId) : chatId;
-        const msg = await api.sendMessage(targetChat, text);
+        const converted = convertToTelegramMarkdown(text);
+        let msg: { message_id: number };
+        try {
+          msg = await api.sendMessage(targetChat, converted, {
+            parse_mode: "Markdown",
+          });
+        } catch {
+          msg = await api.sendMessage(targetChat, text);
+        }
         if (isGroup) {
           await api.sendMessage(chatId, "I sent you a DM with the details.");
         }
         return {
           id: msg.message_id.toString(),
           edit: async (t: string) => {
+            const c = convertToTelegramMarkdown(t);
             try {
-              await api.editMessageText(targetChat, msg.message_id, t);
-            } catch (e) {
-              console.error("Telegram editMessageText error:", e);
+              await api.editMessageText(targetChat, msg.message_id, c, {
+                parse_mode: "Markdown",
+              });
+            } catch {
+              try {
+                await api.editMessageText(targetChat, msg.message_id, t);
+              } catch (e) {
+                console.error("Telegram editMessageText error:", e);
+              }
             }
           },
         };

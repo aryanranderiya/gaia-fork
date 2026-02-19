@@ -23,6 +23,7 @@
 import {
   BaseBotAdapter,
   type BotCommand,
+  convertToSlackMrkdwn,
   handleStreamingChat,
   type PlatformName,
   parseTextArgs,
@@ -137,6 +138,7 @@ export class SlackAdapter extends BaseBotAdapter {
             channelId,
             client,
             respond,
+            command.user_name,
           );
 
           // Parse text args for subcommand-style commands
@@ -275,13 +277,13 @@ export class SlackAdapter extends BaseBotAdapter {
         await client.chat.update({
           channel: channelId,
           ts: currentTs,
-          text,
+          text: convertToSlackMrkdwn(text),
         });
       },
       async (text: string) => {
         const newMessage = await client.chat.postMessage({
           channel: channelId,
-          text,
+          text: convertToSlackMrkdwn(text),
         });
         if ((newMessage as { ts?: string }).ts) {
           currentTs = (newMessage as { ts: string }).ts;
@@ -290,7 +292,7 @@ export class SlackAdapter extends BaseBotAdapter {
           await client.chat.update({
             channel: channelId,
             ts: currentTs,
-            text: updatedText,
+            text: convertToSlackMrkdwn(updatedText),
           });
         };
       },
@@ -339,16 +341,18 @@ export class SlackAdapter extends BaseBotAdapter {
     channelId: string,
     client: SlackWebClient,
     respond: SlackRespondFn,
+    userName?: string,
   ): RichMessageTarget {
     return {
       platform: "slack",
       userId,
       channelId,
+      profile: userName ? { username: userName } : undefined,
 
       send: async (text: string): Promise<SentMessage> => {
         const result = await client.chat.postMessage({
           channel: channelId,
-          text,
+          text: convertToSlackMrkdwn(text),
         });
         const msgTs = (result as { ts?: string }).ts || "";
         return {
@@ -357,14 +361,17 @@ export class SlackAdapter extends BaseBotAdapter {
             await client.chat.update({
               channel: channelId,
               ts: msgTs,
-              text: t,
+              text: convertToSlackMrkdwn(t),
             });
           },
         };
       },
 
       sendEphemeral: async (text: string): Promise<SentMessage> => {
-        await respond({ text, response_type: "ephemeral" });
+        await respond({
+          text: convertToSlackMrkdwn(text),
+          response_type: "ephemeral",
+        });
         return {
           id: "ephemeral",
           edit: async (_t: string) => {

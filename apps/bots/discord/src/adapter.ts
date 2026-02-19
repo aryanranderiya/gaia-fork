@@ -433,6 +433,10 @@ export class DiscordAdapter extends BaseBotAdapter {
       platform: "discord",
       userId: interaction.user.id,
       channelId: interaction.channelId,
+      profile: {
+        username: interaction.user.username,
+        displayName: interaction.user.globalName ?? interaction.user.username,
+      },
 
       send: async (text: string): Promise<SentMessage> => {
         await deferIfNeeded();

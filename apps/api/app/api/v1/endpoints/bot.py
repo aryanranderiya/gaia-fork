@@ -63,13 +63,16 @@ async def create_link_token(
     redis_client = redis_cache.client
     token_key = f"{PLATFORM_LINK_TOKEN_PREFIX}:{token}"
 
-    await redis_client.hset(
-        token_key,
-        mapping={
-            "platform": body.platform,
-            "platform_user_id": body.platform_user_id,
-        },
-    )
+    mapping: dict = {
+        "platform": body.platform,
+        "platform_user_id": body.platform_user_id,
+    }
+    if body.username:
+        mapping["username"] = body.username
+    if body.display_name:
+        mapping["display_name"] = body.display_name
+
+    await redis_client.hset(token_key, mapping=mapping)
     await redis_client.expire(token_key, PLATFORM_LINK_TOKEN_TTL)
 
     auth_url = f"{settings.FRONTEND_URL}/auth/link-platform?platform={body.platform}&token={token}"
@@ -502,7 +505,10 @@ async def unlink_account(request: Request) -> dict:
     if not user:
         raise HTTPException(status_code=404, detail="Account not linked")
 
-    user_id = user.get("user_id") or str(user.get("_id", ""))
+    user_id = str(user["_id"])
     await PlatformLinkService.unlink_account(user_id, platform)
+
+    cache_key = f"bot_user:{platform}:{platform_user_id}"
+    await redis_cache.client.delete(cache_key)
 
     return {"success": True}

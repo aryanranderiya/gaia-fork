@@ -11,7 +11,9 @@ import { apiService } from "@/lib/api";
 
 interface PlatformLink {
   platform: "discord" | "slack" | "telegram" | "whatsapp";
-  platformUserId: string | null;
+  platformUserId: string;
+  username?: string;
+  displayName?: string;
   connectedAt?: string;
 }
 
@@ -90,11 +92,11 @@ export default function LinkedAccountsSettings() {
     try {
       setConnectingPlatform(platformId);
 
-      const data = await apiService.post<{
+      const data = await apiService.get<{
         auth_url?: string;
         instructions?: string;
         auth_type: string;
-      }>(`/platform-links/${platformId}/connect`, {}, { silent: true });
+      }>(`/platform-links/${platformId}/connect`, { silent: true });
 
       if (data.auth_url) {
         const width = 600;
@@ -115,8 +117,10 @@ export default function LinkedAccountsSettings() {
             setConnectingPlatform(null);
           }
         }, 500);
-      } else if (data.instructions) {
+      } else if (data.instructions && platformId === "telegram") {
         toast.info(data.instructions, { duration: 8000 });
+        setConnectingPlatform(null);
+      } else {
         setConnectingPlatform(null);
       }
     } catch {
@@ -201,6 +205,15 @@ export default function LinkedAccountsSettings() {
                         ? platform.connectedDescription
                         : platform.description}
                     </p>
+                    {isConnected &&
+                      (platformLinks[platform.id]?.displayName ||
+                        platformLinks[platform.id]?.username) && (
+                        <p className="mt-0.5 text-xs text-zinc-600">
+                          {platformLinks[platform.id]?.displayName
+                            ? `${platformLinks[platform.id]?.displayName}${platformLinks[platform.id]?.username ? ` (@${platformLinks[platform.id]?.username})` : ""}`
+                            : `@${platformLinks[platform.id]?.username}`}
+                        </p>
+                      )}
                   </div>
                 </div>
 

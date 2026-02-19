@@ -90,6 +90,76 @@ export function formatConversationList(
   return conversations.map((c) => formatConversation(c, baseUrl)).join("\n\n");
 }
 
+// ---------------------------------------------------------------------------
+// Markdown conversion utilities
+// ---------------------------------------------------------------------------
+
+/**
+ * Applies a text transformation only to segments outside fenced code blocks.
+ * Preserves ``` ... ``` blocks unchanged so code is never mangled.
+ */
+function applyOutsideCodeBlocks(
+  text: string,
+  transform: (segment: string) => string,
+): string {
+  const parts: string[] = [];
+  let lastIndex = 0;
+  for (const match of text.matchAll(/```[\s\S]*?```/g)) {
+    parts.push(transform(text.slice(lastIndex, match.index)));
+    parts.push(match[0]);
+    lastIndex = (match.index ?? 0) + match[0].length;
+  }
+  parts.push(transform(text.slice(lastIndex)));
+  return parts.join("");
+}
+
+/**
+ * Converts standard CommonMark Markdown to Telegram legacy Markdown.
+ *
+ * Telegram's legacy `Markdown` parse mode supports:
+ * `*bold*`, `_italic_`, `` `code` ``, ` ```code``` `, `[text](url)`.
+ *
+ * Converts `**bold**` → `*bold*`, strips unsupported `# headers` to bold,
+ * and removes blockquote `>` prefixes and horizontal rules.
+ * Code blocks are preserved unchanged.
+ */
+export function convertToTelegramMarkdown(text: string): string {
+  return applyOutsideCodeBlocks(
+    text,
+    (segment) =>
+      segment
+        .replace(/\*\*\*(.+?)\*\*\*/g, "*$1*") // ***bold italic*** → *bold*
+        .replace(/\*\*(.+?)\*\*/g, "*$1*") // **bold** → *bold*
+        .replace(/^#{1,6}\s+(.+)$/gm, "*$1*") // # Heading → *Heading*
+        .replace(/^>\s*/gm, "") // > quote → strip prefix
+        .replace(/^[-_]{3,}$/gm, ""), // --- / ___ → remove
+  );
+}
+
+/**
+ * Converts standard CommonMark Markdown to Slack mrkdwn.
+ *
+ * Slack mrkdwn supports: `*bold*`, `_italic_`, `` `code` ``, ` ```code``` `,
+ * `<url|label>` hyperlinks.
+ *
+ * Converts `**bold**` → `*bold*`, `[label](url)` → `<url|label>`,
+ * strips `# headers` to bold, strips blockquote `>` prefixes and horizontal rules.
+ * Code blocks are preserved unchanged.
+ */
+export function convertToSlackMrkdwn(text: string): string {
+  return applyOutsideCodeBlocks(
+    text,
+    (segment) =>
+      segment
+        .replace(/\*\*\*(.+?)\*\*\*/g, "*$1*") // ***bold italic*** → *bold*
+        .replace(/\*\*(.+?)\*\*/g, "*$1*") // **bold** → *bold*
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "<$2|$1>") // [label](url) → <url|label>
+        .replace(/^#{1,6}\s+(.+)$/gm, "*$1*") // # Heading → *Heading*
+        .replace(/^>\s*/gm, "") // > quote → strip prefix
+        .replace(/^[-_]{3,}$/gm, ""), // --- / ___ → remove
+  );
+}
+
 /**
  * Formats authentication required message with clear onboarding steps.
  */
@@ -176,8 +246,7 @@ export function formatBotError(error: unknown): string {
     return "⏳ You're sending messages too fast. Please wait a moment and try again.";
   }
 
-  const message =
-    error instanceof Error ? error.message : String(error ?? "");
+  const message = error instanceof Error ? error.message : String(error ?? "");
 
   if (message.includes("timed out") || message.includes("timeout")) {
     return "⏳ The request timed out. The server may be busy — please try again in a moment.";

@@ -122,6 +122,8 @@ export interface BotUserContext {
 
 export type CommandContext = BotUserContext & {
   channelId?: string;
+  /** Optional platform profile info, populated by the bot adapter when available. */
+  profile?: { username?: string; displayName?: string };
 };
 
 /**
@@ -205,6 +207,8 @@ export interface MessageTarget {
   userId: string;
   /** The channel/conversation where the command was invoked (absent for some DM contexts). */
   channelId?: string;
+  /** Optional platform profile info (username, display name) from the bot adapter. */
+  profile?: { username?: string; displayName?: string };
 }
 
 /**

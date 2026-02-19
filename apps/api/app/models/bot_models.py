@@ -32,6 +32,10 @@ class CreateLinkTokenRequest(BaseModel):
 
     platform: str = Field(..., description="Platform name (discord, telegram, etc.)")
     platform_user_id: str = Field(..., description="User's ID on the platform")
+    username: Optional[str] = Field(None, description="Username on the platform")
+    display_name: Optional[str] = Field(
+        None, description="Display name on the platform"
+    )
 
 
 class CreateLinkTokenResponse(BaseModel):

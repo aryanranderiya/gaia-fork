@@ -88,16 +88,26 @@ These are required in **both** development and production:
 
 ### Authentication & OAuth
 
-| Variable               | Required  | Description                |
-| ---------------------- | --------- | -------------------------- |
-| `GOOGLE_CLIENT_ID`     | Prod only | Google OAuth client ID     |
-| `GOOGLE_CLIENT_SECRET` | Prod only | Google OAuth client secret |
+| Variable                    | Required  | Description                          |
+| --------------------------- | --------- | ------------------------------------ |
+| `GOOGLE_CLIENT_ID`          | Prod only | Google OAuth client ID               |
+| `GOOGLE_CLIENT_SECRET`      | Prod only | Google OAuth client secret           |
+| `DISCORD_OAUTH_CLIENT_ID`   | Optional  | Discord OAuth app client ID          |
+| `DISCORD_OAUTH_CLIENT_SECRET` | Optional | Discord OAuth app client secret     |
+| `SLACK_OAUTH_CLIENT_ID`     | Optional  | Slack OAuth app client ID            |
+| `SLACK_OAUTH_CLIENT_SECRET` | Optional  | Slack OAuth app client secret        |
 
 <Note>
   Computed OAuth callback URLs are generated automatically: -
   `WORKOS_REDIRECT_URI` → `{HOST}/api/v1/oauth/workos/callback` -
   `GOOGLE_CALLBACK_URL` → `{HOST}/api/v1/oauth/google/callback` -
-  `COMPOSIO_REDIRECT_URI` → `{HOST}/api/v1/oauth/composio/callback`
+  `COMPOSIO_REDIRECT_URI` → `{HOST}/api/v1/oauth/composio/callback` -
+  `DISCORD_OAUTH_REDIRECT_URI` → `{HOST}/api/v1/platform-auth/discord/callback` -
+  `SLACK_OAUTH_REDIRECT_URI` → `{HOST}/api/v1/platform-auth/slack/callback`
+</Note>
+
+<Note>
+  `DISCORD_OAUTH_CLIENT_ID` and `SLACK_OAUTH_CLIENT_ID` are optional — without them, users must link their accounts using the `/auth` bot command instead of the web UI. See [Discord Bot](/bots/discord) and [Slack Bot](/bots/slack) for setup instructions.
 </Note>
 
 ---
