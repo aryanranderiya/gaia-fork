@@ -11,7 +11,7 @@ import type { BotCommand, CommandExecuteParams } from "../types";
 /** `/stop` command definition. */
 export const stopCommand: BotCommand = {
   name: "stop",
-  description: "Stop the current response and start a new conversation",
+  description: "Reset your conversation session",
 
   async execute({
     gaia,

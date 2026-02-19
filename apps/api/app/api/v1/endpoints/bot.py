@@ -57,6 +57,22 @@ async def create_link_token(
     """
     await require_bot_api_key(request)
 
+    # Validate body matches the authenticated platform headers to prevent any
+    # API key holder from generating tokens for arbitrary platform users.
+    state_platform = getattr(request.state, "bot_platform", None)
+    state_user_id = getattr(request.state, "bot_platform_user_id", None)
+
+    if state_platform and state_platform != body.platform:
+        raise HTTPException(
+            status_code=403,
+            detail="Platform in body does not match X-Bot-Platform header",
+        )
+    if state_user_id and state_user_id != body.platform_user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="platform_user_id in body does not match X-Bot-Platform-User-Id header",
+        )
+
     token = secrets.token_urlsafe(32)
     redis_client = redis_cache.client
     token_key = f"{PLATFORM_LINK_TOKEN_PREFIX}:{token}"
@@ -76,6 +92,31 @@ async def create_link_token(
     auth_url = f"{settings.FRONTEND_URL}/auth/link-platform?platform={body.platform}&token={token}"
 
     return CreateLinkTokenResponse(token=token, auth_url=auth_url)
+
+
+@router.get(
+    "/link-token-info/{token}",
+    status_code=200,
+    summary="Get Link Token Display Info",
+    description="Return non-sensitive display metadata for a pending link token.",
+)
+async def get_link_token_info(token: str) -> dict:
+    """Return display metadata from a link token for the confirmation page.
+
+    The token itself is the credential — no additional auth required.
+    Only returns non-sensitive display fields (platform, username, display_name).
+    Does NOT consume the token.
+    """
+    redis_client = redis_cache.client
+    token_key = f"{PLATFORM_LINK_TOKEN_PREFIX}:{token}"
+    data = await redis_client.hgetall(token_key)
+    if not data:
+        raise HTTPException(status_code=404, detail="Token not found or expired")
+    return {
+        "platform": data.get("platform"),
+        "username": data.get("username"),
+        "display_name": data.get("display_name"),
+    }
 
 
 @router.post(

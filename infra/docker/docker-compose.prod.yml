@@ -171,9 +171,7 @@ services:
   discord-bot:
     container_name: discord-bot
     profiles: ["bots"]
-    build:
-      context: ../..
-      dockerfile: apps/bots/discord/Dockerfile
+    image: ghcr.io/theexperiencecompany/gaia-bot-discord:latest
     env_file:
       - ../../apps/bots/discord/.env
     restart: always
@@ -187,9 +185,7 @@ services:
   slack-bot:
     container_name: slack-bot
     profiles: ["bots"]
-    build:
-      context: ../..
-      dockerfile: apps/bots/slack/Dockerfile
+    image: ghcr.io/theexperiencecompany/gaia-bot-slack:latest
     env_file:
       - ../../apps/bots/slack/.env
     restart: always
@@ -203,9 +199,7 @@ services:
   telegram-bot:
     container_name: telegram-bot
     profiles: ["bots"]
-    build:
-      context: ../..
-      dockerfile: apps/bots/telegram/Dockerfile
+    image: ghcr.io/theexperiencecompany/gaia-bot-telegram:latest
     env_file:
       - ../../apps/bots/telegram/.env
     restart: always

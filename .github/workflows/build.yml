@@ -98,6 +98,14 @@ jobs:
         if: steps.affected.outputs.bots == 'true'
         run: npx nx release --group=bots --dockerVersionScheme=${{ steps.version.outputs.scheme }} --yes --verbose
 
+      - name: Register Discord slash commands
+        if: steps.affected.outputs.bots == 'true' && github.ref == 'refs/heads/master'
+        working-directory: apps/bots/discord
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+        run: pnpm deploy-commands
+
       - name: Skip notification
         if: steps.affected.outputs.api != 'true' && steps.affected.outputs.bots != 'true'
         run: echo "No affected Docker projects, skipping build"

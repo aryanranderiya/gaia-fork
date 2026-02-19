@@ -383,7 +383,7 @@ export class DiscordAdapter extends BaseBotAdapter {
           message: content,
           platform: "discord",
           platformUserId: message.author.id,
-          channelId: message.guildId || message.channelId,
+          channelId: message.channelId,
         },
         sendOrEdit,
         async (text: string) => {
@@ -395,9 +395,17 @@ export class DiscordAdapter extends BaseBotAdapter {
         },
         async (authUrl: string) => {
           clearTyping();
-          await sendOrEdit(
-            `Please link your GAIA account to use me here: ${authUrl}`,
-          );
+          try {
+            await message.reply({
+              content: `Please link your GAIA account to use me here: ${authUrl}`,
+              flags: MessageFlags.Ephemeral,
+            });
+          } catch {
+            // Ephemeral replies unsupported on some message types — fall back publicly
+            await sendOrEdit(
+              `Please link your GAIA account: ${authUrl}\n\n_This link is for you only — don't share it._`,
+            );
+          }
         },
         async (errMsg: string) => {
           clearTyping();
@@ -427,9 +435,13 @@ export class DiscordAdapter extends BaseBotAdapter {
   ): RichMessageTarget {
     let deferred = false;
 
-    const deferIfNeeded = async () => {
+    // Defer with the correct visibility on the first send/sendEphemeral/sendRich call.
+    // send() → public reply; sendEphemeral()/sendRich() → ephemeral reply.
+    const deferIfNeeded = async (ephemeral: boolean) => {
       if (!deferred && !interaction.replied && !interaction.deferred) {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        await interaction.deferReply({
+          flags: ephemeral ? MessageFlags.Ephemeral : undefined,
+        });
         deferred = true;
       }
     };
@@ -444,7 +456,7 @@ export class DiscordAdapter extends BaseBotAdapter {
       },
 
       send: async (text: string): Promise<SentMessage> => {
-        await deferIfNeeded();
+        await deferIfNeeded(false);
         await interaction.editReply({ content: text });
         return {
           id: interaction.id,
@@ -455,7 +467,7 @@ export class DiscordAdapter extends BaseBotAdapter {
       },
 
       sendEphemeral: async (text: string): Promise<SentMessage> => {
-        await deferIfNeeded();
+        await deferIfNeeded(true);
         await interaction.editReply({ content: text });
         return {
           id: interaction.id,
@@ -466,7 +478,7 @@ export class DiscordAdapter extends BaseBotAdapter {
       },
 
       sendRich: async (msg: RichMessage): Promise<SentMessage> => {
-        await deferIfNeeded();
+        await deferIfNeeded(false);
         const embed = richMessageToEmbed(msg);
         await interaction.editReply({ embeds: [embed] });
         return {

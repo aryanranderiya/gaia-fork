@@ -42,8 +42,13 @@ interface TokenEntry {
   expiresAt: number;
 }
 
-/** Default token TTL: 1 hour. */
-const TOKEN_TTL_MS = 60 * 60 * 1000;
+/**
+ * Client-side TTL for cached session tokens.
+ * Set to 12 minutes — slightly under the server's 15-minute expiry —
+ * so the client proactively evicts tokens before the server rejects them,
+ * preventing unnecessary 401 → retry round-trips.
+ */
+const TOKEN_TTL_MS = 12 * 60 * 1000;
 
 export class GaiaClient {
   private client: AxiosInstance;
@@ -224,6 +229,7 @@ export class GaiaClient {
   ): Promise<string> {
     let fullText = "";
     let conversationId = "";
+    let streamError: Error | null = null;
 
     // Increased timeouts for slow API operations (lazy loading, cold starts, etc.)
     const STREAM_TIMEOUT_MS = 600_000; // 10 minutes - overall connection timeout
@@ -398,13 +404,24 @@ export class GaiaClient {
           try {
             if (!finished) {
               finished = true;
-              // Provide more helpful error messages
-              const errorMsg = err.message.includes("ECONNRESET") || err.message.includes("socket hang up")
-                ? "Connection interrupted. Please try again."
-                : err.message.includes("timeout")
-                ? "Request timed out. The server may be busy - please try again."
-                : err.message;
-              await onError(new Error(errorMsg));
+              const isRetryable =
+                err.message.includes("ECONNRESET") ||
+                err.message.includes("socket hang up") ||
+                err.message.includes("ETIMEDOUT");
+
+              if (isRetryable && !fullText) {
+                // No content received yet — store for re-throw so _chatStreamWithRetry can retry
+                streamError = err;
+              } else {
+                // Has partial content or non-retryable — surface to user
+                const errorMsg =
+                  err.message.includes("ECONNRESET") || err.message.includes("socket hang up")
+                    ? "Connection interrupted. Please try again."
+                    : err.message.includes("timeout")
+                    ? "Request timed out. The server may be busy - please try again."
+                    : err.message;
+                await onError(new Error(errorMsg));
+              }
             }
           } catch {
             // Prevent unhandled rejection if callback throws
@@ -431,6 +448,13 @@ export class GaiaClient {
 
       // Re-throw so _chatStreamWithRetry can classify the error and retry if appropriate
       throw error;
+    }
+
+    // Re-throw retryable mid-stream errors so _chatStreamWithRetry can retry them.
+    // These are stored rather than thrown inside the stream event handler because
+    // stream errors resolve the promise (not reject it).
+    if (streamError) {
+      throw streamError;
     }
 
     return conversationId;

@@ -2,7 +2,7 @@
 
 import { Button } from "@heroui/button";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -38,8 +38,33 @@ export default function LinkPlatformPage() {
   const [isLinking, setIsLinking] = useState(false);
   const [isLinked, setIsLinked] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountInfo, setAccountInfo] = useState<{
+    username?: string;
+    displayName?: string;
+  } | null>(null);
 
   const config = platform ? PLATFORM_CONFIG[platform] : null;
+
+  useEffect(() => {
+    if (!isAuthenticated && platform && token && config) {
+      const returnUrl = `/auth/link-platform?platform=${encodeURIComponent(platform)}&token=${encodeURIComponent(token)}`;
+      router.replace(`/login?return_url=${encodeURIComponent(returnUrl)}`);
+    }
+  }, [isAuthenticated, platform, token, config, router]);
+
+  useEffect(() => {
+    if (token) {
+      apiService
+        .get(`/bot/link-token-info/${token}`, { silent: true })
+        .then((data: { username?: string; display_name?: string }) => {
+          setAccountInfo({
+            username: data.username,
+            displayName: data.display_name,
+          });
+        })
+        .catch(() => {});
+    }
+  }, [token]);
 
   if (!token || !platform || !config) {
     return (
@@ -55,27 +80,9 @@ export default function LinkPlatformPage() {
   }
 
   if (!isAuthenticated) {
-    const returnUrl = `/auth/link-platform?platform=${encodeURIComponent(platform)}&token=${encodeURIComponent(token)}`;
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-900 p-8 text-center">
-          <h2 className="mb-2 text-xl font-semibold text-white">
-            Sign in Required
-          </h2>
-          <p className="mb-6 text-sm text-zinc-400">
-            You need to sign in to your GAIA account before linking your{" "}
-            {config.name} account.
-          </p>
-          <Button
-            color="primary"
-            className="w-full"
-            onPress={() =>
-              router.push(`/login?return_url=${encodeURIComponent(returnUrl)}`)
-            }
-          >
-            Sign in to GAIA
-          </Button>
-        </div>
+        <p className="text-sm text-zinc-400">Redirecting to sign in...</p>
       </div>
     );
   }
@@ -145,6 +152,14 @@ export default function LinkPlatformPage() {
         <h2 className="mb-2 text-xl font-semibold text-white">
           Link your {config.name} account to GAIA?
         </h2>
+        {(accountInfo?.displayName || accountInfo?.username) && (
+          <p className="mb-1 text-sm font-medium text-zinc-300">
+            Account: {accountInfo.displayName ?? accountInfo.username}
+            {accountInfo.username && accountInfo.displayName
+              ? ` (@${accountInfo.username})`
+              : ""}
+          </p>
+        )}
         <p className="mb-6 text-sm text-zinc-400">
           This will connect your {config.name} account so you can use GAIA
           directly from {config.name}.

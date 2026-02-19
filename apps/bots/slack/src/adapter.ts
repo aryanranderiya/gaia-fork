@@ -264,7 +264,16 @@ export class SlackAdapter extends BaseBotAdapter {
 
     const ts = (result as { ts?: string }).ts;
     if (!ts) {
-      console.warn("Slack postMessage returned no ts");
+      console.warn("Slack postMessage returned no ts — sending fallback error");
+      try {
+        await client.chat.postEphemeral({
+          channel: channelId,
+          user: userId,
+          text: "Something went wrong processing your message. Please try again.",
+        });
+      } catch (fallbackErr) {
+        console.error("Slack fallback error message also failed:", fallbackErr);
+      }
       return;
     }
 
