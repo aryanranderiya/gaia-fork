@@ -334,6 +334,14 @@ const DependencyInstallStep: React.FC<{
         {!isComplete && logs && logs.length > 0 && (
           <LogWindow logs={logs} />
         )}
+
+        {!isComplete && (
+          <Box marginTop={1}>
+            <Text color="gray" dimColor>
+              This may take a few minutes...
+            </Text>
+          </Box>
+        )}
       </Box>
     </Box>
   );

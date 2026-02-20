@@ -37,21 +37,52 @@ interface StepperProps {
   steps: readonly string[];
 }
 
+const STEP_LABELS: Record<string, string> = {
+  Welcome: "Welcome",
+  Prerequisites: "Prereqs",
+  "Setup Mode": "Mode",
+  "Repository Setup": "Repo",
+  "Environment Setup": "Env",
+  "Install Tools": "Tools",
+  "Project Setup": "Setup",
+  "Installing CLI": "CLI",
+  "Detect Repo": "Detect",
+  Finished: "Done",
+};
+
 const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
   const currentIndex = steps.indexOf(currentStep);
-  const total = steps.length;
-  const stepNum = currentIndex + 1;
 
   return (
-    <Box marginBottom={1} gap={1}>
-      {currentIndex > 0 && <Text color="green">✓ {currentIndex}</Text>}
-      <Text color="gray">
-        {stepNum}/{total}
-      </Text>
-      <Text color="gray">·</Text>
-      <Text color={THEME_COLOR} bold>
-        {currentStep}
-      </Text>
+    <Box marginBottom={1} flexWrap="nowrap">
+      {steps.map((step, i) => {
+        const isDone = i < currentIndex;
+        const isActive = i === currentIndex;
+        const label = STEP_LABELS[step] ?? step;
+
+        return (
+          <Box key={step} flexShrink={0}>
+            {i > 0 && (
+              <Text color="gray" dimColor>
+                {" "}·{" "}
+              </Text>
+            )}
+            {isDone && (
+              <Text color="green">✓ {label}</Text>
+            )}
+            {isActive && (
+              <Text color={THEME_COLOR} bold>
+                {label}
+              </Text>
+            )}
+            {!isDone && !isActive && (
+              <Text color="gray" dimColor>
+                {label}
+              </Text>
+            )}
+          </Box>
+        );
+      })}
     </Box>
   );
 };
