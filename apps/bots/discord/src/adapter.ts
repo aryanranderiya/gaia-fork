@@ -10,6 +10,9 @@
  * - **3-second interaction deadline** via auto-deferral
  * - **Typing indicators** via `sendTyping()` with 8s refresh
  * - **DM and @mention** handling via `MessageCreate` events
+ * - **Rotating presence** cycling fun statuses every 3 minutes
+ * - **DM welcome embed** sent to first-time DM users
+ * - **Context menu commands** for Summarize and Add as Todo
  *
  * @module
  */
@@ -26,15 +29,130 @@ import {
   STREAMING_DEFAULTS,
 } from "@gaia/shared";
 import {
+  ActionRowBuilder,
+  ActivityType,
+  ButtonBuilder,
+  ButtonStyle,
   type ChatInputCommandInteraction,
   Client,
   EmbedBuilder,
   Events,
   GatewayIntentBits,
   type Message,
+  type MessageContextMenuCommandInteraction,
   MessageFlags,
   Partials,
 } from "discord.js";
+
+// ---------------------------------------------------------------------------
+// Rotating presence statuses
+// ---------------------------------------------------------------------------
+
+const ROTATING_STATUSES: { type: ActivityType; name: string }[] = [
+  { type: ActivityType.Watching, name: "over your goals" },
+  { type: ActivityType.Listening, name: "to your inner procrastinator" },
+  { type: ActivityType.Playing, name: "personal assistant to legends" },
+  { type: ActivityType.Competing, name: "in the productivity Olympics" },
+  { type: ActivityType.Watching, name: "your productivity soar" },
+  { type: ActivityType.Listening, name: "to the sound of getting things done" },
+  { type: ActivityType.Playing, name: "life admin simulator" },
+  { type: ActivityType.Competing, name: "against your past self" },
+  { type: ActivityType.Watching, name: "for tasks worth automating" },
+  { type: ActivityType.Listening, name: "to great ideas happen" },
+  { type: ActivityType.Playing, name: "the long game with you" },
+  { type: ActivityType.Competing, name: "for the title of most helpful AI" },
+  { type: ActivityType.Watching, name: "your potential unfold" },
+  { type: ActivityType.Listening, name: "to your todo list grow" },
+  { type: ActivityType.Playing, name: "chess with your calendar" },
+  { type: ActivityType.Competing, name: "in the task completion marathon" },
+  { type: ActivityType.Watching, name: "the chaos become clarity" },
+  { type: ActivityType.Listening, name: "to your ambitions" },
+  { type: ActivityType.Playing, name: "catch-up with your goals" },
+  { type: ActivityType.Watching, name: "your habits build momentum" },
+  { type: ActivityType.Listening, name: "to your 3am ideas" },
+  { type: ActivityType.Playing, name: "scheduler extraordinaire" },
+  { type: ActivityType.Competing, name: "with yesterday's you" },
+  { type: ActivityType.Watching, name: "your dreams take shape" },
+  { type: ActivityType.Listening, name: "to the rhythm of your workflow" },
+  { type: ActivityType.Playing, name: "productivity coach unlocked" },
+  { type: ActivityType.Watching, name: "out for your deadlines" },
+  { type: ActivityType.Listening, name: "to your best ideas yet" },
+  { type: ActivityType.Playing, name: "your favorite AI companion" },
+  { type: ActivityType.Competing, name: "for best personal assistant 2025" },
+  { type: ActivityType.Watching, name: "you crush it today" },
+  { type: ActivityType.Listening, name: "for 'I should write that down' moments" },
+  { type: ActivityType.Playing, name: "executive assistant" },
+  { type: ActivityType.Watching, name: "your workflow evolve" },
+  { type: ActivityType.Listening, name: "to a todo list that never quits" },
+  { type: ActivityType.Playing, name: "the AI you didn't know you needed" },
+  { type: ActivityType.Watching, name: "your future unfold" },
+  { type: ActivityType.Listening, name: "to your daily wins" },
+  { type: ActivityType.Playing, name: "personal concierge since 2024" },
+  { type: ActivityType.Competing, name: "with every other AI (and winning)" },
+  { type: ActivityType.Watching, name: "every task you complete" },
+  { type: ActivityType.Listening, name: "to the grind (it's paying off)" },
+  { type: ActivityType.Playing, name: "co-pilot to your ambitions" },
+  { type: ActivityType.Watching, name: "your back (and your calendar)" },
+  { type: ActivityType.Listening, name: "to success stories (yours)" },
+  { type: ActivityType.Playing, name: "second brain for first-class minds" },
+  { type: ActivityType.Watching, name: "for shortcuts to suggest" },
+  { type: ActivityType.Listening, name: "to the future you're building" },
+  { type: ActivityType.Playing, name: "AI companion to visionaries" },
+  { type: ActivityType.Watching, name: "you level up" },
+  { type: ActivityType.Listening, name: "to creative sparks ignite" },
+  { type: ActivityType.Playing, name: "Swiss Army AI" },
+  { type: ActivityType.Competing, name: "in the habit-building championship" },
+  { type: ActivityType.Watching, name: "your productivity metrics" },
+  { type: ActivityType.Listening, name: "to plans become reality" },
+  { type: ActivityType.Playing, name: "assistant to the ambitious" },
+  { type: ActivityType.Watching, name: "you outpace expectations" },
+  { type: ActivityType.Listening, name: "to ambitions become plans" },
+  { type: ActivityType.Playing, name: "the AI that actually remembers" },
+  { type: ActivityType.Watching, name: "for the next big breakthrough" },
+  { type: ActivityType.Listening, name: "to the productivity beat" },
+  { type: ActivityType.Playing, name: "life optimizer" },
+  { type: ActivityType.Competing, name: "for your favorite app slot" },
+  { type: ActivityType.Watching, name: "you build good habits" },
+  { type: ActivityType.Listening, name: "to ideas worth capturing" },
+  { type: ActivityType.Playing, name: "the kindest productivity nag" },
+  { type: ActivityType.Watching, name: "you turn chaos into clarity" },
+  { type: ActivityType.Listening, name: "to your workflow's rhythm" },
+  { type: ActivityType.Playing, name: "your personal AI, always on" },
+  { type: ActivityType.Watching, name: "for things you might forget" },
+  { type: ActivityType.Listening, name: "for 'hey GAIA'" },
+  { type: ActivityType.Playing, name: "the long game (like you)" },
+  { type: ActivityType.Competing, name: "in the focus championship" },
+  { type: ActivityType.Watching, name: "1,000 tasks at once" },
+  { type: ActivityType.Listening, name: "to every whisper of an idea" },
+  { type: ActivityType.Playing, name: "digital chief of staff" },
+  { type: ActivityType.Watching, name: "deadlines approach (very calmly)" },
+  { type: ActivityType.Listening, name: "to your calendar breathe" },
+  { type: ActivityType.Playing, name: "memory palace curator" },
+  { type: ActivityType.Competing, name: "for most proactive AI ever" },
+  { type: ActivityType.Watching, name: "your goals get checked off" },
+  { type: ActivityType.Listening, name: "to every great plan you make" },
+  { type: ActivityType.Playing, name: "task whisperer" },
+  { type: ActivityType.Watching, name: "you build something great" },
+  { type: ActivityType.Listening, name: "to your procrastinator's excuses" },
+  { type: ActivityType.Playing, name: "your cognitive offloading device" },
+  { type: ActivityType.Competing, name: "in the inbox zero marathon" },
+  { type: ActivityType.Watching, name: "the todo pile (it's growing)" },
+  { type: ActivityType.Listening, name: "to your inner visionary" },
+  { type: ActivityType.Playing, name: "second brain, first priority" },
+  { type: ActivityType.Watching, name: "patterns in your day" },
+  { type: ActivityType.Listening, name: "to the future being planned" },
+  { type: ActivityType.Playing, name: "accountability partner" },
+  { type: ActivityType.Competing, name: "in the deep work tournament" },
+  { type: ActivityType.Watching, name: "you stay ahead of the curve" },
+  { type: ActivityType.Listening, name: "to your morning intentions" },
+  { type: ActivityType.Playing, name: "the AI that has your back" },
+  { type: ActivityType.Watching, name: "every goal inch closer" },
+  { type: ActivityType.Listening, name: "to tasks get done" },
+  { type: ActivityType.Playing, name: "your productivity operating system" },
+  { type: ActivityType.Watching, name: "over everything, so you can focus" },
+];
+
+const STATUS_ROTATION_INTERVAL_MS = 3 * 60 * 1000;
 
 /**
  * Discord-specific implementation of the GAIA bot adapter.
@@ -46,6 +164,9 @@ export class DiscordAdapter extends BaseBotAdapter {
   readonly platform: PlatformName = "discord";
   private client!: Client;
   private token!: string;
+  private dmWelcomeSent = new Set<string>();
+  private statusRotationTimer: ReturnType<typeof setInterval> | null = null;
+  private statusIndex = Math.floor(Math.random() * ROTATING_STATUSES.length);
 
   // ---------------------------------------------------------------------------
   // Lifecycle
@@ -83,18 +204,24 @@ export class DiscordAdapter extends BaseBotAdapter {
 
   /**
    * Registers Discord event listeners:
-   * - `ClientReady` — logs the bot's tag
-   * - `InteractionCreate` — dispatches slash commands
+   * - `ClientReady` — sets rotating presence, logs the bot's tag
+   * - `InteractionCreate` — dispatches slash and context menu commands
    * - `MessageCreate` — handles DMs and @mentions
    */
   protected async registerEvents(): Promise<void> {
     this.client.once(Events.ClientReady, (c) => {
       console.log(`Discord bot ready as ${c.user.tag}`);
+      this.startStatusRotation(c.user);
     });
 
     this.client.on(Events.InteractionCreate, async (interaction) => {
-      if (!interaction.isChatInputCommand()) return;
-      await this.handleInteraction(interaction);
+      if (interaction.isChatInputCommand()) {
+        await this.handleInteraction(interaction);
+        return;
+      }
+      if (interaction.isMessageContextMenuCommand()) {
+        await this.handleContextMenuInteraction(interaction);
+      }
     });
 
     this.client.on(Events.MessageCreate, async (message) => {
@@ -126,8 +253,12 @@ export class DiscordAdapter extends BaseBotAdapter {
     await this.client.login(this.token);
   }
 
-  /** Destroys the Discord client connection. */
+  /** Destroys the Discord client connection and clears the status timer. */
   protected async stop(): Promise<void> {
+    if (this.statusRotationTimer) {
+      clearInterval(this.statusRotationTimer);
+      this.statusRotationTimer = null;
+    }
     this.client.destroy();
   }
 
@@ -137,6 +268,25 @@ export class DiscordAdapter extends BaseBotAdapter {
    */
   getClient(): Client {
     return this.client;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Presence rotation
+  // ---------------------------------------------------------------------------
+
+  /** Starts cycling through {@link ROTATING_STATUSES} every 3 minutes. */
+  private startStatusRotation(user: NonNullable<Client["user"]>): void {
+    const setStatus = () => {
+      const status = ROTATING_STATUSES[this.statusIndex];
+      user.setPresence({
+        status: "online",
+        activities: [{ name: status.name, type: status.type }],
+      });
+      this.statusIndex = (this.statusIndex + 1) % ROTATING_STATUSES.length;
+    };
+
+    setStatus();
+    this.statusRotationTimer = setInterval(setStatus, STATUS_ROTATION_INTERVAL_MS);
   }
 
   // ---------------------------------------------------------------------------
@@ -221,6 +371,100 @@ export class DiscordAdapter extends BaseBotAdapter {
     );
   }
 
+  /**
+   * Handles right-click context menu commands on messages.
+   * Supports "Summarize with GAIA" and "Add as Todo".
+   */
+  private async handleContextMenuInteraction(
+    interaction: MessageContextMenuCommandInteraction,
+  ): Promise<void> {
+    const name = interaction.commandName;
+    const content = interaction.targetMessage.content;
+    const userId = interaction.user.id;
+    const channelId = interaction.channelId;
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+    if (!content.trim()) {
+      await interaction.editReply({
+        content: "That message has no text content to work with.",
+      });
+      return;
+    }
+
+    if (name === "Summarize with GAIA") {
+      let replied = false;
+      await handleStreamingChat(
+        this.gaia,
+        {
+          message: `Summarize the following message in 2-3 concise sentences:\n\n"${content.slice(0, 1000)}"`,
+          platform: "discord",
+          platformUserId: userId,
+          channelId,
+        },
+        async (text: string) => {
+          await interaction.editReply({ content: `**Summary**\n${text}` });
+          replied = true;
+        },
+        async (text: string) => {
+          replied = true;
+          await interaction.editReply({ content: `**Summary**\n${text}` });
+          return async (updated: string) => {
+            await interaction.editReply({ content: `**Summary**\n${updated}` });
+          };
+        },
+        async (authUrl: string) => {
+          await interaction.editReply({
+            content: `Please link your GAIA account first: ${authUrl}`,
+          });
+          replied = true;
+        },
+        async (err: string) => {
+          if (!replied) await interaction.editReply({ content: err });
+        },
+        STREAMING_DEFAULTS.discord,
+      );
+      return;
+    }
+
+    if (name === "Add as Todo") {
+      const title = content.slice(0, 200).replace(/\n/g, " ").trim();
+      let replied = false;
+      await handleStreamingChat(
+        this.gaia,
+        {
+          message: `Add this as a todo item: "${title}"`,
+          platform: "discord",
+          platformUserId: userId,
+          channelId,
+        },
+        async (text: string) => {
+          await interaction.editReply({ content: `**Todo Added**\n${text}` });
+          replied = true;
+        },
+        async (text: string) => {
+          replied = true;
+          await interaction.editReply({ content: `**Todo Added**\n${text}` });
+          return async (updated: string) => {
+            await interaction.editReply({
+              content: `**Todo Added**\n${updated}`,
+            });
+          };
+        },
+        async (authUrl: string) => {
+          await interaction.editReply({
+            content: `Please link your GAIA account first: ${authUrl}`,
+          });
+          replied = true;
+        },
+        async (err: string) => {
+          if (!replied) await interaction.editReply({ content: err });
+        },
+        STREAMING_DEFAULTS.discord,
+      );
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Mention / DM handling
   // ---------------------------------------------------------------------------
@@ -228,10 +472,16 @@ export class DiscordAdapter extends BaseBotAdapter {
   /**
    * Handles DM messages with authenticated streaming.
    *
-   * Uses `handleStreamingChat` (requires auth) since DMs are personal
-   * and users expect conversation history to be preserved.
+   * Sends a welcome embed to first-time users before processing their message.
    */
   private async handleDMMessage(message: Message): Promise<void> {
+    const userId = message.author.id;
+
+    if (!this.dmWelcomeSent.has(userId)) {
+      this.dmWelcomeSent.add(userId);
+      await this.sendDMWelcome(message);
+    }
+
     const content = message.content.trim();
     if (!content) {
       await (message.channel as { send: (t: string) => Promise<Message> }).send(
@@ -242,7 +492,6 @@ export class DiscordAdapter extends BaseBotAdapter {
 
     const send = (text: string) =>
       (message.channel as { send: (t: string) => Promise<Message> }).send(text);
-    const userId = message.author.id;
 
     try {
       const hasTyping = "sendTyping" in message.channel;
@@ -313,6 +562,70 @@ export class DiscordAdapter extends BaseBotAdapter {
       clearTyping();
     } catch (error) {
       await send(formatBotError(error));
+    }
+  }
+
+  /**
+   * Sends a rich welcome embed to a first-time DM user.
+   *
+   * Includes a direct link to heygaia.io with a proper OG preview.
+   */
+  private async sendDMWelcome(message: Message): Promise<void> {
+    const embed = new EmbedBuilder()
+      .setColor(0x6366f1)
+      .setTitle("Hey, I'm GAIA 👋")
+      .setDescription(
+        "Your personal AI — built to think ahead, remember everything, and get things done with you.\n\nHere's what I can do right in Discord:",
+      )
+      .addFields(
+        {
+          name: "💬 Chat",
+          value: "Just type anything. Ask questions, brainstorm, think out loud.",
+          inline: false,
+        },
+        {
+          name: "✅ Todos",
+          value: "Use `/todo add` to capture tasks. Right-click any message → **Add as Todo**.",
+          inline: false,
+        },
+        {
+          name: "⚡ Workflows",
+          value: "Run automations with `/workflow`. Delegate entire projects.",
+          inline: false,
+        },
+        {
+          name: "🔗 Link your account",
+          value: "Use `/auth` to connect your GAIA account for memory and personalization.",
+          inline: false,
+        },
+      )
+      .setFooter({
+        text: "Tip: Right-click any message to summarize it or add it as a todo.",
+      })
+      .setTimestamp();
+
+    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setLabel("Visit heygaia.io")
+        .setURL("https://heygaia.io")
+        .setStyle(ButtonStyle.Link),
+      new ButtonBuilder()
+        .setLabel("Read the Docs")
+        .setURL("https://docs.heygaia.io")
+        .setStyle(ButtonStyle.Link),
+    );
+
+    try {
+      await (
+        message.channel as {
+          send: (opts: {
+            embeds: EmbedBuilder[];
+            components: ActionRowBuilder<ButtonBuilder>[];
+          }) => Promise<Message>;
+        }
+      ).send({ embeds: [embed], components: [row] });
+    } catch {
+      // If we can't send the welcome, continue silently
     }
   }
 

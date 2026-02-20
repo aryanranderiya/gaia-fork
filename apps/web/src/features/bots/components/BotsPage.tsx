@@ -67,9 +67,8 @@ const bots: BotCardProps[] = [
       "Bring GAIA into your workspace. Delegate tasks, run workflows, and get answers — all inside Slack.",
     badge: { label: "Beta", color: "success" },
     primaryAction: {
-      label: "Read the Docs",
-      href: "https://docs.heygaia.io/bots/slack",
-      external: true,
+      label: "Add to Workspace",
+      href: "/slack-bot",
     },
   },
   {

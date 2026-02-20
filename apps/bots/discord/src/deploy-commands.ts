@@ -1,15 +1,18 @@
 /**
- * Registers Discord slash commands with the Discord API.
+ * Registers Discord slash commands and context menu commands with the Discord API.
  *
  * Converts unified {@link BotCommand} definitions from the shared library
  * into Discord `SlashCommandBuilder` objects and deploys them globally
- * via the Discord REST API.
+ * via the Discord REST API. Also registers context menu commands for
+ * right-click message actions.
  *
  * Run with: `pnpm deploy-commands` or `tsx src/deploy-commands.ts`
  */
 
 import { allCommands, type BotCommand } from "@gaia/shared";
 import {
+  ApplicationCommandType,
+  ContextMenuCommandBuilder,
   REST,
   Routes,
   type SlashCommandBooleanOption,
@@ -99,9 +102,21 @@ function addOption(
   }
 }
 
+/** Context menu commands registered as right-click actions on messages. */
+const CONTEXT_MENU_COMMANDS = [
+  new ContextMenuCommandBuilder()
+    .setName("Summarize with GAIA")
+    .setType(ApplicationCommandType.Message)
+    .toJSON(),
+  new ContextMenuCommandBuilder()
+    .setName("Add as Todo")
+    .setType(ApplicationCommandType.Message)
+    .toJSON(),
+];
+
 /** Builds all unified commands into Discord slash command payloads. */
 export function buildAllCommands() {
-  return allCommands.map(buildSlashCommand);
+  return [...allCommands.map(buildSlashCommand), ...CONTEXT_MENU_COMMANDS];
 }
 
 // Only run deployment when executed directly (not imported)
@@ -125,9 +140,9 @@ if (isMain) {
 
   (async () => {
     try {
-      console.log("Registering slash commands...");
+      console.log("Registering slash and context menu commands...");
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
-      console.log("Successfully registered slash commands");
+      console.log("Successfully registered all commands");
     } catch (error) {
       console.error("Failed to register commands:", error);
       process.exit(1);

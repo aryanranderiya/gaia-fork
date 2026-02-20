@@ -18,8 +18,13 @@ export const metadata: Metadata = generatePageMetadata({
   ],
 });
 
+const DISCORD_CLIENT_ID = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+
 export default function DiscordBotPage() {
-  redirect(
-    "https://discord.com/oauth2/authorize?client_id=1388905575399559370",
-  );
+  const url = new URL("https://discord.com/oauth2/authorize");
+  url.searchParams.set("client_id", DISCORD_CLIENT_ID ?? "");
+  url.searchParams.set("scope", "bot applications.commands");
+  url.searchParams.set("permissions", "2048");
+
+  redirect(url.toString());
 }
