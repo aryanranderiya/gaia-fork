@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@heroui/button";
+import { CheckmarkCircle01Icon, Copy01Icon } from "@icons";
 import { useState } from "react";
-import { CheckmarkCircle01Icon, Copy01Icon } from "@/icons";
 
 interface CopyButtonProps {
   textToCopy: string;

@@ -5,7 +5,7 @@ repos:
       - id: check-yaml
         priority: 0
       - id: check-json
-        exclude: ^(apps/web/.*tsconfig.*\.json|\.vscode/.*\.json)$
+        exclude: ^(apps/web/.*tsconfig.*\.json|\.vscode/.*\.json|packages/cli/.*tsconfig.*\.json)$
         priority: 0
       - id: check-toml
         priority: 0
