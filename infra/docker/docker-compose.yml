@@ -88,7 +88,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres # pragma: allowlist secret
-      POSTGRES_DB: postgres
+      POSTGRES_DB: langgraph
     volumes:
       - pgdata:/var/lib/postgresql/data
     ports:
@@ -142,6 +142,7 @@ services:
     container_name: rabbitmq
     ports:
       - "${RABBITMQ_HOST_PORT:-5672}:5672" # AMQP protocol
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     restart: always
@@ -170,6 +171,8 @@ services:
       - ../../apps/api/app:/app/apps/api/app
     depends_on:
       redis:
+        condition: service_healthy
+      mongo:
         condition: service_healthy
     networks:
       - gaia_network
