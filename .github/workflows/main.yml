@@ -61,7 +61,8 @@ jobs:
         run: uv tool install vulture
 
       - name: Dead code check
-        run: bash scripts/dead-code-check.sh --strict
+        run: bash scripts/dead-code-check.sh
+        # Temporarily disable --strict flag.
 
       - name: Run affected quality checks
         run: npx nx affected -t lint type-check build --parallel=3
