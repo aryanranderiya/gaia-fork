@@ -112,6 +112,18 @@ Interactive wizard for first-time setup. This is the main entry point for new us
 gaia init
 ```
 
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--branch <name>` | Clone a specific branch of the GAIA repo instead of the default branch |
+
+**Examples:**
+
+```bash
+gaia init --branch develop
+```
+
 **What it does:**
 
 1. **Prerequisites check** — Verifies Git, Docker, and [Mise](https://mise.jdx.dev) are installed. Auto-installs Mise if missing.
@@ -151,10 +163,27 @@ Starts all GAIA services. Auto-detects the setup mode from your `.env` configura
 gaia start
 ```
 
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--build` | Rebuild Docker images before starting |
+| `--pull` | Pull latest base images before starting |
+
+The flags can be combined:
+
+```bash
+gaia start --build --pull
+```
+
 **What it does:**
 
 - **Self-host mode**: Runs `docker compose --profile all up -d` (everything in Docker, runs in background)
-- **Developer mode**: Runs `mise dev` (databases in Docker, API + web locally with hot reload)
+- **Developer mode**: Runs `mise dev` (databases in Docker, API + web locally with hot reload). Services run in the background and logs are written to `dev-start.log` in the repo root. Monitor them with:
+
+```bash
+tail -f dev-start.log
+```
 
 **Access your instance:**
 - Web: http://localhost:3000
@@ -212,6 +241,28 @@ During `gaia init` or `gaia setup`, you choose a mode:
 - **Self-Host (Docker)** — Everything runs in Docker containers. Best for deployment and non-developers.
 - **Developer (Local)** — Databases in Docker, API + web run locally with hot reload. Best for contributing.
 
+### Port Overrides
+
+When the CLI detects port conflicts during setup, it automatically selects alternative ports and writes them to `infra/docker/.env` inside your GAIA repo directory. For example, if port 5432 is already in use, the CLI might assign 5433 and store `POSTGRES_HOST_PORT=5433` in that file.
+
+These overrides persist across `gaia start` / `gaia stop` cycles — you do not need to re-run setup each time. The CLI reads `infra/docker/.env` on every invocation, so the correct ports are always used without any extra steps.
+
+The `gaia status` command also reads the same overridden ports when performing health checks, so the service table reflects your actual configuration.
+
+To change port assignments after setup, edit `infra/docker/.env` directly. The relevant variables follow the pattern `<SERVICE>_HOST_PORT`, for example:
+
+| Variable | Service |
+|----------|---------|
+| `API_HOST_PORT` | FastAPI backend |
+| `WEB_HOST_PORT` | Next.js web app |
+| `POSTGRES_HOST_PORT` | PostgreSQL |
+| `REDIS_HOST_PORT` | Redis |
+| `MONGO_HOST_PORT` | MongoDB |
+| `RABBITMQ_HOST_PORT` | RabbitMQ |
+| `CHROMA_HOST_PORT` | ChromaDB |
+
+After editing the file, run `gaia stop` and `gaia start` to apply the new assignments.
+
 ## Environment Variable Configuration
 
 Two methods are available:
@@ -262,6 +313,62 @@ This copies the script to `apps/web/public/install.sh`, which is served at `http
 4. Commit and tag: `git tag cli-v<version>`
 5. Push tag — GitHub Actions publishes to npm
 
+## Upgrading
+
+### Updating GAIA
+
+Pull the latest code in your GAIA repo directory, then re-run setup if dependencies changed:
+
+```bash
+cd /path/to/gaia
+git pull
+gaia setup  # if dependencies changed
+```
+
+### Updating the CLI itself
+
+Reinstall globally using the same method you used to install:
+
+```bash
+npm install -g @heygaia/cli
+# or
+pnpm add -g @heygaia/cli
+# or
+bun add -g @heygaia/cli
+```
+
+## Uninstalling
+
+To fully remove GAIA and the CLI:
+
+1. **Stop all running services:**
+
+```bash
+gaia stop
+```
+
+2. **Remove the repo directory** (wherever you cloned it):
+
+```bash
+rm -rf /path/to/gaia
+```
+
+3. **Remove CLI metadata:**
+
+```bash
+rm -rf ~/.gaia
+```
+
+4. **Uninstall the CLI globally:**
+
+```bash
+npm uninstall -g @heygaia/cli
+# or
+pnpm remove -g @heygaia/cli
+# or
+bun remove -g @heygaia/cli
+```
+
 ## Troubleshooting
 
 | Issue | Fix |
@@ -270,6 +377,7 @@ This copies the script to `apps/web/public/install.sh`, which is served at `http
 | Raw mode not supported | The CLI requires an interactive terminal — don't run in background or pipe |
 | Port conflicts not detected | Ensure `lsof` is available (macOS/Linux). Windows requires WSL2 |
 | Env vars not discovered | Check that `settings_validator.py` and `apps/web/.env` exist in the repo |
+| `Python 3 not found` | The CLI requires Python 3 to parse API environment variables. Ensure Python 3 is installed, or install it via Mise: `mise install python` |
 | Docker prerequisite fails | Ensure Docker Desktop/Engine is running, not just installed |
 
 ## License

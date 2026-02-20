@@ -46,6 +46,16 @@ Complete first-time setup. Clones the repository, installs tools, configures env
 gaia init
 ```
 
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--branch <name>` | Clone a specific branch instead of the default |
+
+```bash
+gaia init --branch develop
+```
+
 The interactive wizard walks through:
 
 1. **Prerequisites** - Checks Git, Docker, Mise (auto-installs Mise if missing)
@@ -128,6 +138,15 @@ Start all GAIA services. Automatically detects selfhost vs developer mode from y
 gaia start
 ```
 
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `--build` | Rebuild Docker images before starting |
+| `--pull` | Pull latest base images before starting |
+
+Flags can be combined: `gaia start --build --pull`
+
 **Self-Host mode:**
 - Runs `docker compose --profile all up -d` for the full backend stack
 - Builds and starts the web frontend
@@ -135,6 +154,7 @@ gaia start
 
 **Developer mode:**
 - Runs `mise dev` to start API and web in development mode
+  - Logs are written to `dev-start.log` in the repo root — monitor with `tail -f dev-start.log`
 - Databases run in Docker
 - API and web run locally with hot reload
 
@@ -198,6 +218,26 @@ If required ports are in use, the CLI:
 2. Suggests an alternative port
 3. Automatically updates your `.env` files with the alternative
 
+Port overrides are saved to `infra/docker/.env` inside your GAIA repo and **persist across `gaia start`/`gaia stop` cycles** — no need to re-run setup.
+
+`gaia status` automatically uses the same overridden ports for health checks.
+
+To change port assignments after setup, edit `infra/docker/.env` directly:
+
+| Variable | Service |
+|----------|---------|
+| `API_HOST_PORT` | API (default 8000) |
+| `WEB_HOST_PORT` | Web (default 3000) |
+| `POSTGRES_HOST_PORT` | PostgreSQL (default 5432) |
+| `REDIS_HOST_PORT` | Redis (default 6379) |
+| `MONGO_HOST_PORT` | MongoDB (default 27017) |
+| `RABBITMQ_HOST_PORT` | RabbitMQ (default 5672) |
+| `CHROMA_HOST_PORT` | ChromaDB (default 8080) |
+
+<Info>
+Restart services after editing: `gaia stop && gaia start`
+</Info>
+
 ---
 
 ## Environment Variable Auto-Discovery
@@ -208,6 +248,62 @@ The CLI discovers environment variables directly from the codebase at runtime:
 - **Web variables** - Parsed from `apps/web/.env`
 
 When a developer adds a new variable to either location, the CLI picks it up automatically.
+
+---
+
+## Upgrading
+
+### Updating GAIA
+
+Pull the latest code in your GAIA repo directory:
+
+```bash
+cd /path/to/gaia
+git pull
+```
+
+If dependencies changed, re-run setup:
+
+```bash
+gaia setup
+```
+
+### Updating the CLI
+
+Reinstall globally using your package manager:
+
+```bash
+# npm
+npm install -g @heygaia/cli
+
+# pnpm
+pnpm add -g @heygaia/cli
+
+# bun
+bun add -g @heygaia/cli
+```
+
+---
+
+## Uninstalling
+
+To fully remove GAIA from your machine:
+
+1. Stop all services: `gaia stop`
+2. Delete the GAIA repository directory
+3. Remove CLI metadata: `rm -rf ~/.gaia`
+4. Uninstall the CLI:
+
+```bash
+# npm
+npm uninstall -g @heygaia/cli
+
+# pnpm
+pnpm remove -g @heygaia/cli
+
+# bun
+bun remove -g @heygaia/cli
+```
 
 ---
 
@@ -244,5 +340,23 @@ When a developer adds a new variable to either location, the CLI picks it up aut
     Verify these files exist in your repository:
     - `apps/api/app/config/settings_validator.py`
     - `apps/web/.env`
+  </Accordion>
+
+  <Accordion title="Python 3 not found">
+    The CLI requires Python 3 to discover API environment variables. Install it via Mise:
+
+    ```bash
+    mise install python
+    ```
+
+    Or ensure `python3` is available on your PATH.
+  </Accordion>
+
+  <Accordion title="Developer mode services not starting">
+    Check `dev-start.log` in your GAIA repo root for error output:
+
+    ```bash
+    tail -f dev-start.log
+    ```
   </Accordion>
 </AccordionGroup>

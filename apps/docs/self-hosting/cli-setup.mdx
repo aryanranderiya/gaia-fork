@@ -20,6 +20,9 @@ curl -fsSL https://heygaia.io/install.sh | sh
 
 # Run the setup wizard
 gaia init
+
+# Clone a specific branch
+gaia init --branch develop
 ```
 
 ## What the Wizard Does
@@ -85,6 +88,32 @@ The CLI automatically discovers environment variables from the codebase at runti
 - **API variables**: Extracted from Python settings files using AST parsing
 - **Web variables**: Parsed from `apps/web/.env` at runtime
 
+## Monitoring Logs (Developer Mode)
+
+In developer mode, `gaia start` runs services in the background. Logs are written to `dev-start.log` in the repo root — monitor them with:
+
+```bash
+tail -f dev-start.log
+```
+
 ## Port Conflict Handling
 
 If required ports are already in use, the CLI detects the conflict, shows which process is using the port, and suggests an alternative port. Infrastructure URLs in your `.env` files are automatically updated to use the alternative ports.
+
+Port overrides are saved to `infra/docker/.env` inside your GAIA repo and **persist across `gaia start`/`gaia stop` cycles** — no need to re-run setup. `gaia status` automatically uses the same overridden ports.
+
+To change port assignments after setup, edit `infra/docker/.env` directly:
+
+| Variable | Service | Default |
+|----------|---------|---------|
+| `API_HOST_PORT` | API | 8000 |
+| `WEB_HOST_PORT` | Web | 3000 |
+| `POSTGRES_HOST_PORT` | PostgreSQL | 5432 |
+| `REDIS_HOST_PORT` | Redis | 6379 |
+| `MONGO_HOST_PORT` | MongoDB | 27017 |
+| `RABBITMQ_HOST_PORT` | RabbitMQ | 5672 |
+| `CHROMA_HOST_PORT` | ChromaDB | 8080 |
+
+<Info>
+Restart services after editing: `gaia stop && gaia start`
+</Info>

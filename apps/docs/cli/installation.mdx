@@ -79,6 +79,89 @@ Using `npx` means you can't use the shorter `gaia` command. We recommend install
 
 The CLI will check for these prerequisites and guide you through installing anything missing.
 
+## Upgrading
+
+### Updating GAIA
+
+Pull the latest changes from your GAIA repo directory:
+
+```bash
+cd /path/to/gaia
+git pull
+```
+
+<Tip>
+If the update includes dependency changes, run `gaia setup` afterwards to apply them.
+</Tip>
+
+### Updating the CLI
+
+Reinstall globally using whichever package manager you used originally:
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install -g @heygaia/cli
+    ```
+  </Tab>
+
+  <Tab title="pnpm">
+    ```bash
+    pnpm add -g @heygaia/cli
+    ```
+  </Tab>
+
+  <Tab title="bun">
+    ```bash
+    bun add -g @heygaia/cli
+    ```
+  </Tab>
+</Tabs>
+
+## Uninstalling
+
+To fully remove GAIA from your machine:
+
+**1. Stop all running services:**
+
+```bash
+gaia stop
+```
+
+**2. Delete the GAIA repository directory:**
+
+```bash
+rm -rf /path/to/gaia
+```
+
+**3. Remove CLI metadata:**
+
+```bash
+rm -rf ~/.gaia
+```
+
+**4. Uninstall the CLI:**
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm uninstall -g @heygaia/cli
+    ```
+  </Tab>
+
+  <Tab title="pnpm">
+    ```bash
+    pnpm remove -g @heygaia/cli
+    ```
+  </Tab>
+
+  <Tab title="bun">
+    ```bash
+    bun remove -g @heygaia/cli
+    ```
+  </Tab>
+</Tabs>
+
 ## Next Steps
 
 <CardGroup cols={2}>
