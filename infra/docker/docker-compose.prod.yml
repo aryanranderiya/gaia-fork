@@ -114,6 +114,8 @@ services:
     ports:
       - "6379:6379"
     restart: always
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
@@ -226,7 +228,7 @@ services:
     env_file:
       - ../../apps/api/.env
     volumes:
-      - voice_agent_models:/root/.cache/huggingface
+      - voice_agent_models:/home/appuser/.cache/huggingface
     restart: always
     depends_on:
       gaia-backend:
@@ -237,6 +239,7 @@ services:
 volumes:
   chroma_data:
   pgdata:
+  redis_data:
   rabbitmq_data:
   voice_agent_models:
 

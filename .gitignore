@@ -115,3 +115,4 @@ postman/
 # whatsapp-web.js
 .wwebjs_auth/
 .wwebjs_cache/
+/config.json

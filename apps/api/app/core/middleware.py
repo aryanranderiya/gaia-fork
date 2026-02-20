@@ -98,8 +98,6 @@ def get_allowed_origins() -> list[str]:
         # Allow development origins
         allowed_origins.extend(
             [
-                "http://localhost:5173",
-                "https://localhost:5173",
                 "http://localhost:3000",
                 "http://192.168.138.215:5173",
                 "https://192.168.13.215:5173",
