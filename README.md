@@ -11,8 +11,9 @@
 <br />
 <br />
 
-[![GAIA](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/theexperiencecompany/gaia/refs/heads/master/apps/web/public/badge.json)](https://heygaia.io) [![Documentation](https://img.shields.io/badge/Documentation-00bbff?style=flat&logo=gitbook&logoColor=white)](https://docs.heygaia.io) [![Latest Release](https://img.shields.io/github/v/release/theexperiencecompany/gaia?color=00bbff)](https://github.com/theexperiencecompany/gaia/releases) [![Better Stack Badge](https://uptime.betterstack.com/status-badges/v3/monitor/1zjmp.svg)](https://uptime.betterstack.com/?utm_source=status_badge) 
-![last update](https://img.shields.io/github/commit-activity/m/theexperiencecompany/gaia) [![Discord](https://discord-live-members-count-badge.vercel.app/api/discord-members?guildId=585464664650022914&color=5c6af3&label=Discord)](https://discord.heygaia.io) [![Twitter Follow](https://img.shields.io/twitter/follow/trygaia?style=social)](https://x.com/intent/user?screen_name=trygaia) [![Whatsapp](https://img.shields.io/badge/WhatsApp-25D366?logo=whatsapp&logoColor=fff&style=flat)](https://whatsapp.heygaia.io) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/theexperiencecompany/gaia)
+[![GAIA](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/theexperiencecompany/gaia/refs/heads/master/apps/web/public/badge.json)](https://heygaia.io) [![Documentation](https://img.shields.io/badge/Documentation-00bbff?style=flat&logo=gitbook&logoColor=white)](https://docs.heygaia.io) 
+[![Better Stack Badge](https://uptime.betterstack.com/status-badges/v3/monitor/1zjmp.svg)](https://uptime.betterstack.com/?utm_source=status_badge) ![last update](https://img.shields.io/github/commit-activity/m/theexperiencecompany/gaia) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/theexperiencecompany/gaia)
+[![Discord](https://discord-live-members-count-badge.vercel.app/api/discord-members?guildId=585464664650022914&color=5c6af3&label=Discord)](https://discord.heygaia.io) [![Twitter Follow](https://img.shields.io/twitter/follow/trygaia?style=social)](https://x.com/intent/user?screen_name=trygaia) [![Whatsapp](https://img.shields.io/badge/WhatsApp-25D366?logo=whatsapp&logoColor=fff&style=flat)](https://whatsapp.heygaia.io) 
 </div>
 
 <b>[GAIA](https://heygaia.io)</b> is your proactive, personal AI assistant designed to increase your productivity.
@@ -28,6 +29,7 @@ It's designed to help users manage their digital lives by automating tasks, hand
   - [The Problem](#the-problem)
   - [Features](#features)
   - [Getting Started](#getting-started)
+  - [Monorepo Structure](#monorepo-structure)
   - [Documentation](#documentation)
   - [Community \& Support](#community--support)
   - [Contributing](#contributing)
@@ -98,6 +100,34 @@ gaia init
 The wizard checks prerequisites, clones the repo, configures environment variables, and starts your instance. See the [CLI documentation](https://docs.heygaia.io/cli/installation) or the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for more.
 
 **Develop or contribute:** Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
+
+## Monorepo Structure
+
+This repository is a full-stack monorepo managed with [Nx](https://nx.dev).
+
+```
+gaia
+├── apps
+│   ├── web          → Next.js web app                  https://heygaia.io
+│   ├── desktop      → Electron desktop app (beta)      https://heygaia.io/download
+│   ├── mobile       → React Native mobile app (beta)   
+│   ├── api          → FastAPI + LangGraph backend
+│   ├── voice-agent  → Voice processing worker
+│   ├── docs         → Documentation Website               https://docs.heygaia.io
+│   └── bots
+│       ├── discord  → Discord bot
+│       ├── slack    → Slack bot
+│       └── telegram → Telegram bot
+├── packages
+│   ├── cli          → @heygaia/cli setup tool           https://heygaia.io/install.sh
+│   └── gaia-ui      → @heygaia/ui (wrapper)             https://ui.heygaia.io
+├── libs
+│   └── shared
+│       ├── py       → gaia-shared Python package (used by api, voice-agent, bots)
+│       └── ts       → Shared TypeScript utilities
+└── infra
+    └── docker       → Docker Compose configs (dev + prod)
+```
 
 ## Documentation
 
