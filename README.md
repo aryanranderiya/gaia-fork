@@ -31,6 +31,9 @@ It's designed to help users manage their digital lives by automating tasks, hand
   - [The Problem](#the-problem)
   - [Features](#features)
   - [Getting Started](#getting-started)
+    - [**Cloud (zero setup):**](#cloud-zero-setup)
+    - [**Self-host**](#self-host)
+    - [**Develop or contribute:**](#develop-or-contribute)
   - [Monorepo Structure](#monorepo-structure)
   - [Documentation](#documentation)
   - [Community \& Support](#community--support)
@@ -60,7 +63,7 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 - **Integration Marketplace**: Choose from hundreds of integrations, built by us and the community, to connect GAIA with your favorite tools like Gmail, Slack, Notion, Linear, GitHub, and more!
 - **Multi-Platform**: Web | Desktop - macOS, Windows, Linux  | Mobile
 - **Open Source & Self-Hostable**: Full transparency with the ability to self-host on your own infrastructure
-
+<!-- 
 <div align="center">
   <table>
     <tr>
@@ -75,30 +78,34 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
       </td>
       <td width="50%">
       <center>
-        <img src="apps/web/public/images/screenshots/website_tab.png" alt="GAIA Web App" style="width:100%; border-radius:12px;">
-        GAIA on Web
-         <a href="https://heygaia.io/signup">
-          <img src="https://img.shields.io/badge/Get_Started-00bbff?logoColor=white" alt="Get Started">
-        </a>
+  
       </center>
       </td>
     </tr>
   </table>
-</div>
+</div> -->
 
 ## Getting Started
 
 ### **Cloud (zero setup):**
-- Visit [heygaia.io](https://heygaia.io) to get started instantly.
+
+<a href="https://heygaia.io">
+<img src="apps/web/public/images/screenshots/website_tab.png" alt="GAIA Web App" style="width:400px; border-radius:12px;">
+</a>
+<br/>
+
+- Visit **[heygaia.io](https://heygaia.io)** to get started instantly.
 
 ### **Self-host**
 - Install the CLI and run the setup wizard:
 
 ```
-npx @heygaia/cli@latest init
+npm install -g @heygaia/cli@latest
+
+gaia init
 ```
 
-OR
+__OR__
 
 ```bash
 curl -fsSL https://heygaia.io/install.sh | sh
@@ -108,7 +115,7 @@ gaia init
 See the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for more.
 
 ### **Develop or contribute:**
-Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
+- Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
 
 ## Monorepo Structure
 
