@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "almond",
   "name": "GAIA Documentation",
   "colors": {
     "primary": "#00bbff",
@@ -33,8 +33,12 @@
             "pages": ["introduction", "quick-start", "resources", "manifesto"]
           },
           {
+            "group": "CLI",
+            "pages": ["cli/installation", "cli/commands"]
+          },
+          {
             "group": "Self-Hosting",
-            "pages": ["self-hosting/overview", "self-hosting/docker-setup"]
+            "pages": ["self-hosting/overview", "self-hosting/cli-setup", "self-hosting/docker-setup"]
           },
           {
             "group": "Developers",
@@ -42,20 +46,29 @@
               "developers/introduction",
               "developers/development-setup",
               "developers/commands",
-              "developers/contributing",
-              "developers/code-style",
-              "developers/pull-requests",
-              "developers/conventional-commits"
+              "developers/contributing"
             ]
           },
 
           {
-            "group": "Configuration",
+            "group": "Messaging Platforms (Bots)",
+            "pages": [
+              "bots/overview",
+              "bots/commands",
+              "bots/discord",
+              "bots/slack",
+              "bots/telegram"
+            ]
+          },
+          {
+            "group": "Extra Developer Config",
             "pages": [
               "configuration/environment-variables",
               "configuration/docker",
               "configuration/profiling",
-              "configuration/logging"
+              "configuration/code-style",
+              "configuration/pull-requests",
+              "configuration/conventional-commits"
             ]
           }
         ]
@@ -328,16 +341,11 @@
     ]
   },
   "logo": {
-    "light": "/logo/logo.png",
-    "dark": "/logo/logo.png"
+    "dark": "/logo/text_white.webp",
+    "light": "/logo/text_black.webp"
   },
   "navbar": {
     "links": [
-      {
-        "label": "Discord",
-        "href": "https://discord.heygaia.io",
-        "icon": "discord"
-      },
       {
         "label": "GitHub",
         "href": "https://github.com/theexperiencecompany/gaia",

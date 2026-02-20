@@ -56,6 +56,7 @@ class SubAgentFactory:
             Compiled LangGraph agent with tool registry, retrieval, and checkpointer
         """
         from app.agents.tools.core.registry import get_tool_registry
+        from app.agents.tools.webpage_tool import fetch_webpages, web_search_tool
 
         logger.info(
             f"Creating {provider} sub-agent graph using tool space '{tool_space}' with "
@@ -80,6 +81,11 @@ class SubAgentFactory:
 
         # Add search_memory to scoped_tool_dict so subagents can access user memories
         scoped_tool_dict[search_memory.name] = search_memory
+
+        # Add webpage tools to scoped_tool_dict so subagents can use them when retrieved
+        # These are allowed from general namespace in retrieval.py (lines 212-219)
+        scoped_tool_dict[web_search_tool.name] = web_search_tool
+        scoped_tool_dict[fetch_webpages.name] = fetch_webpages
 
         common_kwargs = {
             "llm": llm,

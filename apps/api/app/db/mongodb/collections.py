@@ -122,6 +122,7 @@ _COLLECTION_MAPPINGS = {
     "device_tokens_collection": "device_tokens",
     "workflow_executions_collection": "workflow_executions",
     "processed_webhooks_collection": "processed_webhooks",
+    "bot_sessions_collection": "bot_sessions",
 }
 
 

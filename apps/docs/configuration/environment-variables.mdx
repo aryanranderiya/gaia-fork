@@ -12,13 +12,16 @@ GAIA uses Pydantic settings to load environment variables with validation. Setti
 - **Production**: All integration keys required for full functionality
 
 <Note>
-  Variables are lazily loaded—the app starts even with missing keys. See [Lazy
-  Loading](/developers/extra/lazy-loading).
+  Variables are lazily loaded—the app starts even with missing keys.
 </Note>
+
+<Tip>
+  **Automated Setup**: The [GAIA CLI](/cli/installation) automatically discovers required environment variables from your codebase using Python AST parsing (for API) and source analysis (for Web). Run `gaia init` to skip manual configuration.
+</Tip>
 
 ---
 
-## Quick Setup
+## Manual Setup
 
 <Steps>
   <Step title="Copy environment files">
@@ -88,16 +91,26 @@ These are required in **both** development and production:
 
 ### Authentication & OAuth
 
-| Variable               | Required  | Description                |
-| ---------------------- | --------- | -------------------------- |
-| `GOOGLE_CLIENT_ID`     | Prod only | Google OAuth client ID     |
-| `GOOGLE_CLIENT_SECRET` | Prod only | Google OAuth client secret |
+| Variable                    | Required  | Description                          |
+| --------------------------- | --------- | ------------------------------------ |
+| `GOOGLE_CLIENT_ID`          | Prod only | Google OAuth client ID               |
+| `GOOGLE_CLIENT_SECRET`      | Prod only | Google OAuth client secret           |
+| `DISCORD_OAUTH_CLIENT_ID`   | Optional  | Discord OAuth app client ID          |
+| `DISCORD_OAUTH_CLIENT_SECRET` | Optional | Discord OAuth app client secret     |
+| `SLACK_OAUTH_CLIENT_ID`     | Optional  | Slack OAuth app client ID            |
+| `SLACK_OAUTH_CLIENT_SECRET` | Optional  | Slack OAuth app client secret        |
 
 <Note>
   Computed OAuth callback URLs are generated automatically: -
   `WORKOS_REDIRECT_URI` → `{HOST}/api/v1/oauth/workos/callback` -
   `GOOGLE_CALLBACK_URL` → `{HOST}/api/v1/oauth/google/callback` -
-  `COMPOSIO_REDIRECT_URI` → `{HOST}/api/v1/oauth/composio/callback`
+  `COMPOSIO_REDIRECT_URI` → `{HOST}/api/v1/oauth/composio/callback` -
+  `DISCORD_OAUTH_REDIRECT_URI` → `{HOST}/api/v1/platform-auth/discord/callback` -
+  `SLACK_OAUTH_REDIRECT_URI` → `{HOST}/api/v1/platform-auth/slack/callback`
+</Note>
+
+<Note>
+  `DISCORD_OAUTH_CLIENT_ID` and `SLACK_OAUTH_CLIENT_ID` are optional — without them, users must link their accounts using the `/auth` bot command instead of the web UI. See [Discord Bot](/bots/discord) and [Slack Bot](/bots/slack) for setup instructions.
 </Note>
 
 ---
@@ -265,9 +278,30 @@ POSTHOG_API_KEY=phc_xxxx
 
 ---
 
+## CLI Auto-Discovery
+
+The GAIA CLI can automatically discover and configure environment variables:
+
+```bash
+# Interactive setup with auto-discovery
+gaia init
+
+# Or run setup separately
+gaia setup
+```
+
+The CLI auto-discovery process:
+
+- **Parses `settings.py`**: Uses Python AST parsing to extract all environment variable definitions
+- **Scans `.env.example`**: Identifies required variables from example files
+- **Prompts for missing values**: Interactive prompts for any undefined variables
+- **Validates configuration**: Ensures all critical variables are properly set
+
+This eliminates manual `.env` file editing and reduces configuration errors.
+
+---
+
 ## See Also
 
 - [Development Setup](/developers/development-setup)
-- [Lazy Loading](/developers/extra/lazy-loading) - How missing keys are handled
-- [Infisical Setup](/configuration/infisical-setup) - Secret management for production
 

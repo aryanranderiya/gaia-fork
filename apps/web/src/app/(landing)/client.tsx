@@ -151,7 +151,7 @@ export default function LandingPageClient({
           <OpenSource />
           <FAQAccordion />
           <LandingDownloadSection />
-          <CommunitySection />
+          {/* <CommunitySection /> */}
           <FinalSection
             showSocials={false}
             timeOfDay={timeOfDay}

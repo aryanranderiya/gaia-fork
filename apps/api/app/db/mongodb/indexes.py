@@ -17,6 +17,7 @@ from app.config.loggers import app_logger as logger
 from app.db.mongodb.collections import (
     ai_models_collection,
     blog_collection,
+    bot_sessions_collection,
     calendars_collection,
     conversations_collection,
     device_tokens_collection,
@@ -78,6 +79,7 @@ async def create_all_indexes():
             create_user_integration_indexes(),
             create_device_token_indexes(),
             create_workflow_execution_indexes(),
+            create_bot_session_indexes(),
         ]
 
         # Execute all index creation tasks concurrently
@@ -105,6 +107,7 @@ async def create_all_indexes():
             "user_integrations",
             "device_tokens",
             "workflow_executions",
+            "bot_sessions",
         ]
 
         index_results = {}
@@ -156,6 +159,20 @@ async def create_user_indexes():
             users_collection.create_index("last_active_at", sparse=True),
             # Inactive email tracking index (sparse since not all users have this field)
             users_collection.create_index("last_inactive_email_sent", sparse=True),
+            # Platform links indexes for bot authentication (unique + sparse: only bot users have these,
+            # and a single platform account must not be linked to multiple GAIA users)
+            users_collection.create_index(
+                "platform_links.discord.id", unique=True, sparse=True
+            ),
+            users_collection.create_index(
+                "platform_links.slack.id", unique=True, sparse=True
+            ),
+            users_collection.create_index(
+                "platform_links.telegram.id", unique=True, sparse=True
+            ),
+            users_collection.create_index(
+                "platform_links.whatsapp.id", unique=True, sparse=True
+            ),
         )
 
     except Exception as e:
@@ -548,7 +565,7 @@ async def create_payment_indexes():
 async def create_processed_webhook_indexes():
     """
     Create indexes for processed_webhooks collection for idempotency.
-    
+
     - Unique index for idempotency check
     - TTL index for automatic cleanup
     """
@@ -558,7 +575,8 @@ async def create_processed_webhook_indexes():
             processed_webhooks_collection.create_index("webhook_id", unique=True),
             # TTL index to auto-delete old records after 30 days
             processed_webhooks_collection.create_index(
-                "processed_at", expireAfterSeconds=2592000  # 30 days
+                "processed_at",
+                expireAfterSeconds=2592000,  # 30 days
             ),
         )
     except Exception as e:
@@ -782,6 +800,30 @@ async def create_device_token_indexes():
 
     except Exception as e:
         logger.error(f"Error creating device token indexes: {str(e)}")
+        raise
+
+
+async def create_bot_session_indexes():
+    """Create indexes for bot_sessions collection for optimal query performance and automatic cleanup."""
+    try:
+        await asyncio.gather(
+            # Unique session key index (critical for session lookup)
+            bot_sessions_collection.create_index("session_key", unique=True),
+            # Compound index for platform user lookups
+            bot_sessions_collection.create_index(
+                [("platform", 1), ("platform_user_id", 1)]
+            ),
+            # Conversation ID index for conversation-based queries
+            bot_sessions_collection.create_index("conversation_id"),
+            # TTL index for automatic session cleanup after 30 days (2,592,000 seconds)
+            bot_sessions_collection.create_index(
+                "updated_at",
+                expireAfterSeconds=2592000,  # 30 days
+            ),
+        )
+
+    except Exception as e:
+        logger.error(f"Error creating bot session indexes: {str(e)}")
         raise
 
 

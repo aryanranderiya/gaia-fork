@@ -11,7 +11,8 @@
         "apps/desktop",
         "apps/mobile",
         "apps/docs",
-        "apps/voice-agent"
+        "apps/voice-agent",
+        "apps/bots"
       ]
     },
     "apps/web": {
@@ -23,7 +24,8 @@
         "apps/desktop",
         "apps/mobile",
         "apps/docs",
-        "apps/voice-agent"
+        "apps/voice-agent",
+        "apps/bots"
       ]
     },
     "apps/desktop": {
@@ -35,7 +37,8 @@
         "apps/web",
         "apps/mobile",
         "apps/docs",
-        "apps/voice-agent"
+        "apps/voice-agent",
+        "apps/bots"
       ]
     },
     "apps/mobile": {
@@ -46,6 +49,33 @@
         "apps/api",
         "apps/web",
         "apps/desktop",
+        "apps/docs",
+        "apps/voice-agent",
+        "apps/bots"
+      ]
+    },
+    "apps/bots": {
+      "release-type": "node",
+      "component": "bots",
+      "changelog-path": "CHANGELOG.md",
+      "exclude-paths": [
+        "apps/api",
+        "apps/web",
+        "apps/desktop",
+        "apps/mobile",
+        "apps/docs",
+        "apps/voice-agent"
+      ]
+    },
+    "packages/cli": {
+      "release-type": "node",
+      "component": "cli",
+      "changelog-path": "CHANGELOG.md",
+      "exclude-paths": [
+        "apps/api",
+        "apps/web",
+        "apps/desktop",
+        "apps/mobile",
         "apps/docs",
         "apps/voice-agent"
       ]
