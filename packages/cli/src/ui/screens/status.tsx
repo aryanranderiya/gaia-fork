@@ -22,11 +22,9 @@ export const StatusScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
   }, [store]);
 
   useEffect(() => {
-    if (state.step === "Results") {
-      setIsRefreshing(false);
-      setLastChecked(new Date().toLocaleTimeString());
-    }
-  }, [state.step]);
+    setIsRefreshing(false);
+    setLastChecked(new Date().toLocaleTimeString());
+  }, [state.data.services]);
 
   useInput((_input, key) => {
     if ((key.return || key.escape) && state.step === "Results") {
