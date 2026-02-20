@@ -12,12 +12,22 @@ export async function runStart(options?: StartServicesOptions): Promise<void> {
     React.createElement(App, { store, command: "start" }),
   );
 
+  const handleExit = () => {
+    unmount();
+    process.exit(130);
+  };
+  process.once("SIGINT", handleExit);
+  process.once("SIGTERM", handleExit);
+
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   try {
     await runStartFlow(store, options);
   } catch (error) {
     store.setError(error as Error);
+  } finally {
+    process.off("SIGINT", handleExit);
+    process.off("SIGTERM", handleExit);
   }
 
   if (store.currentState.error) {

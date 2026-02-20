@@ -15,17 +15,29 @@ import { runInitFlow } from "./flow.js";
  * Creates the store, renders the UI, and runs the initialization flow.
  * Handles errors by displaying them in the UI before exiting.
  */
-export async function runInit(options: { branch?: string } = {}): Promise<void> {
+export async function runInit(
+  options: { branch?: string } = {},
+): Promise<void> {
   const store = createStore();
 
   const { unmount } = render(
     React.createElement(App, { store, command: "init" }),
   );
 
+  const handleExit = () => {
+    unmount();
+    process.exit(130);
+  };
+  process.once("SIGINT", handleExit);
+  process.once("SIGTERM", handleExit);
+
   try {
     await runInitFlow(store, options.branch);
   } catch (error) {
     store.setError(error as Error);
+  } finally {
+    process.off("SIGINT", handleExit);
+    process.off("SIGTERM", handleExit);
   }
 
   if (store.currentState.error) {
