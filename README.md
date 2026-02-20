@@ -124,25 +124,25 @@ This repository is a full-stack monorepo managed with [Nx](https://nx.dev).
 ```
 gaia
 ├── apps
-│   ├── web          → Next.js web app                  https://heygaia.io
-│   ├── desktop      → Electron desktop app (beta)      https://heygaia.io/download
-│   ├── mobile       → React Native mobile app (beta)   
-│   ├── api          → FastAPI + LangGraph backend
-│   ├── voice-agent  → Voice processing worker
-│   ├── docs         → Documentation Website               https://docs.heygaia.io
+│   ├── web              → Next.js web app                  https://heygaia.io
+│   ├── desktop          → Electron desktop app (beta)      https://heygaia.io/download
+│   ├── mobile           → React Native mobile app (beta)   
+│   ├── api              → FastAPI + LangGraph backend
+│   ├── voice-agent      → Voice processing worker
+│   ├── docs             → Documentation Website            https://docs.heygaia.io
 │   └── bots
-│       ├── discord  → Discord bot
-│       ├── slack    → Slack bot
-│       └── telegram → Telegram bot
+│       ├── discord      → Discord bot
+│       ├── slack        → Slack bot
+│       └── telegram     → Telegram bot
 ├── packages
-│   ├── cli          → @heygaia/cli setup tool           https://heygaia.io/install.sh
-│   └── gaia-ui      → @heygaia/ui (wrapper)             https://ui.heygaia.io
+│   ├── cli              → @heygaia/cli setup tool           https://heygaia.io/install.sh
+│   └── gaia-ui          → @heygaia/ui (wrapper)             https://ui.heygaia.io
 ├── libs
 │   └── shared
-│       ├── py       → gaia-shared Python package (used by api, voice-agent, bots)
-│       └── ts       → Shared TypeScript utilities
+│       ├── py           → gaia-shared Python package (used by api, voice-agent, bots)
+│       └── ts           → Shared TypeScript utilities
 └── infra
-    └── docker       → Docker Compose configs (dev + prod)
+    └── docker           → Docker Compose configs (dev + prod)
 ```
 
 ## Documentation
