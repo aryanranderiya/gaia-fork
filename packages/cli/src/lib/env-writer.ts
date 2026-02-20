@@ -313,7 +313,7 @@ export function readDockerComposePortOverrides(
           .trim()
           .replace(/^["']|["']$/g, "");
         const port = Number(cleaned);
-        if (!Number.isNaN(port) && port > 0) {
+        if (!Number.isNaN(port) && port > 0 && port <= 65535) {
           overrides[DOCKER_PORT_VAR_TO_PORT[key]] = port;
         }
       }
