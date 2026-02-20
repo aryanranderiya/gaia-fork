@@ -3,6 +3,7 @@ import { runEnvSetup, selectSetupMode } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import * as prereqs from "../../lib/prerequisites.js";
 import { findRepoRoot, runCommand } from "../../lib/service-starter.js";
+import { LOG_BUFFER_LINES } from "../../ui/constants.js";
 import type { CLIStore } from "../../ui/store.js";
 
 const delay = (ms: number): Promise<void> =>
@@ -196,7 +197,7 @@ export async function runSetupFlow(store: CLIStore): Promise<void> {
     const lines = chunk
       .split("\n")
       .filter((line: string) => line.trim() !== "");
-    const newLogs = [...currentLogs, ...lines].slice(-20);
+    const newLogs = [...currentLogs, ...lines].slice(-LOG_BUFFER_LINES);
     store.updateData("dependencyLogs", newLogs);
   };
 

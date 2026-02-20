@@ -10,6 +10,7 @@ import {
   type StartServicesOptions,
   startServices,
 } from "../../lib/service-starter.js";
+import { LOG_BUFFER_LINES } from "../../ui/constants.js";
 import type { CLIStore } from "../../ui/store.js";
 
 export async function runStartFlow(
@@ -84,7 +85,10 @@ export async function runStartFlow(
       .filter((l) => l.length > 0);
     if (lines.length === 0) return;
     const current: string[] = store.currentState.data.dockerLogs || [];
-    store.updateData("dockerLogs", [...current, ...lines].slice(-50));
+    store.updateData(
+      "dockerLogs",
+      [...current, ...lines].slice(-LOG_BUFFER_LINES),
+    );
   };
 
   try {
