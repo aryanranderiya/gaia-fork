@@ -251,7 +251,9 @@ const LogWindow: React.FC<{ logs: string[]; height?: number }> = ({
 
   useInput((_input, key) => {
     if (key.upArrow) {
-      setScrollOffset((o) => Math.min(o + 1, Math.max(0, logs.length - height)));
+      setScrollOffset((o) =>
+        Math.min(o + 1, Math.max(0, logs.length - height)),
+      );
     } else if (key.downArrow) {
       setScrollOffset((o) => Math.max(0, o - 1));
     }
@@ -271,14 +273,10 @@ const LogWindow: React.FC<{ logs: string[]; height?: number }> = ({
           ↑ {linesAbove} more line{linesAbove !== 1 ? "s" : ""}
         </Text>
       )}
-      <Box
-        flexDirection="column"
-        height={height}
-        overflow="hidden"
-      >
+      <Box flexDirection="column" height={height} overflow="hidden">
         {visible.map((log, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
-          <Text key={start + i} color="gray" wrap="truncate">
+          <Text key={`${start}-${i}`} color="gray" wrap="truncate">
             {log}
           </Text>
         ))}
@@ -331,9 +329,7 @@ const DependencyInstallStep: React.FC<{
           </Box>
         )}
 
-        {!isComplete && logs && logs.length > 0 && (
-          <LogWindow logs={logs} />
-        )}
+        {!isComplete && logs && logs.length > 0 && <LogWindow logs={logs} />}
 
         {!isComplete && (
           <Box marginTop={1}>
