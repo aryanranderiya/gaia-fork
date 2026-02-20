@@ -80,7 +80,10 @@ const ROTATING_STATUSES: { type: ActivityType; name: string }[] = [
   { type: ActivityType.Playing, name: "your favorite AI companion" },
   { type: ActivityType.Competing, name: "for best personal assistant 2025" },
   { type: ActivityType.Watching, name: "you crush it today" },
-  { type: ActivityType.Listening, name: "for 'I should write that down' moments" },
+  {
+    type: ActivityType.Listening,
+    name: "for 'I should write that down' moments",
+  },
   { type: ActivityType.Playing, name: "executive assistant" },
   { type: ActivityType.Watching, name: "your workflow evolve" },
   { type: ActivityType.Listening, name: "to a todo list that never quits" },
@@ -286,7 +289,10 @@ export class DiscordAdapter extends BaseBotAdapter {
     };
 
     setStatus();
-    this.statusRotationTimer = setInterval(setStatus, STATUS_ROTATION_INTERVAL_MS);
+    this.statusRotationTimer = setInterval(
+      setStatus,
+      STATUS_ROTATION_INTERVAL_MS,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -580,12 +586,14 @@ export class DiscordAdapter extends BaseBotAdapter {
       .addFields(
         {
           name: "💬 Chat",
-          value: "Just type anything. Ask questions, brainstorm, think out loud.",
+          value:
+            "Just type anything. Ask questions, brainstorm, think out loud.",
           inline: false,
         },
         {
           name: "✅ Todos",
-          value: "Use `/todo add` to capture tasks. Right-click any message → **Add as Todo**.",
+          value:
+            "Use `/todo add` to capture tasks. Right-click any message → **Add as Todo**.",
           inline: false,
         },
         {
@@ -595,7 +603,8 @@ export class DiscordAdapter extends BaseBotAdapter {
         },
         {
           name: "🔗 Link your account",
-          value: "Use `/auth` to connect your GAIA account for memory and personalization.",
+          value:
+            "Use `/auth` to connect your GAIA account for memory and personalization.",
           inline: false,
         },
       )
@@ -711,7 +720,6 @@ export class DiscordAdapter extends BaseBotAdapter {
           try {
             await message.reply({
               content: `Please link your GAIA account to use me here: ${authUrl}`,
-              flags: MessageFlags.Ephemeral,
             });
           } catch {
             // Ephemeral replies unsupported on some message types — fall back publicly

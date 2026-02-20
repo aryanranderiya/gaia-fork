@@ -168,7 +168,9 @@ async def initiate_platform_connect(
             f"&scope=identify"
             f"&state={state}"
         )
-        return InitiatePlatformConnectResponse(auth_url=auth_url, auth_type="oauth")
+        return InitiatePlatformConnectResponse(
+            auth_url=auth_url, auth_type="oauth", instructions=None
+        )
 
     # Slack OAuth flow
     if platform == "slack" and settings.SLACK_OAUTH_CLIENT_ID:
@@ -185,7 +187,9 @@ async def initiate_platform_connect(
             f"&user_scope=identity.basic"
             f"&state={state}"
         )
-        return InitiatePlatformConnectResponse(auth_url=auth_url, auth_type="oauth")
+        return InitiatePlatformConnectResponse(
+            auth_url=auth_url, auth_type="oauth", instructions=None
+        )
 
     # Telegram manual flow (no OAuth)
     if platform == "telegram":

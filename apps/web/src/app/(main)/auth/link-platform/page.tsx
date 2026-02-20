@@ -56,10 +56,14 @@ export default function LinkPlatformPage() {
     if (token) {
       apiService
         .get(`/bot/link-token-info/${token}`, { silent: true })
-        .then((data: { username?: string; display_name?: string }) => {
+        .then((data) => {
+          const { username, display_name } = data as {
+            username?: string;
+            display_name?: string;
+          };
           setAccountInfo({
-            username: data.username,
-            displayName: data.display_name,
+            username,
+            displayName: display_name,
           });
         })
         .catch(() => {});

@@ -142,7 +142,9 @@ def init_llm(
             model=DEFAULT_GEMINI_FREE_MODEL_NAME,
             temperature=0.1,
             streaming=False,
-            max_tokens=2048,  # Lower limit for free tier auxiliary tasks
+            model_kwargs={
+                "max_tokens": 2048
+            },  # Lower limit for free tier auxiliary tasks
             api_key=settings.OPENROUTER_API_KEY,
             base_url=OPENROUTER_BASE_URL,
             default_headers={

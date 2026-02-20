@@ -18,7 +18,7 @@ from app.models.bot_models import (
     IntegrationInfo,
     ResetSessionRequest,
 )
-from app.models.message_models import MessageRequestWithHistory
+from app.models.message_models import MessageDict, MessageRequestWithHistory
 from app.services.bot_service import BotService
 from app.services.bot_token_service import create_bot_session_token
 from app.services.chat_service import run_chat_stream_background
@@ -150,8 +150,11 @@ async def bot_chat_stream(request: Request, body: BotChatRequest) -> StreamingRe
         body.platform, body.platform_user_id, body.channel_id, user
     )
 
-    history = await BotService.load_conversation_history(conversation_id, user_id)
-    history.append({"role": "user", "content": body.message})
+    raw_history = await BotService.load_conversation_history(conversation_id, user_id)
+    raw_history.append({"role": "user", "content": body.message})
+    history: list[MessageDict] = [
+        MessageDict(role=m["role"], content=m["content"]) for m in raw_history
+    ]
 
     message_request = MessageRequestWithHistory(
         message=body.message,
