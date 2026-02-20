@@ -142,11 +142,27 @@ export class CLIStore extends EventEmitter {
    * @returns Promise that resolves with the user's input
    */
   // biome-ignore lint: Allow any for flexible meta and return types
-  waitForInput(id: string, meta?: any): Promise<any> {
+  waitForInput(id: string, meta?: any, timeoutMs?: number): Promise<any> {
     this.state.inputRequest = { id, meta };
     this.emitNow();
     return new Promise((resolve) => {
       this.inputResolver = resolve;
+
+      if (timeoutMs != null) {
+        const timer = setTimeout(() => {
+          if (this.inputResolver) {
+            this.inputResolver = null;
+            this.state.inputRequest = null;
+            this.emitNow();
+            resolve(null);
+          }
+        }, timeoutMs);
+        const queued = this.inputResolver;
+        this.inputResolver = (value: unknown) => {
+          clearTimeout(timer);
+          queued(value);
+        };
+      }
     });
   }
 
