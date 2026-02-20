@@ -147,9 +147,10 @@ export default function GoalPage() {
       } else {
         console.log("initialising roadmap web socket");
         const initiateWebSocket = (goalId: string, goalTitle: string) => {
-          const ws = new WebSocket(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}ws/roadmap`,
-          );
+          const wsBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "")
+            .replace("http://", "ws://")
+            .replace("https://", "wss://");
+          const ws = new WebSocket(`${wsBaseUrl}ws/roadmap`);
           ws.onopen = () => {
             ws.send(JSON.stringify({ goal_id: goalId, goal_title: goalTitle }));
             console.log("WebSocket: Generating roadmap...");

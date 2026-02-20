@@ -49,14 +49,19 @@ class BaseAppSettings(BaseSettings):
             return cls(**kwargs)
         except Exception as e:
             logger.warning(f"Error creating settings: {str(e)}")
-            # Create a minimal instance with empty strings for required fields
+            # Create a minimal instance with empty strings for required fields,
+            # but skip fields that already have env vars set or have defaults.
             fields = cls.model_fields
-            defaults = {
-                field_name: ""
-                for field_name in fields
-                if field_name not in kwargs
-                and "str" in str(fields[field_name].annotation)
-            }
+            defaults = {}
+            for field_name, field_info in fields.items():
+                if field_name in kwargs:
+                    continue
+                if os.getenv(field_name) is not None:
+                    continue
+                if field_info.default is not None:
+                    continue
+                if "str" in str(field_info.annotation):
+                    defaults[field_name] = ""
             return cls(**defaults, **kwargs)
 
 

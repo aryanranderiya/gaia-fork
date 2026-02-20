@@ -111,3 +111,5 @@ out
 postman/
 
 .agents/plans/
+
+/config.json

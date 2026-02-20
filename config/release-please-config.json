@@ -49,6 +49,19 @@
         "apps/docs",
         "apps/voice-agent"
       ]
+    },
+    "packages/cli": {
+      "release-type": "node",
+      "component": "cli",
+      "changelog-path": "CHANGELOG.md",
+      "exclude-paths": [
+        "apps/api",
+        "apps/web",
+        "apps/desktop",
+        "apps/mobile",
+        "apps/docs",
+        "apps/voice-agent"
+      ]
     }
   }
 }
