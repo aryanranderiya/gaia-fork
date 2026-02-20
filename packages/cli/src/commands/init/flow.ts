@@ -301,7 +301,22 @@ export async function runInitFlow(
     store.setStep("Installing CLI");
     store.setStatus("Installing gaia CLI globally...");
     try {
-      await runCommand("npm", ["install", "-g", "@heygaia/cli"], repoPath);
+      const cliLogHandler = (chunk: string) => {
+        const lines = chunk
+          .split("\n")
+          .map((l: string) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
+          .filter((l: string) => l.length > 0);
+        if (lines.length === 0) return;
+        const current: string[] = store.currentState.data.cliInstallLogs || [];
+        store.updateData("cliInstallLogs", [...current, ...lines].slice(-50));
+      };
+      await runCommand(
+        "npm",
+        ["install", "-g", "@heygaia/cli"],
+        repoPath,
+        undefined,
+        cliLogHandler,
+      );
       store.setStatus("Verifying PATH...");
       const pathResult = await ensureGaiaInPath();
       if (pathResult.inPath) {
@@ -340,20 +355,42 @@ export async function runInitFlow(
       store.updateData("dependencyLogs", [...current, ...lines].slice(-50));
     };
 
+    // Try to pull pre-built images from GHCR first (fast path for self-hosters).
+    // Fall back to building locally if pull fails (e.g. first release, no auth).
+    let pullSucceeded = false;
     try {
+      store.setStatus("Pulling pre-built images from registry...");
       await startServices(
         repoPath,
         "selfhost",
         (status) => store.setStatus(status),
         portOverrides,
         dockerLogHandler,
-        { build: true },
+        { pull: true },
       );
-    } catch (e) {
-      store.setError(
-        new Error(`Failed to start services: ${(e as Error).message}`),
+      pullSucceeded = true;
+    } catch {
+      store.setStatus(
+        "Registry pull failed — building images locally (this takes a few minutes)...",
       );
-      return;
+    }
+
+    if (!pullSucceeded) {
+      try {
+        await startServices(
+          repoPath,
+          "selfhost",
+          (status) => store.setStatus(status),
+          portOverrides,
+          dockerLogHandler,
+          { build: true },
+        );
+      } catch (e) {
+        store.setError(
+          new Error(`Failed to start services: ${(e as Error).message}`),
+        );
+        return;
+      }
     }
 
     store.updateData("dependencyProgress", 100);
@@ -479,7 +516,22 @@ export async function runInitFlow(
   store.setStep("Installing CLI");
   store.setStatus("Installing gaia CLI globally...");
   try {
-    await runCommand("npm", ["install", "-g", "@heygaia/cli"], repoPath);
+    const cliLogHandler = (chunk: string) => {
+      const lines = chunk
+        .split("\n")
+        .map((l: string) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
+        .filter((l: string) => l.length > 0);
+      if (lines.length === 0) return;
+      const current: string[] = store.currentState.data.cliInstallLogs || [];
+      store.updateData("cliInstallLogs", [...current, ...lines].slice(-50));
+    };
+    await runCommand(
+      "npm",
+      ["install", "-g", "@heygaia/cli"],
+      repoPath,
+      undefined,
+      cliLogHandler,
+    );
     store.setStatus("Verifying PATH...");
     const pathResult = await ensureGaiaInPath();
     if (pathResult.inPath) {

@@ -130,6 +130,7 @@ services:
 
   gaia-web:
     container_name: gaia-web
+    image: ${GAIA_WEB_IMAGE:-ghcr.io/theexperiencecompany/gaia-web:latest}
     build:
       context: ../..
       dockerfile: apps/web/Dockerfile

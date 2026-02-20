@@ -1,10 +1,68 @@
 import { Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Header } from "../components/Header.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
+
+const LOG_HEIGHT = 8;
+
+const DockerLogWindow: React.FC<{ logs: string[] }> = ({ logs }) => {
+  const [scrollOffset, setScrollOffset] = useState(0);
+  const prevLenRef = useRef(logs.length);
+
+  useEffect(() => {
+    if (logs.length !== prevLenRef.current) {
+      prevLenRef.current = logs.length;
+      setScrollOffset(0);
+    }
+  }, [logs.length]);
+
+  useInput((_input, key) => {
+    if (key.upArrow) {
+      setScrollOffset((o) =>
+        Math.min(o + 1, Math.max(0, logs.length - LOG_HEIGHT)),
+      );
+    } else if (key.downArrow) {
+      setScrollOffset((o) => Math.max(0, o - 1));
+    }
+  });
+
+  const total = logs.length;
+  const start = Math.max(0, total - LOG_HEIGHT - scrollOffset);
+  const end = Math.max(0, total - scrollOffset);
+  const visible = logs.slice(start, end);
+  const linesAbove = start;
+  const linesBelow = scrollOffset;
+
+  return (
+    <Box flexDirection="column" marginTop={1} marginLeft={1}>
+      {linesAbove > 0 && (
+        <Text color="gray" dimColor>
+          ↑ {linesAbove} more line{linesAbove !== 1 ? "s" : ""}
+        </Text>
+      )}
+      <Box flexDirection="column" height={LOG_HEIGHT} overflow="hidden">
+        {visible.map((line, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
+          <Text key={start + i} color="gray" wrap="truncate">
+            {line}
+          </Text>
+        ))}
+      </Box>
+      {linesBelow > 0 ? (
+        <Text color="gray" dimColor>
+          ↓ {linesBelow} more line{linesBelow !== 1 ? "s" : ""}
+        </Text>
+      ) : (
+        <Text color="gray" dimColor>
+          ↑↓ scroll
+        </Text>
+      )}
+    </Box>
+  );
+};
 
 interface ServiceScreenProps {
   store: CLIStore;
@@ -55,14 +113,7 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({ store }) => {
             </Box>
           )}
           {state.data.dockerLogs && state.data.dockerLogs.length > 0 && (
-            <Box flexDirection="column" marginTop={1} marginLeft={1}>
-              {(state.data.dockerLogs as string[]).map((line, i) => (
-                // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
-                <Text key={i} color="gray" wrap="truncate">
-                  {line}
-                </Text>
-              ))}
-            </Box>
+            <DockerLogWindow logs={state.data.dockerLogs as string[]} />
           )}
         </Box>
       )}

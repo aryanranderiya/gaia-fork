@@ -8,7 +8,7 @@ import { ProgressBar, Select, Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import TextInput from "ink-text-input";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { EnvCategory, EnvVar, SetupMode } from "../../lib/env-parser.js";
 
 import { Shell } from "../components/Shell.js";
@@ -232,6 +232,70 @@ const FinishedStep: React.FC<{
 };
 
 // Dependency installation progress step
+const LOG_WINDOW_HEIGHT = 8;
+
+const LogWindow: React.FC<{ logs: string[]; height?: number }> = ({
+  logs,
+  height = LOG_WINDOW_HEIGHT,
+}) => {
+  const [scrollOffset, setScrollOffset] = useState(0);
+
+  // Auto-scroll to bottom when new logs arrive, unless user has scrolled up
+  const prevLenRef = useRef(logs.length);
+  useEffect(() => {
+    if (logs.length !== prevLenRef.current) {
+      prevLenRef.current = logs.length;
+      setScrollOffset(0);
+    }
+  }, [logs.length]);
+
+  useInput((_input, key) => {
+    if (key.upArrow) {
+      setScrollOffset((o) => Math.min(o + 1, Math.max(0, logs.length - height)));
+    } else if (key.downArrow) {
+      setScrollOffset((o) => Math.max(0, o - 1));
+    }
+  });
+
+  const totalLines = logs.length;
+  const start = Math.max(0, totalLines - height - scrollOffset);
+  const end = Math.max(0, totalLines - scrollOffset);
+  const visible = logs.slice(start, end);
+  const linesAbove = start;
+  const linesBelow = scrollOffset;
+
+  return (
+    <Box flexDirection="column" marginTop={1} marginLeft={1}>
+      {linesAbove > 0 && (
+        <Text color="gray" dimColor>
+          ↑ {linesAbove} more line{linesAbove !== 1 ? "s" : ""}
+        </Text>
+      )}
+      <Box
+        flexDirection="column"
+        height={height}
+        overflow="hidden"
+      >
+        {visible.map((log, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
+          <Text key={start + i} color="gray" wrap="truncate">
+            {log}
+          </Text>
+        ))}
+      </Box>
+      {linesBelow > 0 ? (
+        <Text color="gray" dimColor>
+          ↓ {linesBelow} more line{linesBelow !== 1 ? "s" : ""}
+        </Text>
+      ) : (
+        <Text color="gray" dimColor>
+          ↑↓ scroll
+        </Text>
+      )}
+    </Box>
+  );
+};
+
 const DependencyInstallStep: React.FC<{
   phase: string;
   progress: number;
@@ -267,16 +331,8 @@ const DependencyInstallStep: React.FC<{
           </Box>
         )}
 
-        {/* Logs Window */}
         {!isComplete && logs && logs.length > 0 && (
-          <Box flexDirection="column" marginTop={1} marginLeft={1}>
-            {logs.map((log, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: logs are append-only
-              <Text key={i} color="gray" wrap="truncate">
-                {log}
-              </Text>
-            ))}
-          </Box>
+          <LogWindow logs={logs} />
         )}
       </Box>
     </Box>
@@ -1501,6 +1557,10 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
               label={state.status || "Installing gaia CLI globally..."}
             />
           </Box>
+          {state.data.cliInstallLogs &&
+            (state.data.cliInstallLogs as string[]).length > 0 && (
+              <LogWindow logs={state.data.cliInstallLogs as string[]} />
+            )}
         </Box>
       )}
 
