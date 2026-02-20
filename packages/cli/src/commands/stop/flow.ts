@@ -20,9 +20,13 @@ export async function runStopFlow(store: CLIStore): Promise<void> {
   const portOverrides = readDockerComposePortOverrides(repoPath);
 
   try {
-    await stopServices(repoPath, (status) => {
-      store.setStatus(status);
-    }, portOverrides);
+    await stopServices(
+      repoPath,
+      (status) => {
+        store.setStatus(status);
+      },
+      portOverrides,
+    );
 
     store.setStep("Stopped");
     store.setStatus("All services stopped.");

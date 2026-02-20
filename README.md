@@ -27,10 +27,7 @@ It's designed to help users manage their digital lives by automating tasks, hand
   - [Table of Contents](#table-of-contents)
   - [The Problem](#the-problem)
   - [Features](#features)
-  - [Installation](#installation)
-    - [Self-Hosted Setup](#self-hosted-setup)
-    - [Cloud-Hosted (Zero Setup)](#cloud-hosted-zero-setup)
-  - [Quick Start](#quick-start)
+  - [Getting Started](#getting-started)
   - [Documentation](#documentation)
   - [Community \& Support](#community--support)
   - [Contributing](#contributing)
@@ -87,58 +84,20 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
   </table>
 </div>
 
-## Installation
+## Getting Started
 
-### Self-Hosted Setup
+**Cloud (zero setup):** Visit [heygaia.io](https://heygaia.io) to get started instantly.
 
-Install the GAIA CLI globally and run the interactive setup wizard:
+**Self-hosted:** Install the CLI and run the setup wizard:
 
 ```bash
-# Install the CLI globally
 curl -fsSL https://heygaia.io/install.sh | sh
-
-# Run the setup wizard
 gaia init
 ```
 
-The `gaia init` wizard will:
-- Check prerequisites (Docker, Git)
-- Clone the repository and install tools
-- Auto-discover and configure environment variables
-- Set up Docker containers and start your GAIA instance
+The wizard checks prerequisites, clones the repo, configures environment variables, and starts your instance. See the [CLI documentation](https://docs.heygaia.io/cli/installation) or the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for more.
 
-**Once installed, you can use these commands:**
-
-```bash
-gaia init      # Complete setup from scratch
-gaia setup     # Configure existing repository
-gaia start     # Start all services
-gaia stop      # Stop all services
-gaia status    # Check service health
-```
-
-See the [CLI documentation](https://docs.heygaia.io/cli/installation) for all installation methods and detailed command documentation.
-
-### Cloud-Hosted (Zero Setup)
-
-No installation needed — just visit [heygaia.io](https://heygaia.io) to get started instantly.
-
-## Quick Start
-
-Choose how you'd like to use GAIA:
-
-- **Use GAIA instantly**: No setup required — just visit [heygaia.io](https://heygaia.io).
-- **Self-host GAIA**: Install the CLI with `curl -fsSL https://heygaia.io/install.sh | sh` then run `gaia init`, or see the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for manual Docker setup.
-- **Develop or contribute**: Install the CLI with `curl -fsSL https://heygaia.io/install.sh | sh` then run `gaia init`, or follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup) for manual setup.
-
-**After installation, your workflow looks like this:**
-
-```bash
-gaia init    # First time setup (clones repo, installs everything)
-gaia start   # Start GAIA services
-gaia status  # Check if everything is running
-gaia stop    # Stop services when done
-```
+**Develop or contribute:** Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
 
 ## Documentation
 
@@ -206,18 +165,5 @@ Feel free to contact the team at contact@heygaia.io or aryan@heygaia.io for any 
 
 Made with ❤️ by
 [![The Experience Company](https://img.shields.io/badge/The%20Experience%20Company-121212?logo=data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyOTE3IDI1OTYuMjIiPgogIDxkZWZzPgogICAgPHN0eWxlPgogICAgICAuY2xzLTEgewogICAgICAgIGZpbGw6ICNmZmY7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgPC9kZWZzPgogIDxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTE2MjIuNDQsMTE0MC44MmMtMTcxLjM2LDExNi43Ny0yMTQuNzcsMTM5Ljc0LTI1MC41MSwxOTEuMTktODguNzgsMTI3Ljc4LTk2LjE4LDI3MS45LTkyLjAxLDM1OS42NiwxLjM5LDI3OC44MS00LjY3LDU1MC4xNi0zLjI4LDgyOC45NiwzNDUuNjYtMTQ0LjQ4LDc3NS40OS0zOTcuMDgsMTExNy41LTgzOS45Myw2OC4xMS04OC4xOSw3NjQuMjktOTc0LjMyLDQzNC43Ni0xNDE0LjE0QzI2OTUuMDIsODcuODYsMjQ3Mi4xNyw5LjcxLDIyNTQuMTMsMS41NCwxMzI2Ljc5LTMzLjIsNDg3Ljc3LDUyNS40NywxNTEuOTUsMTExMi4yM2MtLjY0LDEuMTEtMS41NiwyLjczLTIuNzUsNC44Mi01Ni4zNSw5OS4zOS0yMjAuNzIsMzg5LjM2LTExMy44OSw1NDUuMjIsNTMuOTUsNzguNywxNTYuNzgsOTMuNjQsMTc2LjI5LDk2LjQ3LDExMi4zOCwxNi4zMywyMDUuNDUtMzUuNjEsMzE4LjQzLTEwMC45NywxNDguMjctODUuNzcsMjIyLjYzLTEyOC4yNSwyMjMuNjYtMTI4LjkzLDExMC44LTczLjAzLDI5Mi40NS0xMzYuMzUsNDY5LjU5LTI2OS43LjI5LS4yMi01LjQ1LDMuMjctMTYuMzMsOS43OS0xNi43NiwxMC4wNC0zMDguNjksMTE2LjYzLTM5Mi42OCwxNzUuMDYtMTM4LjQ4LDk2LjM0LTUxMC40LDE2Ny44LTU3NC44NSw0OS4zNC02OS44My0xMjguMzMsMTc5Ljg1LTQ1Ni4xOSwyNTguODQtNTYwLjgyLjgxLTEuMDcsNy42Ny0xMC4wNSwxNC40Ny0xOC44NSwzMDguMDItMzk3Ljg0LDcwNC4zNS01NTAuNjgsNzc1LjgzLTU3Ny4yLDM4NC44Mi0xNDIuNzksOTM4LjgxLTE5Ny4xMiwxMDIwLjExLTIxLjE5LDc0LjQ0LDE2MS4xLTE0Mi41OSw0MjAuNDMtMzIxLjkxLDU1OC42OCIvPgogIDxwYXRoIGNsYXNzPSJjbHMtMSIgZD0iTTcyNS4yNiwxNjEyLjcyYy0xMDUuMiw1NC45NC0xOTUuMTQsODguMDYtMjQ3LjQyLDEwNS42NS0xNzYuMDYsNTkuMjUtMjMxLjc3LDMxLjk2LTIzOC4xNCwxMS4xNS04LjU1LTI3LjkxLDE4NS40MS05Ny45NiwyMDkuOTItMTA3LjUxLDc0LjMyLTI4LjkzLDk5LjQ5LTM2Ljc3LDE2My41Ny02NS4wOCw0NS4zMi0yMC4wMiwxNDIuNC02Ni4xNSwyNDMuNTItMTQ0LjA1LDEwLjk1LTguNDMsMjAuMDctMTUuMzgsMzIuMjItMjUuOTIsNDAuMTEtMzQuNzcsOTAuNzItODEuMzksMTMyLjczLTE1OC4zNCwzNy44My02OS4yOSw0OS45My0xNjUuODMsNTQuMDUtMjUyLjUyLDQuMDktLjk5LDIuNjIsNy40MiwyLjk2LDExLjQ0LDcuMjYsODcuNDksMTQuODQsMjM4LjU2LDk3LjU3LDI0NS42OCw2MS42Miw1LjMxLDExMy4xNi0yNy42OSwxNjguNTQtNTMuNzcsMi4yMS0xLjA0LDcuNi00LjU5LDcuMzIsMS40Ny03Mi4wOCw0OC4wMS0xMjAuMzcsOTQuODEtMTQ5LjQ3LDEyNi40Ni0zOS4zOCw0Mi44Mi01Ny43Myw3My4yNi02OS4wMiw5NS4xOS01Ljk5LDExLjY0LTE2LjM5LDMyLjEtMjQuODIsNjAuMzctMjUuMzIsODQuOTgtMjkuMTIsMjI4LjQyLTI5LjEsMjM0LjkxLDAsMCwwLC4xNi0uMDQuMTctMS41Ni4yOS0yMy43OS0yMjQuNi04My45NC0yNDMuNzMtMTIuMjgtMy45MS0yNy44NS0uNzItMzEuNDkuNzUtMTQuMjEsNS43MS0xMTAuODIsOTAuNzYtMjM4Ljk3LDE1Ny42OFoiLz4KPC9zdmc+)](https://experience.heygaia.io)
-<br>
-
-   <p>
-    <a href="https://discord.heygaia.io">
-      <img src="https://img.shields.io/badge/-Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord" />
-    </a>
-    <a href="https://whatsapp.heygaia.io">
-      <img src="https://img.shields.io/badge/-WhatsApp-25D366?style=flat&logo=whatsapp&logoColor=white" alt="WhatsApp" />
-    </a>
-    <a href="https://twitter.com/trygaia">
-      <img src="https://img.shields.io/twitter/follow/trygaia?style=social" alt="Twitter" />
-    </a>
-  </p>
   <a href="https://heygaia.io">heygaia.io</a> • <a href="https://docs.heygaia.io">Documentation</a> • <a href="https://heygaia.io/contact">Contact Us</a>
 </center>

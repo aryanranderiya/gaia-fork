@@ -64,12 +64,11 @@ const Stepper: React.FC<StepperProps> = ({ currentStep, steps }) => {
           <Box key={step} flexShrink={0}>
             {i > 0 && (
               <Text color="gray" dimColor>
-                {" "}·{" "}
+                {" "}
+                ·{" "}
               </Text>
             )}
-            {isDone && (
-              <Text color="green">✓ {label}</Text>
-            )}
+            {isDone && <Text color="green">✓ {label}</Text>}
             {isActive && (
               <Text color={THEME_COLOR} bold>
                 {label}

@@ -13,6 +13,8 @@ import {
 import { LOG_BUFFER_LINES } from "../../ui/constants.js";
 import type { CLIStore } from "../../ui/store.js";
 
+const ANSI_ESCAPE_RE = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, "g");
+
 export async function runStartFlow(
   store: CLIStore,
   options?: StartServicesOptions,
@@ -81,7 +83,7 @@ export async function runStartFlow(
   const logHandler = (chunk: string) => {
     const lines = chunk
       .split("\n")
-      .map((l) => l.replace(/\x1b\[[0-9;]*m/g, "").trim())
+      .map((l) => l.replace(ANSI_ESCAPE_RE, "").trim())
       .filter((l) => l.length > 0);
     if (lines.length === 0) return;
     const current: string[] = store.currentState.data.dockerLogs || [];

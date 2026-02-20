@@ -15,11 +15,7 @@ The CLI checks prerequisites at startup and tells you what's missing.
 
 ## Installation
 
-**Global installation is required** to use the `gaia` command. Choose your preferred method:
-
 ### Quick Install (Recommended)
-
-Downloads and installs the CLI globally using the install script:
 
 ```bash
 curl -fsSL https://heygaia.io/install.sh | sh
@@ -29,56 +25,23 @@ This automatically detects your system and installs using npm or bun.
 
 ### Manual Installation
 
-#### npm
-
 ```bash
 npm install -g @heygaia/cli
-```
-
-#### pnpm
-
-```bash
+# or
 pnpm add -g @heygaia/cli
-```
-
-#### bun
-
-```bash
+# or
 bun add -g @heygaia/cli
 ```
 
-### Verify Installation
-
-After installation, verify the `gaia` command is available:
-
-```bash
-gaia --version
-gaia --help
-```
-
-### Alternative: Run Without Installing (Not Recommended)
-
-You can run commands directly with `npx`, but this won't add the `gaia` command to your PATH:
+### Alternative: Run Without Installing
 
 ```bash
 npx @heygaia/cli init
 ```
 
-**Note:** Using `npx` means you'll need to prefix every command with `npx @heygaia/cli` instead of just using `gaia`. We recommend installing globally for the best experience.
-
-## What Happens When You Install
-
-1. The `@heygaia/cli` npm package is installed globally
-2. A `gaia` binary is added to your PATH (points to `dist/index.js`)
-3. No background processes, daemons, or services are started — the CLI only runs when you invoke it
-
-The CLI itself is a single bundled JavaScript file (~300KB) with no native dependencies.
+You'll need to prefix every command with `npx @heygaia/cli` instead of just `gaia`. Global installation is recommended.
 
 ## Commands
-
-Once installed, you can use these commands from anywhere in your terminal:
-
-### Quick Reference
 
 ```bash
 gaia init          # Full setup from scratch
@@ -90,39 +53,15 @@ gaia --version     # Show CLI version
 gaia --help        # Show all commands
 ```
 
-### Command Details
-
-| Command | Description |
-|---------|-------------|
-| `gaia init` | Full setup from scratch — clone repo, install tools, configure env, start services |
-| `gaia setup` | Configure an existing GAIA repository (env vars, dependencies) |
-| `gaia start` | Start all GAIA services (auto-detects selfhost vs developer mode) |
-| `gaia stop` | Stop all running GAIA services |
-| `gaia status` | Check health of all services with latency |
-| `gaia --version` | Display the current CLI version |
-| `gaia --help` | Show help and list all available commands |
-
 ### `gaia init`
 
-Interactive wizard for first-time setup. This is the main entry point for new users.
-
-**Usage:**
-
-```bash
-gaia init
-```
+Interactive wizard for first-time setup. Handles everything from zero to a running GAIA instance.
 
 **Options:**
 
 | Flag | Description |
 |------|-------------|
-| `--branch <name>` | Clone a specific branch of the GAIA repo instead of the default branch |
-
-**Examples:**
-
-```bash
-gaia init --branch develop
-```
+| `--branch <name>` | Clone a specific branch instead of the default |
 
 **What it does:**
 
@@ -134,34 +73,18 @@ gaia init --branch develop
 6. **Project setup** — Runs `mise setup` to install all dependencies, start Docker services, and seed the database.
 7. **Service startup** — Optionally starts all services immediately.
 
-**First-time users:** This is the command you want! It handles everything from zero to a running GAIA instance.
-
 ### `gaia setup`
 
-For existing repos that need configuration or reconfiguration. Skips cloning and tool installation, goes straight to environment setup.
-
-**Usage:**
+For existing repos — skips cloning and tool installation, goes straight to environment setup. Use when you want to reconfigure environment variables, switch between self-host and developer modes, or reinstall dependencies.
 
 ```bash
 cd /path/to/gaia
 gaia setup
 ```
 
-**When to use:**
-- You already have the GAIA repo cloned
-- You want to reconfigure environment variables
-- You need to switch between self-host and developer modes
-- Dependencies need to be reinstalled
-
 ### `gaia start`
 
 Starts all GAIA services. Auto-detects the setup mode from your `.env` configuration.
-
-**Usage:**
-
-```bash
-gaia start
-```
 
 **Options:**
 
@@ -170,16 +93,10 @@ gaia start
 | `--build` | Rebuild Docker images before starting |
 | `--pull` | Pull latest base images before starting |
 
-The flags can be combined:
-
-```bash
-gaia start --build --pull
-```
-
 **What it does:**
 
 - **Self-host mode**: Runs `docker compose --profile all up -d` (everything in Docker, runs in background)
-- **Developer mode**: Runs `mise dev` (databases in Docker, API + web locally with hot reload). Services run in the background and logs are written to `dev-start.log` in the repo root. Monitor them with:
+- **Developer mode**: Runs `mise dev` (databases in Docker, API + web locally with hot reload). Logs are written to `dev-start.log` in the repo root:
 
 ```bash
 tail -f dev-start.log
@@ -192,32 +109,11 @@ tail -f dev-start.log
 
 ### `gaia stop`
 
-Stops all running GAIA services gracefully.
-
-**Usage:**
-
-```bash
-gaia stop
-```
-
-**What it stops:**
-- All Docker containers in the GAIA compose stack
-- Local processes on ports 8000 (API) and 3000 (Web)
-- Background workers and services
-
-**Note:** Your data is preserved — stopping services doesn't delete any databases or configurations.
+Stops all running GAIA services gracefully — Docker containers, local processes on ports 8000 and 3000, and background workers. Your data is preserved.
 
 ### `gaia status`
 
 Shows a live health dashboard with latency for all services.
-
-**Usage:**
-
-```bash
-gaia status
-```
-
-**Service checks:**
 
 | Service | Port | Health Check |
 |---------|------|--------------|
@@ -229,10 +125,7 @@ gaia status
 | RabbitMQ | 5672 | TCP connection |
 | ChromaDB | 8080 | TCP connection |
 
-**Interactive controls:**
-- Press `r` to refresh status
-- Status indicators: ✓ (healthy), ✗ (down), - (checking)
-- Shows response time for each service
+Press `r` to refresh. Status indicators: ✓ (healthy), ✗ (down), - (checking).
 
 ## Setup Modes
 
@@ -243,13 +136,7 @@ During `gaia init` or `gaia setup`, you choose a mode:
 
 ### Port Overrides
 
-When the CLI detects port conflicts during setup, it automatically selects alternative ports and writes them to `infra/docker/.env` inside your GAIA repo directory. For example, if port 5432 is already in use, the CLI might assign 5433 and store `POSTGRES_HOST_PORT=5433` in that file.
-
-These overrides persist across `gaia start` / `gaia stop` cycles — you do not need to re-run setup each time. The CLI reads `infra/docker/.env` on every invocation, so the correct ports are always used without any extra steps.
-
-The `gaia status` command also reads the same overridden ports when performing health checks, so the service table reflects your actual configuration.
-
-To change port assignments after setup, edit `infra/docker/.env` directly. The relevant variables follow the pattern `<SERVICE>_HOST_PORT`, for example:
+When the CLI detects port conflicts, it automatically selects alternative ports and writes them to `infra/docker/.env`. These persist across `gaia start` / `gaia stop` cycles. To change port assignments after setup, edit `infra/docker/.env` directly:
 
 | Variable | Service |
 |----------|---------|
@@ -261,14 +148,14 @@ To change port assignments after setup, edit `infra/docker/.env` directly. The r
 | `RABBITMQ_HOST_PORT` | RabbitMQ |
 | `CHROMA_HOST_PORT` | ChromaDB |
 
-After editing the file, run `gaia stop` and `gaia start` to apply the new assignments.
+After editing, run `gaia stop` and `gaia start` to apply changes.
 
 ## Environment Variable Configuration
 
 Two methods are available:
 
 - **Manual** — Interactive prompts for each variable with descriptions, documentation links, and defaults.
-- **Infisical** — Enter your Infisical credentials (token, project ID, machine identity) for centralized secret management.
+- **Infisical** — Enter your Infisical credentials for centralized secret management.
 
 ### Auto-Discovery
 
@@ -278,6 +165,52 @@ The CLI discovers environment variables from the codebase at runtime:
 - **Web variables** — Parsed from `apps/web/.env`
 
 When a developer adds a new variable to either location, the CLI picks it up automatically — no CLI updates needed.
+
+## Upgrading
+
+### Updating GAIA
+
+```bash
+cd /path/to/gaia
+git pull
+gaia setup  # if dependencies changed
+```
+
+### Updating the CLI
+
+```bash
+npm install -g @heygaia/cli
+# or
+pnpm add -g @heygaia/cli
+# or
+bun add -g @heygaia/cli
+```
+
+## Uninstalling
+
+1. Stop all running services: `gaia stop`
+2. Remove the repo: `rm -rf /path/to/gaia`
+3. Remove CLI metadata: `rm -rf ~/.gaia`
+4. Uninstall the CLI:
+
+```bash
+npm uninstall -g @heygaia/cli
+# or
+pnpm remove -g @heygaia/cli
+# or
+bun remove -g @heygaia/cli
+```
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| `command not found: gaia` | Ensure the global bin directory is in PATH. For npm: `export PATH="$(npm config get prefix)/bin:$PATH"`. For bun: `export PATH="$HOME/.bun/bin:$PATH"` |
+| Raw mode not supported | The CLI requires an interactive terminal — don't run in background or pipe |
+| Port conflicts not detected | Ensure `lsof` is available (macOS/Linux). Windows requires WSL2 |
+| Env vars not discovered | Check that `settings_validator.py` and `apps/web/.env` exist in the repo |
+| `Python 3 not found` | The CLI requires Python 3 to parse API environment variables. Install it or run `mise install python` |
+| Docker prerequisite fails | Ensure Docker Desktop/Engine is running, not just installed |
 
 ## Development
 
@@ -297,88 +230,14 @@ cd packages/cli && pnpm run build
 
 ### Install Script
 
-Source of truth: `packages/cli/install.sh`. After modifying, sync to the web app:
-
-```bash
-./packages/cli/sync-install.sh
-```
-
-This copies the script to `apps/web/public/install.sh`, which is served at `https://heygaia.io/install.sh`.
+Source of truth: `packages/cli/install.sh`. The web app serves it at `https://heygaia.io/install.sh` by fetching directly from GitHub — no manual sync needed.
 
 ### Publishing
 
 1. Update version in `package.json`
 2. Build: `pnpm run build`
-3. Sync install script: `./sync-install.sh`
-4. Commit and tag: `git tag cli-v<version>`
-5. Push tag — GitHub Actions publishes to npm
-
-## Upgrading
-
-### Updating GAIA
-
-Pull the latest code in your GAIA repo directory, then re-run setup if dependencies changed:
-
-```bash
-cd /path/to/gaia
-git pull
-gaia setup  # if dependencies changed
-```
-
-### Updating the CLI itself
-
-Reinstall globally using the same method you used to install:
-
-```bash
-npm install -g @heygaia/cli
-# or
-pnpm add -g @heygaia/cli
-# or
-bun add -g @heygaia/cli
-```
-
-## Uninstalling
-
-To fully remove GAIA and the CLI:
-
-1. **Stop all running services:**
-
-```bash
-gaia stop
-```
-
-2. **Remove the repo directory** (wherever you cloned it):
-
-```bash
-rm -rf /path/to/gaia
-```
-
-3. **Remove CLI metadata:**
-
-```bash
-rm -rf ~/.gaia
-```
-
-4. **Uninstall the CLI globally:**
-
-```bash
-npm uninstall -g @heygaia/cli
-# or
-pnpm remove -g @heygaia/cli
-# or
-bun remove -g @heygaia/cli
-```
-
-## Troubleshooting
-
-| Issue | Fix |
-|-------|-----|
-| `command not found: gaia` | Ensure the global bin directory is in PATH. For npm: `export PATH="$(npm config get prefix)/bin:$PATH"`. For bun: `export PATH="$HOME/.bun/bin:$PATH"` |
-| Raw mode not supported | The CLI requires an interactive terminal — don't run in background or pipe |
-| Port conflicts not detected | Ensure `lsof` is available (macOS/Linux). Windows requires WSL2 |
-| Env vars not discovered | Check that `settings_validator.py` and `apps/web/.env` exist in the repo |
-| `Python 3 not found` | The CLI requires Python 3 to parse API environment variables. Ensure Python 3 is installed, or install it via Mise: `mise install python` |
-| Docker prerequisite fails | Ensure Docker Desktop/Engine is running, not just installed |
+3. Commit and tag: `git tag cli-v<version>`
+4. Push tag — GitHub Actions publishes to npm
 
 ## License
 

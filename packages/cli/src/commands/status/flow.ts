@@ -1,5 +1,5 @@
-import { checkAllServices, getDockerStatus } from "../../lib/healthcheck.js";
 import { readDockerComposePortOverrides } from "../../lib/env-writer.js";
+import { checkAllServices, getDockerStatus } from "../../lib/healthcheck.js";
 import { findRepoRoot } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";
 

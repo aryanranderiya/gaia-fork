@@ -2,6 +2,68 @@ import { Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import type React from "react";
 import type { PortCheckResult } from "../../lib/prerequisites.js";
+import { THEME_COLOR } from "../constants.js";
+
+export const SystemChecksStep: React.FC<{
+  checks: { git: string; docker: string; mise: string };
+}> = ({ checks }) => (
+  <Box
+    flexDirection="column"
+    borderStyle="round"
+    paddingX={1}
+    borderColor={THEME_COLOR}
+  >
+    <Text bold>System Checks</Text>
+    <Box flexDirection="column" marginTop={1}>
+      <CheckItem
+        label="Git"
+        status={checks.git as "pending" | "success" | "error" | "missing"}
+      />
+      <CheckItem
+        label="Docker"
+        status={checks.docker as "pending" | "success" | "error" | "missing"}
+      />
+      <CheckItem
+        label="Mise"
+        status={checks.mise as "pending" | "success" | "error" | "missing"}
+      />
+    </Box>
+  </Box>
+);
+
+export const EnvSetupSpinnerStep: React.FC<{ status?: string }> = ({
+  status,
+}) => (
+  <Box
+    flexDirection="column"
+    marginTop={1}
+    paddingX={1}
+    borderStyle="round"
+    borderColor={THEME_COLOR}
+  >
+    <Text bold>Environment Setup</Text>
+    <Box marginTop={1}>
+      <Spinner label={status || "Configuring environment..."} />
+    </Box>
+  </Box>
+);
+
+export const ErrorStep: React.FC<{ message: string }> = ({ message }) => (
+  <Box
+    flexDirection="column"
+    borderStyle="single"
+    borderColor="red"
+    padding={1}
+    marginTop={2}
+  >
+    <Text color="red">Error: {message}</Text>
+    <Box marginTop={1}>
+      <Text dimColor>
+        <Text bold>Enter</Text> to exit
+      </Text>
+    </Box>
+  </Box>
+);
 
 export const CheckItem: React.FC<{
   label: string;

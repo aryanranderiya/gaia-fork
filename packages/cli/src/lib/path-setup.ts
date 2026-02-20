@@ -56,14 +56,24 @@ function getYarnBinDir(): string | null {
 function findGaiaBinDir(): string | null {
   const gaiaBin = isWindows ? "gaia.cmd" : "gaia";
 
-  for (const getter of [getNpmBinDir, getPnpmBinDir, getBunBinDir, getYarnBinDir]) {
+  for (const getter of [
+    getNpmBinDir,
+    getPnpmBinDir,
+    getBunBinDir,
+    getYarnBinDir,
+  ]) {
     const dir = getter();
     if (dir && fs.existsSync(path.join(dir, gaiaBin))) return dir;
   }
 
   // Also check plain "gaia" on Windows (some PMs use extensionless files)
   if (isWindows) {
-    for (const getter of [getNpmBinDir, getPnpmBinDir, getBunBinDir, getYarnBinDir]) {
+    for (const getter of [
+      getNpmBinDir,
+      getPnpmBinDir,
+      getBunBinDir,
+      getYarnBinDir,
+    ]) {
       const dir = getter();
       if (dir && fs.existsSync(path.join(dir, "gaia"))) return dir;
     }
@@ -122,7 +132,7 @@ function addToWindowsPath(binDir: string): boolean {
   try {
     // Update persistent user PATH via setx
     const currentPath = tryExec(
-      'powershell -Command "[Environment]::GetEnvironmentVariable(\'Path\', \'User\')"',
+      "powershell -Command \"[Environment]::GetEnvironmentVariable('Path', 'User')\"",
     );
     if (currentPath && currentPath.includes(binDir)) return true;
 

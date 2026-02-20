@@ -12,7 +12,12 @@ import { useEffect, useRef, useState } from "react";
 import type { EnvCategory, EnvVar, SetupMode } from "../../lib/env-parser.js";
 
 import { Shell } from "../components/Shell.js";
-import { CheckItem, PortConflictStep } from "../components/shared-steps.js";
+import {
+  EnvSetupSpinnerStep,
+  ErrorStep,
+  PortConflictStep,
+  SystemChecksStep,
+} from "../components/shared-steps.js";
 import { THEME_COLOR } from "../constants.js";
 import type { CLIStore } from "../store.js";
 
@@ -294,7 +299,7 @@ const LogWindow: React.FC<{ logs: string[]; height?: number }> = ({
   );
 };
 
-const DependencyInstallStep: React.FC<{
+export const DependencyInstallStep: React.FC<{
   phase: string;
   progress: number;
   isComplete: boolean;
@@ -1397,19 +1402,7 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
       )}
 
       {state.step === "Prerequisites" && state.data.checks && (
-        <Box
-          flexDirection="column"
-          borderStyle="round"
-          paddingX={1}
-          borderColor={THEME_COLOR}
-        >
-          <Text bold>System Checks</Text>
-          <Box flexDirection="column" marginTop={1}>
-            <CheckItem label="Git" status={state.data.checks.git} />
-            <CheckItem label="Docker" status={state.data.checks.docker} />
-            <CheckItem label="Mise" status={state.data.checks.mise} />
-          </Box>
-        </Box>
+        <SystemChecksStep checks={state.data.checks} />
       )}
 
       {state.inputRequest?.id === "port_conflicts" &&
@@ -1506,18 +1499,7 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         )}
 
       {state.step === "Environment Setup" && !state.inputRequest && (
-        <Box
-          flexDirection="column"
-          marginTop={1}
-          paddingX={1}
-          borderStyle="round"
-          borderColor={THEME_COLOR}
-        >
-          <Text bold>Environment Setup</Text>
-          <Box marginTop={1}>
-            <Spinner label={state.status || "Configuring environment..."} />
-          </Box>
-        </Box>
+        <EnvSetupSpinnerStep status={state.status} />
       )}
 
       {state.step === "Finished" && (
@@ -1568,22 +1550,7 @@ export const InitScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
         </Box>
       )}
 
-      {state.error && (
-        <Box
-          flexDirection="column"
-          borderStyle="single"
-          borderColor="red"
-          padding={1}
-          marginTop={2}
-        >
-          <Text color="red">Error: {state.error.message}</Text>
-          <Box marginTop={1}>
-            <Text dimColor>
-              <Text bold>Enter</Text> to exit
-            </Text>
-          </Box>
-        </Box>
-      )}
+      {state.error && <ErrorStep message={state.error.message} />}
     </Shell>
   );
 };

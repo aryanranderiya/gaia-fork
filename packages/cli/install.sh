@@ -3,6 +3,9 @@ set -e
 
 # GAIA CLI Installer
 # Usage: curl -fsSL https://heygaia.io/install.sh | sh
+#
+# NOTE: Do not rename this file. The web app serves it at heygaia.io/install.sh
+# by fetching it from GitHub using this exact path: packages/cli/install.sh
 
 BOLD='\033[1m'
 GREEN='\033[0;32m'
