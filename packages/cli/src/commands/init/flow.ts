@@ -12,6 +12,7 @@ import {
   runCommand,
   startServices,
 } from "../../lib/service-starter.js";
+import { LOG_BUFFER_LINES } from "../../ui/constants.js";
 import type { CLIStore } from "../../ui/store.js";
 
 const DEV_MODE = process.env.GAIA_CLI_DEV === "true";
@@ -33,7 +34,7 @@ export async function runInitFlow(
     const lines = chunk
       .split("\n")
       .filter((line: string) => line.trim() !== "");
-    const newLogs = [...currentLogs, ...lines].slice(-20);
+    const newLogs = [...currentLogs, ...lines].slice(-LOG_BUFFER_LINES);
     store.updateData("dependencyLogs", newLogs);
   };
 
@@ -227,7 +228,16 @@ export async function runInitFlow(
             break;
           } else if (action === "delete_reclone") {
             store.setStatus("Removing existing installation...");
-            fs.rmSync(repoPath, { recursive: true, force: true });
+            try {
+              fs.rmSync(repoPath, { recursive: true, force: true });
+            } catch (e) {
+              store.setError(
+                new Error(
+                  `Failed to remove directory: ${(e as Error).message}\nTry removing it manually: rm -rf "${repoPath}"`,
+                ),
+              );
+              return;
+            }
             break;
           } else if (action === "different_path") {
             continue;
@@ -308,7 +318,10 @@ export async function runInitFlow(
           .filter((l: string) => l.length > 0);
         if (lines.length === 0) return;
         const current: string[] = store.currentState.data.cliInstallLogs || [];
-        store.updateData("cliInstallLogs", [...current, ...lines].slice(-50));
+        store.updateData(
+          "cliInstallLogs",
+          [...current, ...lines].slice(-LOG_BUFFER_LINES),
+        );
       };
       await runCommand(
         "npm",
@@ -352,7 +365,10 @@ export async function runInitFlow(
         .filter((l: string) => l.length > 0);
       if (lines.length === 0) return;
       const current: string[] = store.currentState.data.dependencyLogs || [];
-      store.updateData("dependencyLogs", [...current, ...lines].slice(-50));
+      store.updateData(
+        "dependencyLogs",
+        [...current, ...lines].slice(-LOG_BUFFER_LINES),
+      );
     };
 
     // Try to pull pre-built images from GHCR first (fast path for self-hosters).
@@ -369,9 +385,10 @@ export async function runInitFlow(
         { pull: true },
       );
       pullSucceeded = true;
-    } catch {
+    } catch (e) {
+      const reason = (e as Error).message?.split("\n")[0] ?? "unknown error";
       store.setStatus(
-        "Registry pull failed — building images locally (this takes a few minutes)...",
+        `Registry pull failed (${reason}) — building images locally (this takes a few minutes)...`,
       );
     }
 
@@ -505,7 +522,7 @@ export async function runInitFlow(
 
   const envMethod = (store.currentState.data.envMethod as string) || "manual";
   writeConfig({
-    version: "0.1.8",
+    version: CLI_VERSION,
     setupComplete: true,
     setupMethod: envMethod as "manual" | "infisical",
     repoPath,
@@ -523,7 +540,10 @@ export async function runInitFlow(
         .filter((l: string) => l.length > 0);
       if (lines.length === 0) return;
       const current: string[] = store.currentState.data.cliInstallLogs || [];
-      store.updateData("cliInstallLogs", [...current, ...lines].slice(-50));
+      store.updateData(
+        "cliInstallLogs",
+        [...current, ...lines].slice(-LOG_BUFFER_LINES),
+      );
     };
     await runCommand(
       "npm",
