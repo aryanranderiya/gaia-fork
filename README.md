@@ -12,7 +12,9 @@
 <br />
 
 [![GAIA](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/theexperiencecompany/gaia/refs/heads/master/apps/web/public/badge.json)](https://heygaia.io) [![Documentation](https://img.shields.io/badge/Documentation-00bbff?style=flat&logo=gitbook&logoColor=white)](https://docs.heygaia.io) 
+
 [![Better Stack Badge](https://uptime.betterstack.com/status-badges/v3/monitor/1zjmp.svg)](https://uptime.betterstack.com/?utm_source=status_badge) ![last update](https://img.shields.io/github/commit-activity/m/theexperiencecompany/gaia) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/theexperiencecompany/gaia)
+
 [![Discord](https://discord-live-members-count-badge.vercel.app/api/discord-members?guildId=585464664650022914&color=5c6af3&label=Discord)](https://discord.heygaia.io) [![Twitter Follow](https://img.shields.io/twitter/follow/trygaia?style=social)](https://x.com/intent/user?screen_name=trygaia) [![Whatsapp](https://img.shields.io/badge/WhatsApp-25D366?logo=whatsapp&logoColor=fff&style=flat)](https://whatsapp.heygaia.io) 
 </div>
 
@@ -65,8 +67,7 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
       <td width="50%">
       <center>
         <img src="apps/web/public/images/screenshots/desktop_dock.png" alt="GAIA Desktop App" style="width:100%; border-radius:12px;">
-        <em>GAIA on Desktop</em>
-        <br/>
+        GAIA on Desktop
          <a href="https://heygaia.io/download">
           <img src="https://img.shields.io/badge/Download-00bbff?logoColor=white" alt="Download">
         </a>
@@ -75,8 +76,7 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
       <td width="50%">
       <center>
         <img src="apps/web/public/images/screenshots/website_tab.png" alt="GAIA Web App" style="width:100%; border-radius:12px;">
-        <em>GAIA on Web</em>
-        <br/>
+        GAIA on Web
          <a href="https://heygaia.io/signup">
           <img src="https://img.shields.io/badge/Get_Started-00bbff?logoColor=white" alt="Get Started">
         </a>
@@ -88,18 +88,27 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 
 ## Getting Started
 
-**Cloud (zero setup):** Visit [heygaia.io](https://heygaia.io) to get started instantly.
+### **Cloud (zero setup):**
+- Visit [heygaia.io](https://heygaia.io) to get started instantly.
 
-**Self-hosted:** Install the CLI and run the setup wizard:
+### **Self-host**
+- Install the CLI and run the setup wizard:
+
+```
+npx @heygaia/cli@latest init
+```
+
+OR
 
 ```bash
 curl -fsSL https://heygaia.io/install.sh | sh
 gaia init
 ```
 
-The wizard checks prerequisites, clones the repo, configures environment variables, and starts your instance. See the [CLI documentation](https://docs.heygaia.io/cli/installation) or the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for more.
+See the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for more.
 
-**Develop or contribute:** Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
+### **Develop or contribute:**
+Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
 
 ## Monorepo Structure
 
