@@ -135,6 +135,18 @@ class CommonSettings(BaseAppSettings):
         """Google OAuth callback URL."""
         return f"{self.HOST}/api/v1/oauth/google/callback"
 
+    @computed_field  # type: ignore
+    @property
+    def DISCORD_OAUTH_REDIRECT_URI(self) -> str:
+        """Discord OAuth callback URL."""
+        return f"{self.HOST}/api/v1/platform-auth/discord/callback"
+
+    @computed_field  # type: ignore
+    @property
+    def SLACK_OAUTH_REDIRECT_URI(self) -> str:
+        """Slack OAuth callback URL."""
+        return f"{self.HOST}/api/v1/platform-auth/slack/callback"
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         extra="allow",
@@ -271,6 +283,23 @@ class ProductionSettings(CommonSettings):
     SLACK_SIGNING_SECRET: Optional[str] = None
     SLACK_APP_TOKEN: Optional[str] = None
     TELEGRAM_BOT_TOKEN: Optional[str] = None
+
+    # ----------------------------------------------
+    # Bot OAuth Configuration (Optional)
+    # ----------------------------------------------
+    DISCORD_OAUTH_CLIENT_ID: Optional[str] = None
+    DISCORD_OAUTH_CLIENT_SECRET: Optional[str] = None
+    SLACK_OAUTH_CLIENT_ID: Optional[str] = None
+    SLACK_OAUTH_CLIENT_SECRET: Optional[str] = None
+    TELEGRAM_BOT_USERNAME: Optional[str] = None
+
+    # ----------------------------------------------
+    # Bot Session Token Configuration
+    # ----------------------------------------------
+    BOT_SESSION_TOKEN_SECRET: (
+        str  # Required: min 32 chars - DO NOT reuse GAIA_BOT_API_KEY
+    )
+    BOT_SESSION_TOKEN_EXPIRY_MINUTES: int = 15
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
@@ -418,6 +447,27 @@ class DevelopmentSettings(CommonSettings):
     SLACK_SIGNING_SECRET: Optional[str] = None
     SLACK_APP_TOKEN: Optional[str] = None
     TELEGRAM_BOT_TOKEN: Optional[str] = None
+
+    # ----------------------------------------------
+    # Bot OAuth Configuration (Optional)
+    # ----------------------------------------------
+    DISCORD_OAUTH_CLIENT_ID: Optional[str] = None
+    DISCORD_OAUTH_CLIENT_SECRET: Optional[str] = None
+    SLACK_OAUTH_CLIENT_ID: Optional[str] = None
+    SLACK_OAUTH_CLIENT_SECRET: Optional[str] = None
+    TELEGRAM_BOT_USERNAME: Optional[str] = None
+
+    # ----------------------------------------------
+    # Bot Session Token Configuration
+    # ----------------------------------------------
+    BOT_SESSION_TOKEN_SECRET: Optional[str] = None  # Falls back to GAIA_BOT_API_KEY
+    BOT_SESSION_TOKEN_EXPIRY_MINUTES: int = 15
+
+    @computed_field  # type: ignore
+    @property
+    def SLACK_OAUTH_REDIRECT_URI(self) -> str:
+        """Slack OAuth callback URL using redirectmeto proxy for local development."""
+        return "https://redirectmeto.com/http://localhost:8000/api/v1/platform-auth/slack/callback"
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

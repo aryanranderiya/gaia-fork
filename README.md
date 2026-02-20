@@ -34,6 +34,7 @@ It's designed to help users manage their digital lives by automating tasks, hand
     - [**Cloud (zero setup):**](#cloud-zero-setup)
     - [**Self-host**](#self-host)
     - [**Develop or contribute:**](#develop-or-contribute)
+  - [Chat with GAIA on Your Favorite Platforms](#chat-with-gaia-on-your-favorite-platforms)
   - [Monorepo Structure](#monorepo-structure)
   - [Documentation](#documentation)
   - [Community \& Support](#community--support)
@@ -62,6 +63,7 @@ Our goal with Gaia is to remove this mental load entirely. One assistant that un
 - **Graph-Based Memory**: Builds a living knowledge graph of your work - tasks link to projects, meetings link to documents, everything connects
 - **Integration Marketplace**: Choose from hundreds of integrations, built by us and the community, to connect GAIA with your favorite tools like Gmail, Slack, Notion, Linear, GitHub, and more!
 - **Multi-Platform**: Web | Desktop - macOS, Windows, Linux  | Mobile
+- **Messaging Platform Integrations**: Talk to GAIA on Discord, Slack, and Telegram
 - **Open Source & Self-Hostable**: Full transparency with the ability to self-host on your own infrastructure
 <!-- 
 <div align="center">
@@ -117,6 +119,21 @@ See the [Self-Hosting Guide](https://docs.heygaia.io/self-hosting/overview) for 
 ### **Develop or contribute:**
 - Follow the [Developer Docs](https://docs.heygaia.io/developers/development-setup).
 
+
+## Chat with GAIA on Your Favorite Platforms
+
+Use GAIA directly inside the tools you're already in!
+
+|&emsp;&emsp;&emsp;&emsp; | Platform | How to Use |
+|---|---|---|
+| <img src="/apps/web/public/images/icons/macos/discord.webp" alt="Discord" width="50" height="50"/>| **Discord** | [Add the bot](https://heygaia.io/discord-bot) or [join the server](https://discord.heygaia.io) — use `/gaia` or `@mention` GAIA in any channel |
+| <img src="/apps/web/public/images/icons/macos/slack.webp"  alt="Slack" width="50" height="50" /> | **Slack** | Install the Slack app in your workspace and use `/gaia` and other slash commands |
+|<img src="/apps/web/public/images/icons/macos/telegram.webp" alt="Telegram" width="50" height="50" />|  **Telegram** | [Message @heygaia_bot](https://t.me/heygaia_bot) and send messages or use `/gaia` commands |
+<!-- |<img src="/apps/web/public/images/icons/macos/whatsapp.webp" alt="WhatsApp" width="50" height="50" />|  **WhatsApp** | Start a chat with the GAIA bot and send messages or use `/gaia` commands | -->
+
+See the [Bot Integrations Guide](https://docs.heygaia.io/bots/overview) for setup and usage details.
+
+
 ## Monorepo Structure
 
 This repository is a full-stack monorepo managed with [Nx](https://nx.dev).
@@ -150,6 +167,7 @@ gaia
 Our comprehensive documentation is available at [docs.heygaia.io](https://docs.heygaia.io):
 
 - **[Quick Start](https://docs.heygaia.io/quick-start)** - Get up and running in minutes
+- **[Bot Integrations](https://docs.heygaia.io/bots/overview)** - Use GAIA on Discord, Slack, and Telegram
 - **[Self-Hosting](https://docs.heygaia.io/self-hosting/overview)** - Deploy GAIA on your infrastructure
 - **[For Developers](https://docs.heygaia.io/developers/introduction)** - Contribute and extend GAIA
 
@@ -158,7 +176,7 @@ Our comprehensive documentation is available at [docs.heygaia.io](https://docs.h
 Join our growing community of users and contributors:
 
 - <img src="https://cdn.simpleicons.org/discord/5865F2" alt="Discord" width="16" /> &nbsp;**[Discord](https://discord.heygaia.io)** — Chat with the team and other users.
-- <img src="https://cdn.simpleicons.org/x/ffffff" alt="Twitter" width="16" /> &nbsp;**[Twitter](https://twitter.com/trygaia)** — Get the latest news and updates.
+- <img src="/apps/web/public/images/icons/twitter.webp" alt="Twitter" width="16" /> &nbsp;**[Twitter](https://twitter.com/trygaia)** — Get the latest news and updates.
 - <img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="WhatsApp" width="16" /> &nbsp;**[WhatsApp](https://whatsapp.heygaia.io)** — Get direct support from our team.
 
 ## Contributing
@@ -186,8 +204,7 @@ We rely heavily on open-source software and world-class developer tools. This pa
 This project is licensed under the [Polyform Strict License 1.0.0](https://polyformproject.org/licenses/strict/1.0.0/).
 
 > [!WARNING]
-> This license allows noncommercial, personal, and research use only.
-> **Commercial use, distribution, and modifications are not permitted.**
+> This license allows noncommercial use only.
 
 See the full license terms at [LICENSE.md](LICENSE.md).
 

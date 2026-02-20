@@ -1,6 +1,7 @@
 import {
   BlushBrush02Icon,
   BookOpen02Icon,
+  BubbleChatAddIcon,
   ConnectIcon,
   CreditCardPosIcon,
   GlobalIcon,
@@ -99,6 +100,18 @@ export const appConfig = {
         label: "Download",
         icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
         description: "Get GAIA for desktop, mobile, and web",
+      },
+      {
+        href: "/bots",
+        label: "Bots",
+        icon: (
+          <MessageMultiple02Icon
+            width={20}
+            height={20}
+            color={"currentColor"}
+          />
+        ),
+        description: "Chat with GAIA on Discord, Telegram, Slack, and WhatsApp",
       },
       {
         href: "/roadmap",

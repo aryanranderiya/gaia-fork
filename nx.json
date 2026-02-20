@@ -92,6 +92,18 @@
         "changelog": {
           "projectChangelogs": true
         }
+      },
+      "bots": {
+        "projects": ["bot-discord", "bot-slack", "bot-telegram"],
+        "projectsRelationship": "fixed",
+        "docker": {
+          "groupPreVersionCommand": "npx nx run-many -t docker:build -p bot-discord,bot-slack,bot-telegram",
+          "skipVersionActions": true,
+          "registryUrl": "ghcr.io"
+        },
+        "changelog": {
+          "projectChangelogs": false
+        }
       }
     },
     "docker": {

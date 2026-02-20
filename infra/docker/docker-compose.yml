@@ -194,6 +194,54 @@ services:
     networks:
       - gaia_network
 
+  # Discord Bot
+  discord-bot:
+    container_name: discord-bot
+    profiles: ["bots", "all"]
+    build:
+      context: ../..
+      dockerfile: apps/bots/discord/Dockerfile
+    env_file:
+      - ../../apps/bots/discord/.env
+    restart: on-failure
+    depends_on:
+      gaia-backend:
+        condition: service_healthy
+    networks:
+      - gaia_network
+
+  # Slack Bot
+  slack-bot:
+    container_name: slack-bot
+    profiles: ["bots", "all"]
+    build:
+      context: ../..
+      dockerfile: apps/bots/slack/Dockerfile
+    env_file:
+      - ../../apps/bots/slack/.env
+    restart: on-failure
+    depends_on:
+      gaia-backend:
+        condition: service_healthy
+    networks:
+      - gaia_network
+
+  # Telegram Bot
+  telegram-bot:
+    container_name: telegram-bot
+    profiles: ["bots", "all"]
+    build:
+      context: ../..
+      dockerfile: apps/bots/telegram/Dockerfile
+    env_file:
+      - ../../apps/bots/telegram/.env
+    restart: on-failure
+    depends_on:
+      gaia-backend:
+        condition: service_healthy
+    networks:
+      - gaia_network
+
   # Voice Agent Worker
   voice-agent-worker:
     container_name: voice-agent-worker

@@ -57,6 +57,13 @@ jobs:
         run: uv run mypy --install-types --non-interactive
         working-directory: apps/api
 
+      - name: Install vulture
+        run: uv tool install vulture
+
+      - name: Dead code check
+        run: bash scripts/dead-code-check.sh
+        # Temporarily disable --strict flag.
+
       - name: Run affected quality checks
         run: npx nx affected -t lint type-check build --parallel=3
         env:

@@ -154,8 +154,60 @@ services:
     environment:
       - WORKER_TYPE=arq_worker
       - PYTHONPATH=/app/apps/api
-    command: ["uv", "run", "--group", "backend", "python", "-m", "arq", "app.worker.WorkerSettings"]
+    command:
+      [
+        "uv",
+        "run",
+        "--group",
+        "backend",
+        "python",
+        "-m",
+        "arq",
+        "app.worker.WorkerSettings",
+      ]
     restart: always
+    networks:
+      - gaia_network
+
+  # Discord Bot (optional - enable with --profile bots)
+  discord-bot:
+    container_name: discord-bot
+    profiles: ["bots"]
+    image: ghcr.io/theexperiencecompany/gaia-bot-discord:latest
+    env_file:
+      - ../../apps/bots/discord/.env
+    restart: always
+    depends_on:
+      gaia-backend:
+        condition: service_healthy
+    networks:
+      - gaia_network
+
+  # Slack Bot (optional - enable with --profile bots)
+  slack-bot:
+    container_name: slack-bot
+    profiles: ["bots"]
+    image: ghcr.io/theexperiencecompany/gaia-bot-slack:latest
+    env_file:
+      - ../../apps/bots/slack/.env
+    restart: always
+    depends_on:
+      gaia-backend:
+        condition: service_healthy
+    networks:
+      - gaia_network
+
+  # Telegram Bot (optional - enable with --profile bots)
+  telegram-bot:
+    container_name: telegram-bot
+    profiles: ["bots"]
+    image: ghcr.io/theexperiencecompany/gaia-bot-telegram:latest
+    env_file:
+      - ../../apps/bots/telegram/.env
+    restart: always
+    depends_on:
+      gaia-backend:
+        condition: service_healthy
     networks:
       - gaia_network
 

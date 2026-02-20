@@ -242,9 +242,9 @@ class MCPClient:
             # .well-known/oauth-authorization-server endpoints)
             server_config["headers"] = {"Authorization": f"Bearer {raw_token}"}
         elif mcp_config.requires_auth:
-            logger.warning(
-                f"No valid token for {integration_id} - connection may fail. "
-                "Token store returned None (check status='connected' requirement)"
+            raise ValueError(
+                f"No valid token for {integration_id}. "
+                "OAuth authorization required - user must complete the OAuth flow."
             )
         else:
             # No auth required and no bearer token - set auth to None
