@@ -2,13 +2,14 @@ import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@heroui/popover";
 import { ScrollShadow } from "@heroui/scroll-shadow";
+import { CancelIcon, ConnectIcon } from "@icons";
 import type React from "react";
 import { useState } from "react";
+import { Gmail, GoogleCalendarIcon } from "@/components/shared/icons";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
 import { useFetchIntegrationStatus } from "@/features/integrations";
 import { useIntegrationSearch } from "@/features/integrations/hooks/useIntegrationSearch";
 import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
-import { CancelIcon, ConnectIcon, Gmail, GoogleCalendarIcon } from "@/icons";
 import { useIntegrationsStore } from "@/stores/integrationsStore";
 
 interface OnboardingIntegrationButtonsProps {
@@ -24,7 +25,7 @@ export const OnboardingIntegrationButtons: React.FC<
   useFetchIntegrationStatus({ refetchOnMount: "always" });
 
   const gmailStatus = getIntegrationStatus("gmail");
-  const calendarStatus = getIntegrationStatus("google_calendar");
+  const calendarStatus = getIntegrationStatus("googlecalendar");
   const isGmailConnected = gmailStatus?.connected || false;
   const isCalendarConnected = calendarStatus?.connected || false;
 
@@ -38,7 +39,7 @@ export const OnboardingIntegrationButtons: React.FC<
 
   const handleCalendarConnect = async () => {
     try {
-      await connectIntegration("google_calendar");
+      await connectIntegration("googlecalendar");
     } catch (error) {
       console.error("Failed to connect Calendar:", error);
     }
@@ -55,7 +56,7 @@ export const OnboardingIntegrationButtons: React.FC<
   const baseIntegrations = integrations.filter(
     (int) =>
       int.id !== "gmail" &&
-      int.id !== "google_calendar" &&
+      int.id !== "googlecalendar" &&
       int.available &&
       !int.isSpecial,
   );

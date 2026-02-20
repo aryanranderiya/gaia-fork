@@ -2,6 +2,7 @@
 
 import "@xyflow/react/dist/style.css";
 
+import { Alert01Icon } from "@icons";
 import {
   ConnectionLineType,
   type Edge,
@@ -16,11 +17,9 @@ import dagre from "dagre";
 import { useParams } from "next/navigation";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-
 import { GoalSidebar } from "@/components/layout/sidebar/right-variants/GoalSidebar";
 import { MultiStepLoader } from "@/components/ui/multi-step-loader";
 import { goalsApi } from "@/features/goals/api/goalsApi";
-import { Alert01Icon } from "@/icons";
 import { truncateTitle } from "@/lib/utils";
 import { useRightSidebar } from "@/stores/rightSidebarStore";
 import type { Goal } from "@/types/api/goalsApiTypes";
@@ -151,9 +150,7 @@ export default function GoalPage() {
           const wsBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "")
             .replace("http://", "ws://")
             .replace("https://", "wss://");
-          const ws = new WebSocket(
-            `${wsBaseUrl}ws/roadmap`,
-          );
+          const ws = new WebSocket(`${wsBaseUrl}ws/roadmap`);
           ws.onopen = () => {
             ws.send(JSON.stringify({ goal_id: goalId, goal_title: goalTitle }));
             console.log("WebSocket: Generating roadmap...");

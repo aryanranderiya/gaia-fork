@@ -1,24 +1,25 @@
-import type { ReactElement } from "react";
-
 import {
   BlushBrush02Icon,
   BookOpen02Icon,
   ConnectIcon,
   CreditCardPosIcon,
-  DiscordIcon,
-  Github,
   GlobalIcon,
-  HeartHandIcon,
   Home01Icon,
   Idea01Icon,
-  LinkedinIcon,
   MapsIcon,
   MessageMultiple02Icon,
   QuillWrite01Icon,
+} from "@icons";
+import type { ReactElement } from "react";
+import {
+  DiscordIcon,
+  Github,
+  HeartHandIcon,
+  LinkedinIcon,
   TwitterIcon,
   WhatsappIcon,
   YoutubeIcon,
-} from "@/icons";
+} from "@/components/shared/icons";
 
 export interface AppLink {
   label: string;
@@ -30,6 +31,7 @@ export interface AppLink {
   commented?: boolean;
   description?: string;
   hideFooter?: boolean;
+  hideNavbar?: boolean;
 }
 
 export interface LinkSection {
@@ -93,6 +95,12 @@ export const appConfig = {
         description: "Choose the perfect plan for your needs",
       },
       {
+        href: "/download",
+        label: "Download",
+        icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
+        description: "Get GAIA for desktop, mobile, and web",
+      },
+      {
         href: "/roadmap",
         label: "Roadmap",
         icon: <MapsIcon width={20} height={20} color={"currentColor"} />,
@@ -117,11 +125,11 @@ export const appConfig = {
         description: "Read the latest updates and insights",
       },
       {
-        href: "/docs",
+        href: "https://docs.heygaia.io",
         label: "Documentation",
         icon: <BookOpen02Icon width={20} height={20} color={"currentColor"} />,
         external: true,
-        description: "Comprehensive documentation and guides",
+        description: "Guides, tutorials, and knowledge base",
       },
       {
         href: "/request-feature",
@@ -137,14 +145,41 @@ export const appConfig = {
         external: true,
         description: "Check the status of GAIA services",
       },
+      {
+        href: "/compare",
+        label: "Compare",
+        icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
+        description: "See how GAIA compares to other tools",
+        hideNavbar: true,
+      },
+      {
+        href: "/for",
+        label: "For Your Role",
+        icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
+        description: "Discover how GAIA fits your role",
+        hideNavbar: true,
+      },
+      {
+        href: "/learn",
+        label: "Glossary",
+        icon: <BookOpen02Icon width={20} height={20} color={"currentColor"} />,
+        description: "AI and productivity terms explained",
+        hideNavbar: true,
+      },
     ] as AppLink[],
 
     company: [
       {
+        href: "/about",
+        label: "About",
+        icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
+        description: "Learn about GAIA and the team behind it",
+      },
+      {
         href: "/manifesto",
         label: "Manifesto",
         icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
-        description: "about our mission",
+        description: "Our mission and vision",
       },
       {
         href: "/brand",
@@ -184,7 +219,7 @@ export const appConfig = {
 
     connect: [
       {
-        href: "/discord",
+        href: "https://discord.heygaia.io",
         label: "Discord",
         icon: <DiscordIcon width={20} height={20} color="#5865f2" />,
         external: true,
@@ -205,14 +240,14 @@ export const appConfig = {
         description: "Check out our open source projects",
       },
       {
-        href: "/whatsapp",
+        href: "https://whatsapp.heygaia.io",
         label: "WhatsApp",
         icon: <WhatsappIcon width={20} height={20} color="#25D366" />,
         external: true,
         description: "Join WhatsApp Community",
       },
       {
-        href: "https://youtube.com/@heygaia_io",
+        href: "https://youtube.com/@theexperiencecompany",
         label: "YouTube",
         icon: <YoutubeIcon width={25} height={25} color="#FF0000" />,
         external: true,
