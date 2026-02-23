@@ -165,9 +165,9 @@ class TelegramChannelAdapter(ExternalPlatformAdapter):
         self, content: Dict[str, Any], user_id: str
     ) -> ChannelDeliveryStatus:
         """Deliver content without storing any per-request state on ``self``."""
-        ctx, err = await self._get_platform_context(user_id)
-        if err:
-            return err
+        ctx, context_err = await self._get_platform_context(user_id)
+        if context_err:
+            return context_err
         if (
             ctx is None
         ):  # guaranteed by _get_platform_context invariant; guard for type narrowing
@@ -183,22 +183,22 @@ class TelegramChannelAdapter(ExternalPlatformAdapter):
 
                 if content.get("type") == "workflow_messages":
                     if header := content.get("header"):
-                        if err := await send_plain(header):
-                            return self._error(f"Telegram header error: {err}")
+                        if send_err := await send_plain(header):
+                            return self._error(f"Telegram header error: {send_err}")
 
                     for msg in content.get("messages", []):
-                        if err := await self._send_markdown(session, ctx, msg):
-                            return self._error(f"Telegram message error: {err}")
+                        if send_err := await self._send_markdown(session, ctx, msg):
+                            return self._error(f"Telegram message error: {send_err}")
 
                     if footer := content.get("footer"):
-                        if err := await self._send_markdown(session, ctx, footer):
-                            return self._error(f"Telegram footer error: {err}")
+                        if send_err := await self._send_markdown(session, ctx, footer):
+                            return self._error(f"Telegram footer error: {send_err}")
 
                     return self._success()
 
                 text = content.get("text", "")
-                if err := await self._send_markdown(session, ctx, text):
-                    return self._error(f"Telegram message error: {err}")
+                if send_err := await self._send_markdown(session, ctx, text):
+                    return self._error(f"Telegram message error: {send_err}")
                 return self._success()
         except Exception as exc:
             return self._error(str(exc))

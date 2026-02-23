@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as os from "os";
 import * as path from "path";
-import { CLI_VERSION, writeConfig } from "../../lib/config.js";
+import { writeConfig } from "../../lib/config.js";
 import { runEnvSetup, selectSetupMode } from "../../lib/env-setup.js";
 import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import {
@@ -17,6 +17,7 @@ import {
   runCommand,
   startServices,
 } from "../../lib/service-starter.js";
+import { CLI_VERSION } from "../../lib/version.js";
 import { LOG_BUFFER_LINES } from "../../ui/constants.js";
 import type { CLIStore } from "../../ui/store.js";
 

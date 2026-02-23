@@ -56,9 +56,8 @@ export async function runConcurrentInteractiveCommands(
     const stopAll = () => {
       if (stopping) return;
       stopping = true;
-      for (let i = 0; i < processes.length; i++) {
-        const proc = processes[i];
-        const command = commands[i];
+      for (const [index, proc] of processes.entries()) {
+        const command = commands[index];
         try {
           if (
             process.platform !== "win32" &&
@@ -74,9 +73,8 @@ export async function runConcurrentInteractiveCommands(
         }
       }
       shutdownTimer = setTimeout(() => {
-        for (let i = 0; i < processes.length; i++) {
-          const proc = processes[i];
-          const command = commands[i];
+        for (const [index, proc] of processes.entries()) {
+          const command = commands[index];
           try {
             if (
               process.platform !== "win32" &&
