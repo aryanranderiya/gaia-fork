@@ -96,7 +96,7 @@ export default function UnifiedWorkflowCard({
 
   // Normalize data from different sources
   const title = propTitle || workflow?.title || communityWorkflow?.title || "";
-  const description =
+  const displayDescription =
     propDescription ||
     workflow?.description ||
     communityWorkflow?.description ||
@@ -162,7 +162,9 @@ export default function UnifiedWorkflowCard({
 
       const workflowRequest = {
         title,
-        description,
+        description:
+          communityWorkflow?.description || propDescription || undefined,
+        prompt: communityWorkflow?.prompt || displayDescription || title,
         trigger_config: {
           type: "manual" as const,
           enabled: true,
@@ -282,7 +284,7 @@ export default function UnifiedWorkflowCard({
         <h3 className="line-clamp-2 text-lg font-medium">{title}</h3>
         {!showDescriptionAsTooltip && (
           <div className="mt-1 line-clamp-2 min-h-8 flex-1 text-xs text-zinc-500">
-            {description}
+            {displayDescription}
           </div>
         )}
       </div>
@@ -341,7 +343,7 @@ export default function UnifiedWorkflowCard({
 
   return showDescriptionAsTooltip ? (
     <Tooltip
-      content={description}
+      content={workflow?.prompt || displayDescription}
       placement="top"
       className="max-w-xs"
       showArrow

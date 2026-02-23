@@ -33,7 +33,7 @@ class WorkflowGenerationService:
 
     @staticmethod
     async def generate_steps_with_llm(
-        description: str, title: str, trigger_config=None
+        prompt: str, title: str, trigger_config=None, description: str | None = None
     ) -> list:
         """Generate workflow steps using LLM with Pydantic parser."""
         try:
@@ -80,9 +80,15 @@ class WorkflowGenerationService:
             llm = init_llm()
 
             logger.info("[WorkflowGen] Formatting prompt...")
+            prompt_context = prompt
+            if description:
+                prompt_context = (
+                    f"{prompt}\n\n"
+                    f"Short display summary for additional context: {description}"
+                )
             # format_instructions is pre-filled via partial_variables
             formatted_prompt = WORKFLOW_GENERATION_TEMPLATE.format(
-                description=description,
+                description=prompt_context,
                 title=title,
                 trigger_context=trigger_context,
                 tools="\n".join(tools_with_categories),

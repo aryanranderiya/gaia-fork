@@ -291,7 +291,8 @@ async def create_workflow_from_todo(
         # Create workflow using modern workflow system
         workflow_request = CreateWorkflowRequest(
             title=f"Todo: {todo_title}",
-            description=todo_description or f"Workflow for todo: {todo_title}",
+            description=f"Workflow for todo: {todo_title}",
+            prompt=todo_description or f"Complete todo: {todo_title}",
             trigger_config=TriggerConfig(type=TriggerType.MANUAL, enabled=True),
             generate_immediately=True,  # Generate steps immediately for todos
         )

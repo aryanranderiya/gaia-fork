@@ -63,7 +63,8 @@ For finalized workflow:
 {{
     "type": "finalized",
     "title": "Workflow Title",
-    "description": "What this workflow does",
+    "description": "1-2 sentence summary for UI cards",
+    "prompt": "Detailed step-by-step instructions. Include numbered steps, specific integrations, data sources, and expected outputs.",
     "trigger_type": "manual|scheduled|integration",
     "cron_expression": "0 9 * * *",
     "trigger_slug": "TRIGGER_SLUG_HERE",
@@ -83,8 +84,8 @@ Original request:
 # WORKFLOW GENERATION PROMPTS (existing)
 # =============================================================================
 
-# Template for generating workflow descriptions from todo items
-TODO_WORKFLOW_DESCRIPTION_TEMPLATE = """This workflow was automatically generated from a todo item to help the user accomplish their task.
+# Template for generating detailed todo execution prompt
+TODO_WORKFLOW_PROMPT_TEMPLATE = """This workflow was automatically generated from a todo item to help the user accomplish their task.
 
 **Purpose:** Break down this todo into actionable automated steps. The user will click "Run Workflow" when they're ready to execute it, and the AI assistant will carry out each step in sequence.
 
@@ -99,6 +100,9 @@ TODO_WORKFLOW_DESCRIPTION_TEMPLATE = """This workflow was automatically generate
 
 Generate practical, executable steps that will help the user complete: "{title}"
 """
+
+# Short display description for todo workflows
+TODO_WORKFLOW_DESCRIPTION_TEMPLATE = "Automated workflow to complete: {title}"
 
 WORKFLOW_GENERATION_SYSTEM_PROMPT = """Create a practical workflow plan for this goal using ONLY the available tools listed below.
 

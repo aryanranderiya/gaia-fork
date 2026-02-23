@@ -119,7 +119,8 @@ class WorkflowService:
             # Step 1: Create workflow in PENDING state (activated=False)
             workflow = Workflow(
                 title=request.title,
-                description=request.description,
+                description=request.description or "",
+                prompt=request.prompt,
                 steps=workflow_steps,
                 trigger_config=trigger_config,
                 activated=False,  # Start in pending state
@@ -145,7 +146,10 @@ class WorkflowService:
                     "workflows", create_if_not_exists=True
                 )
                 content = (
-                    f"{workflow.title} | {workflow.description} | {trigger_config.type}"
+                    f"{workflow.title} | "
+                    f"{workflow.description or ''} | "
+                    f"{workflow.prompt or ''} | "
+                    f"{trigger_config.type}"
                 )
                 chroma.add_texts(
                     texts=[content],
@@ -739,7 +743,10 @@ class WorkflowService:
 
             # Generate new steps using the existing title and description
             steps_data = await WorkflowGenerationService.generate_steps_with_llm(
-                workflow.description, workflow.title, workflow.trigger_config
+                workflow.effective_prompt,
+                workflow.title,
+                workflow.trigger_config,
+                description=workflow.description,
             )
 
             # Update workflow with new steps
@@ -915,7 +922,8 @@ class WorkflowService:
                 formatted_workflow = {
                     "id": workflow["_id"],
                     "title": workflow["title"],
-                    "description": workflow["description"],
+                    "description": workflow.get("description"),
+                    "prompt": workflow.get("prompt"),
                     "steps": normalized_steps,
                     "created_at": workflow["created_at"],
                     "creator": {
@@ -1024,7 +1032,10 @@ class WorkflowService:
 
             # Generate steps using structured LLM output
             steps_data = await WorkflowGenerationService.generate_steps_with_llm(
-                workflow.description, workflow.title, workflow.trigger_config
+                workflow.effective_prompt,
+                workflow.title,
+                workflow.trigger_config,
+                description=workflow.description,
             )
 
             if steps_data:

@@ -128,7 +128,7 @@ export default function WorkflowModal({
 
   // Check if save button should be disabled (used for hotkey and button)
   const isSaveDisabled = useCallback(() => {
-    if (!formData.title.trim() || !formData.description.trim()) {
+    if (!formData.title.trim() || !formData.prompt?.trim()) {
       return true;
     }
 
@@ -261,7 +261,8 @@ export default function WorkflowModal({
 
       resetFormValues({
         title: draftData.suggested_title,
-        description: draftData.prompt || draftData.suggested_description,
+        description: draftData.suggested_description || undefined,
+        prompt: draftData.prompt || draftData.suggested_description || "",
         activeTab,
         selectedTrigger: selectedTriggerValue,
         trigger_config: triggerConfig,
@@ -296,6 +297,7 @@ export default function WorkflowModal({
     return (
       formData.title !== currentFormData.title ||
       formData.description !== currentFormData.description ||
+      formData.prompt !== currentFormData.prompt ||
       formData.activeTab !== currentFormData.activeTab ||
       formData.selectedTrigger !== currentFormData.selectedTrigger ||
       JSON.stringify(formData.trigger_config) !==
@@ -310,7 +312,7 @@ export default function WorkflowModal({
   };
 
   const handleSave = async (data: WorkflowFormData) => {
-    if (!data.title.trim() || !data.description.trim()) return;
+    if (!data.title.trim() || !data.prompt?.trim()) return;
 
     if (mode === "create") {
       setCreationPhase("creating");
@@ -336,7 +338,8 @@ export default function WorkflowModal({
       // Create the request object that matches the backend API
       const createRequest = {
         title: data.title,
-        description: data.description,
+        description: data.description || undefined,
+        prompt: data.prompt,
         trigger_config: data.trigger_config,
         generate_immediately: true, // Generate steps immediately
       };
@@ -381,7 +384,8 @@ export default function WorkflowModal({
     try {
       const updateRequest = {
         title: data.title,
-        description: data.description,
+        description: data.description || undefined,
+        prompt: data.prompt,
         trigger_config: {
           ...data.trigger_config,
         },
@@ -397,6 +401,7 @@ export default function WorkflowModal({
         setCurrentWorkflow({
           ...currentWorkflow,
           ...updateRequest,
+          description: updateRequest.description ?? "",
         });
       }
 

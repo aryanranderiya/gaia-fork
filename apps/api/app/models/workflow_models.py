@@ -8,7 +8,7 @@ from datetime import timezone as dt_timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.config.loggers import general_logger as logger
 from app.models.scheduler_models import BaseScheduledTask
@@ -190,7 +190,12 @@ class Workflow(BaseScheduledTask):
 
     title: str = Field(min_length=1, description="Title of the workflow")
     description: str = Field(
-        min_length=1, description="Description of what this workflow aims to accomplish"
+        default="",
+        description="Short display description for cards/UI (1-2 sentences)",
+    )
+    prompt: str = Field(
+        default="",
+        description="Detailed execution instructions for AI. Falls back to description if not set.",
     )
     steps: List[WorkflowStep] = Field(
         description="List of workflow steps to execute", max_length=10
@@ -286,6 +291,22 @@ class Workflow(BaseScheduledTask):
 
         super().__init__(**data)
 
+    @model_validator(mode="before")
+    @classmethod
+    def hydrate_legacy_prompt_and_description(cls, data):
+        """Ensure legacy records still expose prompt and non-null description."""
+        if isinstance(data, dict):
+            description = data.get("description") or ""
+            prompt = data.get("prompt") or description
+            data["description"] = description
+            data["prompt"] = prompt
+        return data
+
+    @property
+    def effective_prompt(self) -> str:
+        """Return the execution prompt with backward-compatible fallback."""
+        return self.prompt or self.description
+
 
 # Request/Response models for API
 
@@ -294,8 +315,12 @@ class CreateWorkflowRequest(BaseModel):
     """Request model for creating a new workflow."""
 
     title: str = Field(min_length=1, description="Title of the workflow")
-    description: str = Field(
-        min_length=1, description="Description of what the workflow should accomplish"
+    description: Optional[str] = Field(
+        default=None,
+        description="Short optional display description (1-2 sentences)",
+    )
+    prompt: str = Field(
+        min_length=1, description="Detailed execution instructions for the AI"
     )
     trigger_config: TriggerConfig = Field(description="Trigger configuration")
     steps: Optional[List[WorkflowStep]] = Field(
@@ -307,12 +332,19 @@ class CreateWorkflowRequest(BaseModel):
         default=False, description="Generate steps immediately vs background"
     )
 
-    @field_validator("title", "description")
+    @field_validator("title", "prompt")
     @classmethod
     def validate_non_empty_strings(cls, v):
         if not v or not v.strip():
             raise ValueError("Field cannot be empty or contain only whitespace")
         return v.strip()
+
+    @field_validator("description")
+    @classmethod
+    def validate_optional_description(cls, v):
+        if v is not None and not v.strip():
+            return ""
+        return v.strip() if v else None
 
 
 class UpdateWorkflowRequest(BaseModel):
@@ -320,9 +352,26 @@ class UpdateWorkflowRequest(BaseModel):
 
     title: Optional[str] = Field(default=None)
     description: Optional[str] = Field(default=None)
+    prompt: Optional[str] = Field(default=None)
     steps: Optional[List[WorkflowStep]] = Field(default=None)
     trigger_config: Optional[TriggerConfig] = Field(default=None)
     activated: Optional[bool] = Field(default=None)
+
+    @field_validator("title", "prompt")
+    @classmethod
+    def validate_optional_non_empty_strings(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Field cannot be empty or contain only whitespace")
+            return v.strip()
+        return v
+
+    @field_validator("description")
+    @classmethod
+    def validate_optional_update_description(cls, v):
+        if v is not None and not v.strip():
+            return ""
+        return v.strip() if v else None
 
 
 class WorkflowResponse(BaseModel):

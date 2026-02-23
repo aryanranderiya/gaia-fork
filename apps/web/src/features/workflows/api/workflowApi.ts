@@ -64,7 +64,13 @@ export const workflowApi = {
   // Update a workflow
   updateWorkflow: async (
     workflowId: string,
-    updates: Partial<CreateWorkflowRequest>,
+    updates: {
+      title?: string;
+      description?: string;
+      prompt?: string;
+      trigger_config?: CreateWorkflowRequest["trigger_config"];
+      activated?: boolean;
+    },
   ): Promise<WorkflowResponse> => {
     return apiService.put<WorkflowResponse>(
       `/workflows/${workflowId}`,
