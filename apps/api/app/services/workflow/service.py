@@ -998,7 +998,8 @@ class WorkflowService:
                 formatted_workflow = {
                     "id": workflow["_id"],
                     "title": workflow["title"],
-                    "description": workflow["description"],
+                    "description": workflow.get("description", ""),
+                    "prompt": workflow.get("prompt") or workflow.get("description", ""),
                     "steps": normalized_steps,
                     "created_at": workflow["created_at"],
                     "categories": workflow.get("use_case_categories", ["featured"]),
