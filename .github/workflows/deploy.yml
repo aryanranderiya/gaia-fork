@@ -81,6 +81,9 @@ jobs:
               git checkout master
               git pull --ff-only origin master
 
+              # Authenticate to GHCR on the VM before pulling images.
+              echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u '${{ github.actor }}' --password-stdin
+
               # Pull updated images first, then do in-place rolling recreation.
               compose_cmd pull
 
