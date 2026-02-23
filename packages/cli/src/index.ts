@@ -2,12 +2,12 @@
 
 import { Command } from "commander";
 import { CLI_COMMAND_DESCRIPTIONS } from "../../../libs/shared/ts/src/cli/command-manifest.js";
+import { runDev } from "./commands/dev/handler.js";
 import { runInit } from "./commands/init/handler.js";
 import { runSetup } from "./commands/setup/handler.js";
 import { runStart } from "./commands/start/handler.js";
 import { runStatus } from "./commands/status/handler.js";
 import { runStop } from "./commands/stop/handler.js";
-import { runDev } from "./commands/dev/handler.js";
 import { runLogs } from "./commands/stream-logs/handler.js";
 import { CLI_VERSION } from "./lib/version.js";
 

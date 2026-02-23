@@ -7,9 +7,9 @@ import { portOverridesToDockerEnv } from "../../lib/env-writer.js";
 import {
   createLogHandler,
   delay,
+  runBasePrerequisiteChecks,
   runDeveloperPrerequisiteChecks,
   runPortChecks,
-  runBasePrerequisiteChecks,
 } from "../../lib/flow-utils.js";
 import * as git from "../../lib/git.js";
 import {

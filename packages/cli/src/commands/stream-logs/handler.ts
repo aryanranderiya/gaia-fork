@@ -5,16 +5,16 @@ import {
   readDockerComposePortOverrides,
 } from "../../lib/env-writer.js";
 import {
+  runConcurrentInteractiveCommands,
+  runInteractiveCommand,
+} from "../../lib/interactive.js";
+import {
   DEV_LOG_FILE,
   detectSetupMode,
   findRepoRoot,
   isPidAlive,
   readStoredDevPid,
 } from "../../lib/service-starter.js";
-import {
-  runConcurrentInteractiveCommands,
-  runInteractiveCommand,
-} from "../../lib/interactive.js";
 
 function getDockerEnvFileArgs(dockerDir: string): string[] {
   const envPath = path.join(dockerDir, ".env");

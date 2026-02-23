@@ -3,10 +3,10 @@ import { runEnvSetup, selectSetupMode } from "../../lib/env-setup.js";
 import {
   createLogHandler,
   delay,
+  runBasePrerequisiteChecks,
   runDeveloperPrerequisiteChecks,
   runMiseDeveloperSetup,
   runPortChecks,
-  runBasePrerequisiteChecks,
 } from "../../lib/flow-utils.js";
 import { findRepoRoot } from "../../lib/service-starter.js";
 import type { CLIStore } from "../../ui/store.js";

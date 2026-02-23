@@ -1,11 +1,11 @@
 import * as fs from "fs";
 import * as path from "path";
+import { runInteractiveCommand } from "../../lib/interactive.js";
 import {
   DEV_PID_FILE,
   detectSetupMode,
   findRepoRoot,
 } from "../../lib/service-starter.js";
-import { runInteractiveCommand } from "../../lib/interactive.js";
 
 export async function runDev(profile?: string): Promise<void> {
   if (profile && profile !== "full") {
