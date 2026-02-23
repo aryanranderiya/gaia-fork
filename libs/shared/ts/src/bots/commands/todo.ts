@@ -106,11 +106,7 @@ export const todoCommand: BotCommand = {
         await target.sendEphemeral("Usage: /todo add <title>");
         return;
       }
-      const priority = args.priority as
-        | "low"
-        | "medium"
-        | "high"
-        | undefined;
+      const priority = args.priority as "low" | "medium" | "high" | undefined;
       const description = args.description
         ? String(args.description)
         : undefined;

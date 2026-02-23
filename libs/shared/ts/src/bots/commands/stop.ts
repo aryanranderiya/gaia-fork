@@ -13,24 +13,12 @@ export const stopCommand: BotCommand = {
   name: "stop",
   description: "Reset your conversation session",
 
-  async execute({
-    gaia,
-    target,
-    ctx,
-  }: CommandExecuteParams): Promise<void> {
+  async execute({ gaia, target, ctx }: CommandExecuteParams): Promise<void> {
     try {
-      await gaia.resetSession(
-        ctx.platform,
-        ctx.platformUserId,
-        ctx.channelId,
-      );
-      await target.sendEphemeral(
-        "⏹️ Stopped. Starting a new conversation.",
-      );
+      await gaia.resetSession(ctx.platform, ctx.platformUserId, ctx.channelId);
+      await target.sendEphemeral("⏹️ Stopped. Starting a new conversation.");
     } catch {
-      await target.sendEphemeral(
-        "❌ Failed to stop. Please try again.",
-      );
+      await target.sendEphemeral("❌ Failed to stop. Please try again.");
     }
   },
 };

@@ -8,7 +8,11 @@
  *
  * @module
  */
-import { dispatchWorkflowSubcommand, handleWorkflowCreate, handleWorkflowDelete } from "../utils/commands";
+import {
+  dispatchWorkflowSubcommand,
+  handleWorkflowCreate,
+  handleWorkflowDelete,
+} from "../utils/commands";
 import { truncateResponse, parseTextArgs } from "../utils";
 import type { BotCommand, CommandExecuteParams } from "../types";
 

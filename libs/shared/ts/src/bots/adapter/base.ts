@@ -196,7 +196,11 @@ export abstract class BaseBotAdapter {
       return;
     }
 
-    const ctx = this.buildContext(target.userId, target.channelId, target.profile);
+    const ctx = this.buildContext(
+      target.userId,
+      target.channelId,
+      target.profile,
+    );
 
     try {
       await command.execute({
@@ -239,5 +243,4 @@ export abstract class BaseBotAdapter {
       profile,
     };
   }
-
 }

@@ -194,7 +194,7 @@ export class GaiaClient {
 
         // Check if this is a retryable error
         const isRetryable = retryableErrors.some((retryableErr) =>
-          errorMsg.includes(retryableErr)
+          errorMsg.includes(retryableErr),
         );
 
         if (!isRetryable || attempt === maxRetries) {
@@ -207,7 +207,7 @@ export class GaiaClient {
         const delayMs = Math.min(1000 * Math.pow(2, attempt), 5000);
         attemptedRetries++;
         console.log(
-          `Retrying stream (attempt ${attemptedRetries}/${maxRetries}) after ${delayMs}ms...`
+          `Retrying stream (attempt ${attemptedRetries}/${maxRetries}) after ${delayMs}ms...`,
         );
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
@@ -383,12 +383,16 @@ export class GaiaClient {
               } else if (receivedKeepalive) {
                 // Received keepalive but no content - server is working but slow
                 await onError(
-                  new Error("The AI is processing your request but hasn't responded yet. Please try again."),
+                  new Error(
+                    "The AI is processing your request but hasn't responded yet. Please try again.",
+                  ),
                 );
               } else {
                 // No keepalive, no content - connection issue
                 await onError(
-                  new Error("Connection lost before receiving a response. Please try again."),
+                  new Error(
+                    "Connection lost before receiving a response. Please try again.",
+                  ),
                 );
               }
             }
@@ -415,11 +419,12 @@ export class GaiaClient {
               } else {
                 // Has partial content or non-retryable — surface to user
                 const errorMsg =
-                  err.message.includes("ECONNRESET") || err.message.includes("socket hang up")
+                  err.message.includes("ECONNRESET") ||
+                  err.message.includes("socket hang up")
                     ? "Connection interrupted. Please try again."
                     : err.message.includes("timeout")
-                    ? "Request timed out. The server may be busy - please try again."
-                    : err.message;
+                      ? "Request timed out. The server may be busy - please try again."
+                      : err.message;
                 await onError(new Error(errorMsg));
               }
             }
@@ -592,9 +597,12 @@ export class GaiaClient {
    */
   async deleteWorkflow(workflowId: string, ctx: BotUserContext): Promise<void> {
     return this.requestWithAuth(async () => {
-      await this.client.delete(`/api/v1/workflows/${encodeURIComponent(workflowId)}`, {
-        headers: this.userHeaders(ctx),
-      });
+      await this.client.delete(
+        `/api/v1/workflows/${encodeURIComponent(workflowId)}`,
+        {
+          headers: this.userHeaders(ctx),
+        },
+      );
     }, ctx);
   }
 
@@ -651,9 +659,12 @@ export class GaiaClient {
    */
   async getTodo(todoId: string, ctx: BotUserContext): Promise<Todo> {
     return this.requestWithAuth(async () => {
-      const { data } = await this.client.get(`/api/v1/todos/${encodeURIComponent(todoId)}`, {
-        headers: this.userHeaders(ctx),
-      });
+      const { data } = await this.client.get(
+        `/api/v1/todos/${encodeURIComponent(todoId)}`,
+        {
+          headers: this.userHeaders(ctx),
+        },
+      );
       return mapTodoResponse(data);
     }, ctx);
   }
@@ -787,10 +798,7 @@ export class GaiaClient {
   /**
    * Unlinks a platform account from the GAIA user.
    */
-  async unlinkAccount(
-    platform: string,
-    platformUserId: string,
-  ): Promise<void> {
+  async unlinkAccount(platform: string, platformUserId: string): Promise<void> {
     return this.request(async () => {
       await this.client.post(
         "/api/v1/bot/unlink",

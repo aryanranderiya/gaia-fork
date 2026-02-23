@@ -59,5 +59,9 @@ export async function loadConfig(): Promise<BotConfig> {
   }
 
   log("Configuration loaded successfully");
-  return { gaiaApiUrl: gaiaApiUrl!, gaiaApiKey: gaiaApiKey!, gaiaFrontendUrl: gaiaFrontendUrl! };
+  return {
+    gaiaApiUrl: gaiaApiUrl!,
+    gaiaApiKey: gaiaApiKey!,
+    gaiaFrontendUrl: gaiaFrontendUrl!,
+  };
 }

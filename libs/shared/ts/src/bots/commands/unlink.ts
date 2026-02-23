@@ -13,15 +13,8 @@ export const unlinkCommand: BotCommand = {
   name: "unlink",
   description: "Disconnect your account from GAIA",
 
-  async execute({
-    gaia,
-    target,
-    ctx,
-  }: CommandExecuteParams): Promise<void> {
-    const status = await gaia.checkAuthStatus(
-      ctx.platform,
-      ctx.platformUserId,
-    );
+  async execute({ gaia, target, ctx }: CommandExecuteParams): Promise<void> {
+    const status = await gaia.checkAuthStatus(ctx.platform, ctx.platformUserId);
 
     if (!status.authenticated) {
       await target.sendEphemeral(

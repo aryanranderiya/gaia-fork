@@ -40,9 +40,7 @@ export const statusCommand: BotCommand = {
         }
       }
     } catch {
-      await target.sendEphemeral(
-        "Error checking status. Please try again.",
-      );
+      await target.sendEphemeral("Error checking status. Please try again.");
     }
   },
 };

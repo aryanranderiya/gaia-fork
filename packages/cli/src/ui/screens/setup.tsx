@@ -2,6 +2,7 @@ import { Spinner } from "@inkjs/ui";
 import { Box, Text, useInput } from "ink";
 import type React from "react";
 import { useEffect, useState } from "react";
+import type { SetupMode } from "../../lib/env-parser.js";
 
 import { SETUP_STEPS, Shell } from "../components/Shell.js";
 import {
@@ -150,16 +151,17 @@ export const SetupScreen: React.FC<{ store: CLIStore }> = ({ store }) => {
 };
 
 const FinishedStep: React.FC<{
-  setupMode?: string;
+  setupMode?: SetupMode;
   portOverrides?: Record<number, number>;
   onConfirm: () => void;
-}> = ({ portOverrides, onConfirm }) => {
+}> = ({ setupMode, portOverrides, onConfirm }) => {
   useInput((_input, key) => {
     if (key.return) onConfirm();
   });
 
   const webPort = portOverrides?.[3000] ?? 3000;
   const apiPort = portOverrides?.[8000] ?? 8000;
+  const isSelfHost = setupMode === "selfhost";
 
   return (
     <Box
@@ -175,7 +177,7 @@ const FinishedStep: React.FC<{
 
       <Box marginTop={1}>
         <Text bold>Run: </Text>
-        <Text color="cyan">$ gaia start</Text>
+        <Text color="cyan">{isSelfHost ? "$ gaia start" : "$ gaia dev"}</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">
@@ -194,7 +196,11 @@ const FinishedStep: React.FC<{
       </Box>
 
       <Box marginTop={1}>
-        <Text color="gray">gaia stop · gaia status · gaia setup</Text>
+        <Text color="gray">
+          {isSelfHost
+            ? "gaia logs · gaia stop · gaia status · gaia setup"
+            : "gaia dev full · gaia logs · gaia stop · gaia status · gaia setup"}
+        </Text>
       </Box>
 
       <Box marginTop={1}>

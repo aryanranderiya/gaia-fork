@@ -108,7 +108,7 @@ export const settingsCommand: BotCommand = {
         timestamp: true,
         thumbnailUrl: profileImageUrl ?? undefined,
         authorName: profileImageUrl
-          ? (settings.userName || "GAIA User")
+          ? settings.userName || "GAIA User"
           : undefined,
         authorIconUrl: profileImageUrl ?? undefined,
       };

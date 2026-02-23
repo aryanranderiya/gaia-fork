@@ -55,8 +55,9 @@ PLATFORM_CONFIGS = {
         get_client_secret=lambda: settings.DISCORD_OAUTH_CLIENT_SECRET,
         get_redirect_uri=lambda: settings.DISCORD_OAUTH_REDIRECT_URI,
         user_info_url="https://discord.com/api/users/@me",
-        extract_user_id=lambda token_data,
-        access_token: "",  # uses user_info_url instead
+        extract_user_id=lambda token_data, access_token: (
+            ""
+        ),  # uses user_info_url instead
         extra_token_headers={"Content-Type": "application/x-www-form-urlencoded"},
     ),
     "slack": PlatformOAuthConfig(
