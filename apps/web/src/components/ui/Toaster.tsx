@@ -1,14 +1,18 @@
 "use client";
 
-import { Toaster as SileoToaster } from "sileo";
+import { Toaster as SileoToaster, type SileoPosition } from "sileo";
+
+export interface ToasterProps {
+  position?: SileoPosition;
+}
 
 /**
  * App-wide Toaster configured with dark theme defaults.
  */
-export function Toaster() {
+export function Toaster({ position = "top-right" }: ToasterProps) {
   return (
     <SileoToaster
-      position="top-right"
+      position={position}
       options={{
         fill: "#262626",
         styles: {

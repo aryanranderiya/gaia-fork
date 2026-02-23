@@ -13,9 +13,6 @@ interface ErrorHandlerDependencies {
   router: AppRouterInstance;
 }
 
-// Track active integration toasts to prevent duplicates
-const activeIntegrationToasts = new Set<string>();
-
 // Constants - Routes where we skip auto-opening login modal on 401
 const LANDING_ROUTES = [
   "/",
@@ -123,20 +120,12 @@ const handleForbiddenError = (
     const integrationDetail = detail as { type: string; message?: string };
     const toastKey = `integration-${integrationDetail.type || "default"}`;
 
-    // Check if toast for this integration is already active
-    if (activeIntegrationToasts.has(toastKey)) {
-      return;
-    }
-
-    // Add to active toasts set
-    activeIntegrationToasts.add(toastKey);
-
     toast.error(integrationDetail.message || "Integration required.", {
+      id: toastKey,
       duration: Infinity,
       action: {
         label: "Connect",
         onClick: () => {
-          activeIntegrationToasts.delete(toastKey);
           router.push("/integrations");
         },
       },

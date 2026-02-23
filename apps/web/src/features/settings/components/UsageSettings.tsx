@@ -19,6 +19,12 @@ import { useUsageSummary } from "../hooks/useUsage";
 export default function UsageSettings() {
   const [selectedPeriod, setSelectedPeriod] = useState("day");
   const { data: summary, isLoading: summaryLoading } = useUsageSummary();
+  const periodLabel =
+    selectedPeriod === "day"
+      ? "daily"
+      : selectedPeriod === "month"
+        ? "monthly"
+        : `${selectedPeriod}ly`;
 
   const getProgressColor = (percentage: number) => {
     if (percentage >= 90) return "danger";
@@ -106,7 +112,7 @@ export default function UsageSettings() {
               No limits configured
             </h3>
             <p className="mt-1 text-sm text-zinc-500">
-              No {selectedPeriod}ly limits are configured for your{" "}
+              No {periodLabel} limits are configured for your{" "}
               {summary?.plan_type?.toUpperCase()} plan.
             </p>
           </div>

@@ -30,11 +30,10 @@ from app.utils.notification.channels import (
     InAppChannelAdapter,
     TelegramChannelAdapter,
 )
-from app.db.mongodb.collections import users_collection
+from app.utils.notification.channel_preferences import fetch_channel_preferences
 from app.utils.notification.storage import (
     MongoDBNotificationStorage,
 )
-from bson import ObjectId
 from fastapi import Request
 
 
@@ -206,12 +205,7 @@ class NotificationOrchestrator:
     async def _get_channel_prefs(self, user_id: str) -> dict:
         """Fetch user's notification channel preferences from DB."""
         try:
-            user = await users_collection.find_one({"_id": ObjectId(user_id)})
-            prefs = (user or {}).get("notification_channel_prefs", {})
-            return {
-                "telegram": prefs.get("telegram", True),
-                "discord": prefs.get("discord", True),
-            }
+            return await fetch_channel_preferences(user_id)
         except Exception as e:
             # Default to all DISABLED on error — better to skip delivery than
             # to spam users who have opted out when the DB is unavailable.

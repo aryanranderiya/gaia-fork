@@ -47,8 +47,10 @@ export default function AccountSection({
       });
 
       setIsEditing(false);
+      toast.success("Name updated!", { id: "update-name" });
     } catch (error) {
       console.error("Profile update error:", error);
+      toast.error("Failed to update name", { id: "update-name" });
     } finally {
       setIsLoading(false);
     }

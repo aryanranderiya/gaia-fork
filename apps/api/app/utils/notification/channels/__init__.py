@@ -6,9 +6,9 @@ from app.utils.notification.channels.telegram import TelegramChannelAdapter
 
 __all__ = [
     "ChannelAdapter",
-    "SendFn",
+    "DiscordChannelAdapter",
     "ExternalPlatformAdapter",
     "InAppChannelAdapter",
+    "SendFn",
     "TelegramChannelAdapter",
-    "DiscordChannelAdapter",
 ]

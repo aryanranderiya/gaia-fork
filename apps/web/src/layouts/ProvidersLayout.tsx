@@ -37,7 +37,7 @@ export default function ProvidersLayout({ children }: { children: ReactNode }) {
           </Suspense>
           <GlobalInterceptor />
           {/* <HydrationManager /> */}
-          <Toaster />
+          <Toaster position="bottom-right" />
           <LoginModal />
           <GlobalIntegrationModal />
           <ElectronRouteGuard>

@@ -69,8 +69,8 @@ export const toast = {
 
   info: (message: string, opts?: ToastOptions) =>
     fire(sileo.info, message, {
-      icon: React.createElement(InformationCircleIcon),
       ...opts,
+      icon: opts?.icon ?? React.createElement(InformationCircleIcon),
     }),
 
   /** Sticky info toast. Pass the returned id to success/error to replace it. */

@@ -1,6 +1,7 @@
 import logging
 from typing import Any, Dict
 
+from app.constants.notifications import CHANNEL_TYPE_INAPP
 from app.core.websocket_manager import websocket_manager
 from app.models.notification.notification_models import (
     ChannelDeliveryStatus,
@@ -25,10 +26,10 @@ class InAppChannelAdapter(ChannelAdapter):
 
     @property
     def channel_type(self) -> str:
-        return "inapp"
+        return CHANNEL_TYPE_INAPP
 
     def can_handle(self, notification: NotificationRequest) -> bool:
-        return any(ch.channel_type == "inapp" for ch in notification.channels)
+        return any(ch.channel_type == CHANNEL_TYPE_INAPP for ch in notification.channels)
 
     async def transform(self, notification: NotificationRequest) -> Dict[str, Any]:
         return {
@@ -45,7 +46,7 @@ class InAppChannelAdapter(ChannelAdapter):
                     "style": action.style,
                     "requires_confirmation": action.requires_confirmation,
                     "confirmation_message": action.confirmation_message,
-                    "config": action.config.model_dump(),
+                    "config": action.config.model_dump() if action.config else None,
                 }
                 for action in (notification.content.actions or [])
             ],

@@ -39,11 +39,14 @@ jobs:
       # Normalize manual inputs into reusable step outputs.
       - name: Resolve release inputs
         id: release
+        env:
+          TAG_INPUT: ${{ github.event.inputs.tag }}
+          VERSION_INPUT: ${{ github.event.inputs.version }}
         run: |
           set -euo pipefail
 
-          TAG="${{ github.event.inputs.tag }}"
-          VERSION="${{ github.event.inputs.version }}"
+          TAG="$TAG_INPUT"
+          VERSION="$VERSION_INPUT"
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
@@ -51,7 +54,10 @@ jobs:
       # Validate tag/version/manifest consistency and skip if npm already has this version.
       - name: Verify CLI release tag/version and npm idempotency
         id: verify
-        run: node scripts/ci/verify-cli-release.mjs --tag "${{ steps.release.outputs.tag }}" --version "${{ steps.release.outputs.version }}"
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: node scripts/ci/verify-cli-release.mjs --tag "$RELEASE_TAG" --version "$RELEASE_VERSION"
 
       # Build only when publish is actually required.
       - name: Install dependencies
@@ -74,4 +80,6 @@ jobs:
       # Idempotent rerun path: emit clear skip message.
       - name: Skip publish for existing npm version
         if: steps.verify.outputs.should_publish != 'true'
-        run: echo "Skipping publish because @heygaia/cli@${{ steps.release.outputs.version }} already exists on npm."
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: echo "Skipping publish because @heygaia/cli@$RELEASE_VERSION already exists on npm."

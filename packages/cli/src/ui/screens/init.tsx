@@ -414,8 +414,14 @@ export const StartServicesStep: React.FC<{
           </Box>
         ) : (
           <Box flexDirection="column">
-            <Text color="cyan">$ gaia dev</Text>
-            <Text color="cyan">$ gaia dev full</Text>
+            <Text color="cyan">$ gaia dev (or: gaia dev full)</Text>
+            <Text dimColor>
+              gaia dev: Runs API + web app with hot reload for normal development.
+            </Text>
+            <Text dimColor>
+              gaia dev full: Adds workers, bots, and voice-agent services for
+              workflows, queues, and scheduled jobs.
+            </Text>
           </Box>
         )}
       </Box>

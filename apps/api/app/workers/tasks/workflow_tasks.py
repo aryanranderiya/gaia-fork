@@ -283,7 +283,12 @@ async def execute_workflow_by_id(
                         # Quota exhausted — show when the limit resets
                         try:
                             reset_dt = datetime.fromisoformat(reset_time_str)
-                            formatted_reset = reset_dt.strftime("%b %d at %I:%M %p UTC")
+                            if reset_dt.tzinfo is None:
+                                reset_dt = reset_dt.replace(tzinfo=timezone.utc)
+                            reset_dt_utc = reset_dt.astimezone(timezone.utc)
+                            formatted_reset = reset_dt_utc.strftime(
+                                "%b %d at %I:%M %p UTC"
+                            )
                             body = (
                                 f"'{workflow.title}' couldn't run — "
                                 f"you've used all your workflow executions for today. "

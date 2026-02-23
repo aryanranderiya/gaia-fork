@@ -11,7 +11,7 @@ from typing import Any, Dict, List
 
 import aiohttp
 from app.config.settings import settings
-from app.constants.notifications import TELEGRAM_BOT_API_BASE
+from app.constants.notifications import CHANNEL_TYPE_TELEGRAM, TELEGRAM_BOT_API_BASE
 from app.models.notification.notification_models import (
     ChannelDeliveryStatus,
     NotificationRequest,
@@ -30,14 +30,16 @@ class TelegramChannelAdapter(ExternalPlatformAdapter):
     """
 
     MAX_MESSAGE_LENGTH = 4096  # UTF-16 code units (Telegram's limit per message)
+    TELEGRAM_MESSAGE_HEADROOM = 6
+    # Reserve a few UTF-16 units to avoid edge cases at entity boundaries.
 
     @property
     def channel_type(self) -> str:
-        return "telegram"
+        return CHANNEL_TYPE_TELEGRAM
 
     @property
     def platform_name(self) -> str:
-        return "telegram"
+        return CHANNEL_TYPE_TELEGRAM
 
     @property
     def bold_marker(self) -> str:
@@ -139,73 +141,63 @@ class TelegramChannelAdapter(ExternalPlatformAdapter):
     async def _setup_sender(
         self, session: aiohttp.ClientSession, ctx: Dict[str, Any]
     ) -> tuple[SendFn | None, ChannelDeliveryStatus | None]:
-        """Store (session, ctx) as instance vars so _deliver_content can reach them.
-
-        Returns a no-op SendFn to satisfy the base class contract; the actual
-        sending is done via _send_message in our _deliver_content override.
-        """
-        # Stash for _deliver_content (cleaned up in finally block below).
-        self._tg_session = session  # type: ignore[attr-defined]
-        self._tg_ctx = ctx  # type: ignore[attr-defined]
-
-        async def _noop(text: str) -> str | None:  # satisfies SendFn signature
-            return None
-
-        return _noop, None  # type: ignore[return-value]
-
-    async def _deliver_content(
-        self, send_fn: SendFn, content: Dict[str, Any]
-    ) -> ChannelDeliveryStatus:
-        """Send content using Telegram MessageEntity API.
-
-        Overrides the base class implementation to use entity-based formatting
-        instead of parse_mode HTML. send_fn is unused (replaced by _send_message).
-        """
-        session: aiohttp.ClientSession = self._tg_session  # type: ignore[attr-defined]
-        ctx: Dict[str, Any] = self._tg_ctx  # type: ignore[attr-defined]
+        """Return a per-delivery sender closure bound to the current session/context."""
 
         async def send_plain(text: str) -> str | None:
-            """Send plain/emoji text with no Markdown conversion."""
             return await self._send_message(session, ctx, text, [])
 
-        async def send_markdown(text: str) -> str | None:
-            """Convert Markdown → entities and send, chunking if necessary."""
-            for chunk_text, chunk_entities in self._chunks_from_md(
-                text,
-                self.MAX_MESSAGE_LENGTH - 6,  # small headroom
-            ):
-                err = await self._send_message(session, ctx, chunk_text, chunk_entities)
-                if err:
-                    return err
-            return None
+        return send_plain, None
 
-        if content.get("type") == "workflow_messages":
-            if header := content.get("header"):
-                if err := await send_plain(header):
-                    return self._error(f"Telegram header error: {err}")
-
-            for msg in content.get("messages", []):
-                if err := await send_markdown(msg):
-                    return self._error(f"Telegram message error: {err}")
-
-            if footer := content.get("footer"):
-                if err := await send_markdown(footer):
-                    return self._error(f"Telegram footer error: {err}")
-
-            return self._success()
-
-        # Standard single message — also Markdown-converted
-        if err := await send_markdown(content.get("text", "")):
-            return self._error(f"Telegram message error: {err}")
-        return self._success()
+    async def _send_markdown(
+        self, session: aiohttp.ClientSession, ctx: Dict[str, Any], text: str
+    ) -> str | None:
+        """Convert Markdown to entities and send chunked messages safely."""
+        for chunk_text, chunk_entities in self._chunks_from_md(
+            text,
+            self.MAX_MESSAGE_LENGTH - self.TELEGRAM_MESSAGE_HEADROOM,
+        ):
+            err = await self._send_message(session, ctx, chunk_text, chunk_entities)
+            if err:
+                return err
+        return None
 
     async def deliver(
         self, content: Dict[str, Any], user_id: str
     ) -> ChannelDeliveryStatus:
-        """Override to clean up _tg_session / _tg_ctx after delivery."""
+        """Deliver content without storing any per-request state on ``self``."""
+        ctx, err = await self._get_platform_context(user_id)
+        if err:
+            return err
+        if (
+            ctx is None
+        ):  # guaranteed by _get_platform_context invariant; guard for type narrowing
+            raise RuntimeError(
+                "ctx is None despite no error — this should never happen"
+            )
+
         try:
-            return await super().deliver(content, user_id)
-        finally:
-            # Remove temp instance vars set by _setup_sender
-            self.__dict__.pop("_tg_session", None)
-            self.__dict__.pop("_tg_ctx", None)
+            async with aiohttp.ClientSession(**self._session_kwargs(ctx)) as session:
+                async def send_plain(text: str) -> str | None:
+                    return await self._send_message(session, ctx, text, [])
+
+                if content.get("type") == "workflow_messages":
+                    if header := content.get("header"):
+                        if err := await send_plain(header):
+                            return self._error(f"Telegram header error: {err}")
+
+                    for msg in content.get("messages", []):
+                        if err := await self._send_markdown(session, ctx, msg):
+                            return self._error(f"Telegram message error: {err}")
+
+                    if footer := content.get("footer"):
+                        if err := await self._send_markdown(session, ctx, footer):
+                            return self._error(f"Telegram footer error: {err}")
+
+                    return self._success()
+
+                text = content.get("text", "")
+                if err := await self._send_markdown(session, ctx, text):
+                    return self._error(f"Telegram message error: {err}")
+                return self._success()
+        except Exception as exc:
+            return self._error(str(exc))

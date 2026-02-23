@@ -27,7 +27,7 @@ jobs:
         include:
           - os: macos-latest
             target: mac
-          - os: blacksmith-4vcpu-ubuntu-2404
+          - os: windows-latest
             target: win
           - os: ubuntu-latest
             target: linux

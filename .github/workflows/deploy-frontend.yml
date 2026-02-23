@@ -35,7 +35,7 @@ jobs:
 
       # Mirror master branch to private fork consumed by production hosting.
       - name: Sync master to private fork
-        uses: TobKed/github-forks-sync-action@master
+        uses: TobKed/github-forks-sync-action@2fb78daa46a630ff56455a63dec51ff00ba56e23 # v0.4.0
         with:
           github_token: ${{ secrets.PRIVATE_FORK_TOKEN }}
           upstream_repository: ${{ github.repository }}
@@ -47,16 +47,16 @@ jobs:
       # Always send deploy outcome to Discord for visibility.
       - name: Notify Discord of deployment
         if: always()
-        uses: appleboy/discord-action@v1.2.0
+        uses: appleboy/discord-action@afc227330777ad298156a1f5233dfa1e885616db # v1.2.0
         with:
           webhook_url: ${{ secrets.DISCORD_WEBHOOK }}
           username: "Gaia Deploy Bot"
-          color: ${{ job.status == 'success' && '#00d4aa' || '#ff6b6b' }}
+          color: ${{ job.status == 'success' && '#00d4aa' || job.status == 'cancelled' && '#ffa500' || '#ff6b6b' }}
           message: |
-            🌐 **Web Deployment ${{ job.status == 'success' && 'Triggered' || 'Failed' }}**
+            🌐 **Web Deployment ${{ job.status == 'success' && 'Triggered' || job.status == 'cancelled' && 'Cancelled' || 'Failed' }}**
             **Repo:** ${{ github.repository }}
             **Branch:** master
             **Commit:** ${{ github.sha }}
-            **Status:** ${{ job.status == 'success' && 'Synced to private fork' || 'Sync failed' }}
-            **Next Step:** ${{ job.status == 'success' && 'Vercel will auto-deploy' || 'Check logs' }}
+            **Status:** ${{ job.status == 'success' && 'Synced to private fork' || job.status == 'cancelled' && 'Sync cancelled' || 'Sync failed' }}
+            **Next Step:** ${{ job.status == 'success' && 'Vercel will auto-deploy' || job.status == 'cancelled' && 'N/A' || 'Check logs' }}
             **Triggered by:** ${{ github.actor }}

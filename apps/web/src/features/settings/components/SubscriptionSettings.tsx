@@ -33,8 +33,7 @@ const getDaysUntil = (dateString?: string): number | null => {
   if (!dateString) return null;
   try {
     const diff = new Date(dateString).getTime() - Date.now();
-    const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-    return days > 0 ? days : 0;
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
   } catch {
     return null;
   }
@@ -165,6 +164,7 @@ export function SubscriptionSettings() {
 
   const nextBillingLabel = (() => {
     if (daysUntilNextBilling === null) return null;
+    if (daysUntilNextBilling < 0) return "overdue";
     if (daysUntilNextBilling === 0) return "due today";
     if (daysUntilNextBilling === 1) return "tomorrow";
     return `in ${daysUntilNextBilling} days`;

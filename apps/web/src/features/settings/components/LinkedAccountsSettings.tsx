@@ -3,7 +3,7 @@
 import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TelegramIcon } from "@/components";
 import {
   SettingsPage,
@@ -66,8 +66,20 @@ export default function LinkedAccountsSettings() {
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(
     null,
   );
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const clearPollTimer = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
   useEffect(() => {
     fetchPlatformLinks();
+    return () => {
+      clearPollTimer();
+    };
   }, []);
 
   const fetchPlatformLinks = async () => {
@@ -107,9 +119,10 @@ export default function LinkedAccountsSettings() {
           `width=${width},height=${height},left=${left},top=${top}`,
         );
 
-        const pollTimer = setInterval(() => {
+        clearPollTimer();
+        pollTimerRef.current = setInterval(() => {
           if (popup?.closed) {
-            clearInterval(pollTimer);
+            clearPollTimer();
             fetchPlatformLinks();
             setConnectingPlatform(null);
           }

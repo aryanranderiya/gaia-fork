@@ -32,7 +32,6 @@ export async function runBasePrerequisiteChecks(store: CLIStore): Promise<{
   store.updateData("checks", {
     git: "pending",
     docker: "pending",
-    mise: "pending",
   });
 
   await delay(500);
@@ -91,6 +90,11 @@ export async function runBasePrerequisiteChecks(store: CLIStore): Promise<{
 export async function runDeveloperPrerequisiteChecks(
   store: CLIStore,
 ): Promise<"success" | null> {
+  store.updateData("checks", {
+    ...store.currentState.data.checks,
+    mise: "pending",
+  });
+
   let miseStatus = await prereqs.checkMise();
   store.updateData("checks", {
     ...store.currentState.data.checks,

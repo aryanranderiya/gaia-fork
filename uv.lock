@@ -2243,7 +2243,7 @@ backend = [
     { name = "starlette", specifier = "==0.41.3" },
     { name = "sumy", specifier = "==0.11.0" },
     { name = "tavily-python", specifier = ">=0.7.12" },
-    { name = "telegramify-markdown", specifier = ">=1.0.0rc1" },
+    { name = "telegramify-markdown", specifier = "==1.0.0rc4" },
     { name = "tldextract", specifier = ">=5.1.3" },
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "uvicorn", specifier = ">=0.34.1" },

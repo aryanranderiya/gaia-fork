@@ -233,6 +233,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/bots/telegram/Dockerfile
+    # Generate ../../apps/bots/.env from apps/bots/.env.example before enabling bots.
     env_file:
       - ../../apps/bots/.env
     restart: on-failure

@@ -113,7 +113,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-        if: steps.affected.outputs.api == 'true' || steps.affected.outputs.bots == 'true'
       - name: Setup Blacksmith Builder
         uses: useblacksmith/setup-docker-builder@v1
 
@@ -203,7 +202,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-        if: steps.web-affected.outputs.web == 'true'
       - name: Setup Blacksmith Builder
         uses: useblacksmith/setup-docker-builder@v1
 

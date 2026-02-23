@@ -72,7 +72,12 @@ class ExternalPlatformAdapter(ChannelAdapter):
         return True
 
     def _split_text(self, text: str, limit: int) -> List[str]:
-        """Split text at paragraph/newline boundaries to respect char limits."""
+        """Split text at paragraph/newline boundaries to respect char limits.
+
+        Note: this uses Python ``len`` (Unicode code points), not UTF-16 code
+        units. Platforms like Telegram enforce UTF-16 limits, so adapters for
+        those platforms should use a UTF-16-aware splitter instead.
+        """
         if len(text) <= limit:
             return [text]
         parts: List[str] = []
@@ -166,7 +171,10 @@ class ExternalPlatformAdapter(ChannelAdapter):
             return self._success()
 
         # Standard single message
-        err = await send_fn(content.get("text", ""))
+        text = content.get("text")
+        if not isinstance(text, str) or not text.strip():
+            return self._error(f"{name} message error: empty text")
+        err = await send_fn(text)
         if err:
             return self._error(f"{name} message error: {err}")
         return self._success()

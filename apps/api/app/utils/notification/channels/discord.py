@@ -3,7 +3,7 @@ from typing import Any, Dict
 import aiohttp
 
 from app.config.settings import settings
-from app.constants.notifications import DISCORD_API_BASE
+from app.constants.notifications import CHANNEL_TYPE_DISCORD, DISCORD_API_BASE
 from app.models.notification.notification_models import ChannelDeliveryStatus
 from app.utils.notification.channels.base import SendFn
 from app.utils.notification.channels.external import ExternalPlatformAdapter
@@ -17,11 +17,11 @@ class DiscordChannelAdapter(ExternalPlatformAdapter):
 
     @property
     def channel_type(self) -> str:
-        return "discord"
+        return CHANNEL_TYPE_DISCORD
 
     @property
     def platform_name(self) -> str:
-        return "discord"
+        return CHANNEL_TYPE_DISCORD
 
     @property
     def bold_marker(self) -> str:
