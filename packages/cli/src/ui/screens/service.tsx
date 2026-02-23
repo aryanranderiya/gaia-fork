@@ -167,8 +167,7 @@ export const ServiceScreen: React.FC<ServiceScreenProps> = ({ store }) => {
                   Use gaia dev / gaia dev full for foreground Nx TUI.
                 </Text>
                 <Text color="gray">
-                  Run <Text color={THEME_COLOR}>gaia logs</Text> to stream
-                  logs.
+                  Run <Text color={THEME_COLOR}>gaia logs</Text> to stream logs.
                 </Text>
                 <Text color="gray">
                   Run <Text color={THEME_COLOR}>gaia stop</Text> to shut down.

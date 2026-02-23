@@ -122,9 +122,12 @@ async function _handleStream(
         return;
       }
 
-      currentEditor = await sendNewMessage(afterTrimmed.replaceAll("<NEW_MESSAGE_BREAK>", "").trim() || "...");
+      currentEditor = await sendNewMessage(
+        afterTrimmed.replaceAll("<NEW_MESSAGE_BREAK>", "").trim() || "...",
+      );
       fullText = afterTrimmed;
-      sentText = afterTrimmed.replaceAll("<NEW_MESSAGE_BREAK>", "").trim() || "...";
+      sentText =
+        afterTrimmed.replaceAll("<NEW_MESSAGE_BREAK>", "").trim() || "...";
       breakHandledDuringStreaming = true;
     }
   };
@@ -136,7 +139,10 @@ async function _handleStream(
         if (streamDone || !streaming) return;
 
         const now = Date.now();
-        if (fullText.includes("<NEW_MESSAGE_BREAK>") || now - lastEditTime >= editIntervalMs) {
+        if (
+          fullText.includes("<NEW_MESSAGE_BREAK>") ||
+          now - lastEditTime >= editIntervalMs
+        ) {
           lastEditTime = now;
           if (editTimer) {
             clearTimeout(editTimer);
@@ -147,13 +153,16 @@ async function _handleStream(
             await updateDisplay(fullText);
           });
         } else if (!editTimer) {
-          editTimer = setTimeout(() => {
-            editTimer = null;
-            if (!streamDone) {
-              lastEditTime = Date.now();
-              enqueue(() => updateDisplay(fullText));
-            }
-          }, editIntervalMs - (now - lastEditTime));
+          editTimer = setTimeout(
+            () => {
+              editTimer = null;
+              if (!streamDone) {
+                lastEditTime = Date.now();
+                enqueue(() => updateDisplay(fullText));
+              }
+            },
+            editIntervalMs - (now - lastEditTime),
+          );
         }
       },
       async (finalText) => {
@@ -170,7 +179,10 @@ async function _handleStream(
           // Breaks were already processed during streaming — just do final update
           // of the current (last) segment without re-splitting
           await updateDisplay(fullText);
-        } else if (sendNewMessage && finalText.includes("<NEW_MESSAGE_BREAK>")) {
+        } else if (
+          sendNewMessage &&
+          finalText.includes("<NEW_MESSAGE_BREAK>")
+        ) {
           // Handle NEW_MESSAGE_BREAK for non-streaming platforms (e.g. Discord)
           fullText = finalText;
           sentText = "";
@@ -245,4 +257,3 @@ export async function handleStreamingChat(
     options,
   );
 }
-

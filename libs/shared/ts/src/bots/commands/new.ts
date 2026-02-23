@@ -14,11 +14,7 @@ export const newCommand: BotCommand = {
   name: "new",
   description: "Start a new conversation with GAIA",
 
-  async execute({
-    gaia,
-    target,
-    ctx,
-  }: CommandExecuteParams): Promise<void> {
+  async execute({ gaia, target, ctx }: CommandExecuteParams): Promise<void> {
     const response = await handleNewConversation(gaia, ctx);
     await target.sendEphemeral(response);
   },

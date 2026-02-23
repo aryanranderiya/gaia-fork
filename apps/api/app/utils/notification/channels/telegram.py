@@ -177,6 +177,7 @@ class TelegramChannelAdapter(ExternalPlatformAdapter):
 
         try:
             async with aiohttp.ClientSession(**self._session_kwargs(ctx)) as session:
+
                 async def send_plain(text: str) -> str | None:
                     return await self._send_message(session, ctx, text, [])
 

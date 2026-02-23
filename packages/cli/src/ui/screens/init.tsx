@@ -179,7 +179,9 @@ const FinishedStep: React.FC<{
         </Box>
 
         <Box marginTop={1}>
-          <Text color="gray">gaia logs · gaia stop · gaia status · gaia setup</Text>
+          <Text color="gray">
+            gaia logs · gaia stop · gaia status · gaia setup
+          </Text>
         </Box>
 
         <Box marginTop={1}>
@@ -416,7 +418,8 @@ export const StartServicesStep: React.FC<{
           <Box flexDirection="column">
             <Text color="cyan">$ gaia dev (or: gaia dev full)</Text>
             <Text dimColor>
-              gaia dev: Runs API + web app with hot reload for normal development.
+              gaia dev: Runs API + web app with hot reload for normal
+              development.
             </Text>
             <Text dimColor>
               gaia dev full: Adds workers, bots, and voice-agent services for
@@ -484,7 +487,9 @@ export const ServicesRunningStep: React.FC<{
       </Box>
 
       <Box marginTop={1}>
-        <Text color="gray">gaia logs · gaia stop · gaia status · gaia setup</Text>
+        <Text color="gray">
+          gaia logs · gaia stop · gaia status · gaia setup
+        </Text>
       </Box>
 
       <Box marginTop={1}>

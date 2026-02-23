@@ -29,7 +29,9 @@ class InAppChannelAdapter(ChannelAdapter):
         return CHANNEL_TYPE_INAPP
 
     def can_handle(self, notification: NotificationRequest) -> bool:
-        return any(ch.channel_type == CHANNEL_TYPE_INAPP for ch in notification.channels)
+        return any(
+            ch.channel_type == CHANNEL_TYPE_INAPP for ch in notification.channels
+        )
 
     async def transform(self, notification: NotificationRequest) -> Dict[str, Any]:
         return {

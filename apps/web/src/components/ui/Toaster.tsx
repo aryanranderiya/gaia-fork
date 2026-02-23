@@ -1,6 +1,6 @@
 "use client";
 
-import { Toaster as SileoToaster, type SileoPosition } from "sileo";
+import { type SileoPosition, Toaster as SileoToaster } from "sileo";
 
 export interface ToasterProps {
   position?: SileoPosition;

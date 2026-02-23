@@ -117,7 +117,9 @@ async def update_channel_preferences(
             updates["notification_channel_prefs.discord"] = preferences.discord
 
         if updates:
-            await users_collection.update_one({"_id": ObjectId(user_id)}, {"$set": updates})
+            await users_collection.update_one(
+                {"_id": ObjectId(user_id)}, {"$set": updates}
+            )
 
         prefs = await fetch_channel_preferences(user_id)
         return ChannelPreferences(telegram=prefs["telegram"], discord=prefs["discord"])
