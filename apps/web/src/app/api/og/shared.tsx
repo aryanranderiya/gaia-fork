@@ -11,6 +11,7 @@ import {
   toolIconConfigs,
 } from "@/config/toolIconConfig";
 import { wallpapers } from "@/config/wallpapers";
+import { siteConfig } from "@/lib/seo";
 
 // Re-export from shared config
 export {
@@ -95,12 +96,8 @@ export async function loadFonts(
   return fonts;
 }
 
-export function getBaseUrl(requestUrl: string): string {
-  const url = new URL(requestUrl);
-  return (
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : url.origin)
-  );
+export function getBaseUrl(_requestUrl: string): string {
+  return siteConfig.url;
 }
 
 export function getApiBaseUrl(): string {
