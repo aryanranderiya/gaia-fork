@@ -33,12 +33,13 @@ const nextConfig = {
       "@icons": "@theexperiencecompany/gaia-icons/solid-rounded",
     },
   },
+  serverExternalPackages: ["moment", "moment-timezone"],
   experimental: {
     optimizePackageImports: [
       "mermaid",
       "react-syntax-highlighter",
       "cytoscape",
-      "@heroui/*",
+      // "@heroui/*",
     ],
   },
   webpack: (config, { isServer }) => {
