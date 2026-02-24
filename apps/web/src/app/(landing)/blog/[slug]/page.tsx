@@ -62,7 +62,9 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   // Get suggested posts (excluding current post)
   const allBlogs = await getAllBlogPosts(false);
-  const suggestedPosts = allBlogs.filter((post) => post.slug !== slug).slice(0, 3);
+  const suggestedPosts = allBlogs
+    .filter((post) => post.slug !== slug)
+    .slice(0, 3);
 
   // Generate structured data for SEO
   const articleSchema = generateArticleSchema(
