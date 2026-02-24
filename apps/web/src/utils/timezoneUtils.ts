@@ -22,8 +22,7 @@ const getOffsetString = (timezone: string): string => {
     timeZoneName: "shortOffset",
   }).formatToParts(new Date());
 
-  const tzPart =
-    parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
+  const tzPart = parts.find((p) => p.type === "timeZoneName")?.value ?? "GMT";
 
   // shortOffset produces values like "GMT+5:30", "GMT-5", "GMT"
   const match = tzPart.match(/GMT([+-]\d+(?::\d+)?)?/);
