@@ -17,7 +17,6 @@ import { isOnboardingPhaseUpdateMessage } from "@/features/onboarding/types/webs
 import CommandMenu from "@/features/search/components/CommandMenu";
 import { useIsMobile } from "@/hooks/ui/useMobile";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
-import { useOAuthSuccessToast } from "@/hooks/useOAuthSuccessToast";
 import ProvidersLayout from "@/layouts/ProvidersLayout";
 import SidebarLayout, { CustomSidebarTrigger } from "@/layouts/SidebarLayout";
 import { apiService } from "@/lib/api";
@@ -64,7 +63,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   // Check if user needs onboarding
   useOnboardingGuard();
   useBackgroundSync();
-  useOAuthSuccessToast(); // Global OAuth success/error toast handling
 
   // Determine visibility of onboarding UI elements:
   const hasCompletedInitialOnboarding = user.onboarding?.completed === true;
