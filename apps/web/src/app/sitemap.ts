@@ -5,6 +5,7 @@ import { getAllGlossaryTermSlugs } from "@/features/glossary/data/glossaryData";
 import { workflowApi } from "@/features/workflows/api/workflowApi";
 import { getAllBlogPosts } from "@/lib/blog";
 import { fetchAllPaginated, isDevelopment } from "@/lib/fetchAll";
+import { getServerApiBaseUrl } from "@/lib/serverApiBaseUrl";
 import { getSiteUrl } from "@/lib/seo";
 
 /**
@@ -163,9 +164,8 @@ async function getIntegrationPages(
   baseUrl: string,
 ): Promise<MetadataRoute.Sitemap> {
   try {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
-    const apiBaseUrl = apiUrl.replace(/\/$/, "");
+    const apiBaseUrl = getServerApiBaseUrl();
+    if (!apiBaseUrl) return [];
 
     if (isDevelopment()) {
       const response = await fetch(

@@ -7,6 +7,7 @@ import {
   normalizeHouse,
 } from "@/features/onboarding/constants/houses";
 import { siteConfig } from "@/lib/seo";
+import { getServerApiBaseUrl } from "@/lib/serverApiBaseUrl";
 
 export async function generateMetadata({
   params,
@@ -28,9 +29,10 @@ export async function generateMetadata({
   };
 
   try {
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1/";
-    const apiBaseUrl = apiUrl.replace(/\/$/, "");
+    const apiBaseUrl = getServerApiBaseUrl();
+    if (!apiBaseUrl) {
+      return fallbackMetadata;
+    }
 
     const response = await fetch(`${apiBaseUrl}/user/holo-card/${cardId}`, {
       headers: {
