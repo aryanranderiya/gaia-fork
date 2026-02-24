@@ -58,17 +58,12 @@ const STATIC_PAGES: Array<{
   { path: "/faq", freq: "monthly", priority: 0.8 },
   { path: "/manifesto", freq: "monthly", priority: 0.8 },
   { path: "/about", freq: "monthly", priority: 0.8 },
-  { path: "/docs", freq: "weekly", priority: 0.8 },
   { path: "/contact", freq: "monthly", priority: 0.7 },
   { path: "/brand", freq: "monthly", priority: 0.7 },
   { path: "/login", freq: "monthly", priority: 0.6 },
   { path: "/signup", freq: "monthly", priority: 0.6 },
-  { path: "/status", freq: "daily", priority: 0.6 },
   { path: "/terms", freq: "monthly", priority: 0.5 },
   { path: "/privacy", freq: "monthly", priority: 0.5 },
-  { path: "/request-feature", freq: "monthly", priority: 0.5 },
-  { path: "/support", freq: "monthly", priority: 0.6 },
-  { path: "/desktop", freq: "monthly", priority: 0.6 },
   { path: "/thanks", freq: "monthly", priority: 0.4 },
 ];
 
@@ -247,7 +242,6 @@ function getComparisonPages(baseUrl: string): MetadataRoute.Sitemap {
   const slugs = getAllComparisonSlugs();
   return slugs.map((slug) => ({
     url: `${baseUrl}/compare/${slug}`,
-    lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.8,
   }));
@@ -267,7 +261,6 @@ async function getPersonaPages(
     const slugs = getAllPersonaSlugs();
     return slugs.map((slug) => ({
       url: `${baseUrl}/for/${slug}`,
-      lastModified: new Date(),
       changeFrequency: "monthly" as const,
       priority: 0.8,
     }));
@@ -284,7 +277,6 @@ function getGlossaryPages(baseUrl: string): MetadataRoute.Sitemap {
   const slugs = getAllGlossaryTermSlugs();
   return slugs.map((slug) => ({
     url: `${baseUrl}/learn/${slug}`,
-    lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.7,
   }));

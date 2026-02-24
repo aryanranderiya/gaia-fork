@@ -523,7 +523,7 @@ export function generateAboutPageSchema(): WithContext<AboutPage> {
     "@type": "AboutPage",
     name: "About GAIA",
     description: "Learn about GAIA's mission and the team behind it",
-    url: `${siteConfig.url}/manifesto`,
+    url: `${siteConfig.url}/about`,
     mainEntity: {
       "@type": "Organization",
       name: siteConfig.short_name,
