@@ -15,14 +15,8 @@ import {
 
 import { defaultFont, getAllFontVariables } from "./fonts";
 
-// Dynamically determine the base URL based on environment
+// Use a stable canonical base URL resolved in seo.ts
 const getMetadataBase = () => {
-  // if (process.env.NEXT_PUBLIC_APP_URL)
-  //   return new URL(process.env.NEXT_PUBLIC_APP_URL);
-
-  // if (process.env.VERCEL_URL)
-  //   return new URL(`https://${process.env.VERCEL_URL}`);
-
   return new URL(siteConfig.url);
 };
 
