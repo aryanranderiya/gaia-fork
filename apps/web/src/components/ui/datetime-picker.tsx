@@ -3,11 +3,7 @@
  */
 "use client";
 
-import {
-  ArrowLeft01Icon,
-  CalendarIcon,
-  Cancel01Icon,
-} from "@icons";
+import { ArrowLeft01Icon, CalendarIcon, Cancel01Icon } from "@icons";
 import {
   addHours,
   endOfDay,

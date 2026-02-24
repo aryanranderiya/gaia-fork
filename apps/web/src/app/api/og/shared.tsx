@@ -12,6 +12,7 @@ import {
 } from "@/config/toolIconConfig";
 import { wallpapers } from "@/config/wallpapers";
 import { siteConfig } from "@/lib/seo";
+import { getServerApiBaseUrl } from "@/lib/serverApiBaseUrl";
 
 // Re-export from shared config
 export {
@@ -101,9 +102,7 @@ export function getBaseUrl(_requestUrl: string): string {
 }
 
 export function getApiBaseUrl(): string {
-  const apiUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
-  return apiUrl.replace(/\/$/, "");
+  return getServerApiBaseUrl() ?? "";
 }
 
 export function truncateText(text: string, maxLength: number): string {

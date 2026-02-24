@@ -4,9 +4,9 @@ import { Analytics as VercelAnalytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
+import { Suspense } from "react";
 
 import AnalyticsLayout from "@/layouts/AnalyticsLayout";
-import ProvidersLayout from "@/layouts/ProvidersLayout";
 import {
   generateOrganizationSchema,
   generateWebSiteSchema,
@@ -176,7 +176,7 @@ export default function RootLayout({
       </head>
       <body className={`dark ${defaultFont.className}`}>
         <div id="app-root">
-          <ProvidersLayout>{children}</ProvidersLayout>
+          <Suspense fallback={null}>{children}</Suspense>
         </div>
 
         {/* JSON-LD Schema - Organization */}
