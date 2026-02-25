@@ -5,8 +5,8 @@ import { getAllGlossaryTermSlugs } from "@/features/glossary/data/glossaryData";
 import { workflowApi } from "@/features/workflows/api/workflowApi";
 import { getAllBlogPosts } from "@/lib/blog";
 import { fetchAllPaginated, isDevelopment } from "@/lib/fetchAll";
-import { getServerApiBaseUrl } from "@/lib/serverApiBaseUrl";
 import { getSiteUrl } from "@/lib/seo";
+import { getServerApiBaseUrl } from "@/lib/serverApiBaseUrl";
 
 /**
  * Sitemap IDs for different content types.

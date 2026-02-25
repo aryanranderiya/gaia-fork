@@ -10,4 +10,3 @@ export function getServerApiBaseUrl(): string | null {
 
   return apiUrl.replace(/\/+$/, "");
 }
-

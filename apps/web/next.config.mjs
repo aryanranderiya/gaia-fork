@@ -31,6 +31,9 @@ const nextConfig = {
     // Change the value here to swap the entire icon variant across the app
     resolveAlias: {
       "@icons": "@theexperiencecompany/gaia-icons/solid-rounded",
+      // cytoscape: emptyStub,
+      // "cytoscape-cose-bilkent": emptyStub,
+      // "cytoscape-fcose": emptyStub,
     },
   },
   serverExternalPackages: ["moment", "moment-timezone"],
@@ -39,19 +42,18 @@ const nextConfig = {
       "mermaid",
       "react-syntax-highlighter",
       "cytoscape",
+      "@theexperiencecompany/gaia-icons/solid-rounded",
       // "@heroui/*",
     ],
   },
-  webpack: (config, { isServer }) => {
-    // Exclude cytoscape from bundle since it's not used
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        cytoscape: false,
-        "cytoscape-cose-bilkent": false,
-        "cytoscape-fcose": false,
-      };
-    }
+  webpack: (config) => {
+    // Exclude cytoscape from bundle since it's not used (both client and server)
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      cytoscape: false,
+      "cytoscape-cose-bilkent": false,
+      "cytoscape-fcose": false,
+    };
     // Alias @icons to the active icon variant — change here to swap the entire set
     config.resolve.alias["@icons"] =
       "@theexperiencecompany/gaia-icons/solid-rounded";
@@ -59,7 +61,7 @@ const nextConfig = {
   },
   images: {
     dangerouslyAllowSVG: true,
-    minimumCacheTTL: 2592000, // 30 days — overrides short upstream Cache-Control (e.g. GitHub's 5 min)
+    minimumCacheTTL: 2_592_000, // 30 days — overrides short upstream Cache-Control (e.g. GitHub's 5 min)
     remotePatterns: [
       {
         protocol: "https",
@@ -159,13 +161,21 @@ export default withSentryConfig(withBundleAnalyzer(withMDX(nextConfig)), {
   // side errors will fail.
   // tunnelRoute: "/monitoring",
 
-  // New webpack-based configuration for Sentry options
+  // Disable auto-instrumentation to prevent @sentry/node-core + OpenTelemetry from leaking into the bundle
   webpack: {
-    // Automatically tree-shake Sentry logger statements to reduce bundle size
+    autoInstrumentServerFunctions: false,
+    autoInstrumentMiddleware: false,
+    autoInstrumentAppDirectory: false,
     treeshake: {
       removeDebugLogging: true,
     },
-    // Enables automatic instrumentation of Vercel Cron Monitors
-    automaticVercelMonitors: true,
+  },
+
+  // Strip unused Sentry features from the client bundle
+  bundleSizeOptimizations: {
+    excludeDebugStatements: true,
+    excludeReplayShadowDom: true,
+    excludeReplayIframe: true,
+    excludeReplayWorker: true,
   },
 });
