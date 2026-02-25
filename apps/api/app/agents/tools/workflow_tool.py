@@ -92,11 +92,10 @@ async def create_workflow_directly(
             timezone=user_timezone,
         )
 
-        workflow_description = draft.prompt if draft.prompt else draft.description
-
         request = CreateWorkflowRequest(
             title=draft.title,
-            description=workflow_description,
+            description=draft.description,
+            prompt=draft.prompt,
             trigger_config=trigger_config,
             steps=None,  # Steps are embedded in the prompt
             generate_immediately=True,
@@ -121,6 +120,7 @@ async def create_workflow_directly(
             "id": workflow.id,
             "title": workflow.title,
             "description": workflow.description,
+            "prompt": workflow.prompt,
             "trigger_config": {
                 "type": frontend_trigger_type_map.get(
                     workflow.trigger_config.type, workflow.trigger_config.type
@@ -474,8 +474,8 @@ async def list_workflows(config: RunnableConfig) -> dict:
                 "id": w.id,
                 "title": w.title,
                 "description": w.description[:100] + "..."
-                if len(w.description) > 100
-                else w.description,
+                if w.description and len(w.description) > 100
+                else (w.description or ""),
                 "trigger_type": w.trigger_config.type,
                 "activated": w.activated,
                 "step_count": len(w.steps),
