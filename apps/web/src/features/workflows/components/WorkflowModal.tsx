@@ -431,7 +431,9 @@ export default function WorkflowModal({
     } catch (error) {
       toast.error("Failed to reset workflow", {
         description:
-          error instanceof Error ? error.message : "An unexpected error occurred",
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
         duration: 4000,
       });
     }
@@ -635,11 +637,11 @@ export default function WorkflowModal({
       backdrop="blur"
     >
       <ModalContent>
-        <ModalBody className="flex flex-col overflow-hidden pr-2">
+        <ModalBody className="min-h-0 overflow-hidden pr-2">
           {creationPhase === "form" ? (
-            <div className="flex flex-1 min-h-0 gap-8">
+            <div className="flex min-h-0 flex-1 gap-8">
               <div className="flex min-h-0 flex-1 flex-col">
-                <div className="min-h-0 flex-1 space-y-6 overflow-y-auto">
+                <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
                   <WorkflowHeader
                     mode={mode}
                     control={control}
@@ -663,14 +665,16 @@ export default function WorkflowModal({
                     }
                   />
 
-                  <div className="border-t border-zinc-800" />
-
-                  <div className="space-y-4">
-                    <WorkflowDescriptionField
-                      control={control}
-                      errors={errors}
-                      mode={mode}
-                    />
+                  <div>
+                    <div className="border-t border-zinc-800 mb-2" />
+                    <div className="space-y-4">
+                      <WorkflowDescriptionField
+                        control={control}
+                        errors={errors}
+                        setValue={setValue}
+                        mode={mode}
+                      />
+                    </div>
                   </div>
                 </div>
 

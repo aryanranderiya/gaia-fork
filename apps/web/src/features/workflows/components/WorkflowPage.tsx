@@ -163,7 +163,10 @@ export default function WorkflowPage() {
     if (!open) {
       router.push("/workflows", { scroll: false });
       if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
-      clearTimeoutRef.current = setTimeout(() => setSelectedWorkflow(null), 300);
+      clearTimeoutRef.current = setTimeout(
+        () => setSelectedWorkflow(null),
+        300,
+      );
     }
   };
 

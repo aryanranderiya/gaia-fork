@@ -98,7 +98,10 @@ export default function WorkflowsSidebar() {
           setIsEditModalOpen(open);
           if (!open) {
             if (clearTimeoutRef.current) clearTimeout(clearTimeoutRef.current);
-            clearTimeoutRef.current = setTimeout(() => setSelectedWorkflow(null), 300);
+            clearTimeoutRef.current = setTimeout(
+              () => setSelectedWorkflow(null),
+              300,
+            );
           }
         }}
         existingWorkflow={selectedWorkflow}

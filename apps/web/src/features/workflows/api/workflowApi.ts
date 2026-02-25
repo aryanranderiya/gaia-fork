@@ -256,6 +256,30 @@ export const workflowApi = {
     });
   },
 
+  // Generate or improve workflow instructions using AI
+  generatePrompt: async (params: {
+    title?: string;
+    description?: string;
+    trigger_config?: Record<string, unknown>;
+    existing_prompt?: string;
+  }): Promise<{
+    prompt: string;
+    suggested_trigger?: {
+      type: "manual" | "schedule" | "integration";
+      cron_expression?: string;
+      trigger_name?: string;
+    };
+  }> => {
+    return apiService.post<{
+      prompt: string;
+      suggested_trigger?: {
+        type: "manual" | "schedule" | "integration";
+        cron_expression?: string;
+        trigger_name?: string;
+      };
+    }>("/workflows/generate-prompt", params, { silent: true });
+  },
+
   // Reset a system workflow to its default definition
   resetToDefault: async (
     workflowId: string,
