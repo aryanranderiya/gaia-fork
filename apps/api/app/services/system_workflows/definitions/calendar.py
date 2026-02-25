@@ -72,8 +72,7 @@ def _meeting_prep() -> CreateWorkflowRequest:
                     "(2) Suggested agenda / talking points, "
                     "(3) Open action items to address, "
                     "(4) Relevant background from past interactions, "
-                    "(5) Join link if available. "
-                    "Save the brief as a note or document."
+                    "(5) Join link if available."
                 ),
             ),
         ],

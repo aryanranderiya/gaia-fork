@@ -50,6 +50,10 @@ async def create_workflow(
 ):
     """Create a new workflow with automatic timezone detection."""
     try:
+        # Strip system fields — these are set by the provisioner only
+        request.is_system_workflow = False
+        request.source_integration = None
+        request.system_workflow_key = None
         # Pass user timezone to the service for automatic population
         workflow = await WorkflowService.create_workflow(
             request, user["user_id"], user_timezone=user_timezone
