@@ -4,9 +4,8 @@ import { useDrag } from "@use-gesture/react";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
-export const dynamic = "force-dynamic";
-
 import HeaderManager from "@/components/layout/headers/HeaderManager";
+import ProvidersLayout from "@/layouts/ProvidersLayout";
 import Sidebar from "@/components/layout/sidebar/MainSidebar";
 import RightSidebar from "@/components/layout/sidebar/RightSidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -31,6 +30,8 @@ import {
 } from "@/stores/onboardingStore";
 import { useRightSidebar } from "@/stores/rightSidebarStore";
 import { useUIStoreSidebar } from "@/stores/uiStore";
+
+export const dynamic = "force-dynamic";
 
 const HeaderSidebarTrigger = () => {
   return (
@@ -177,6 +178,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   );
 
   return (
+    <ProvidersLayout>
     <TooltipProvider>
       <SidebarProvider
         open={currentOpen}
@@ -234,5 +236,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         )}
       </SidebarProvider>
     </TooltipProvider>
+    </ProvidersLayout>
   );
 }
