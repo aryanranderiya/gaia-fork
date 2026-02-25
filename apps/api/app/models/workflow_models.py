@@ -375,10 +375,9 @@ class CreateWorkflowRequest(BaseModel):
     @field_validator("description")
     @classmethod
     def validate_optional_description(cls, v):
-        if v is None:
-            return None
-        stripped = v.strip()
-        return stripped if stripped else None
+        if v is not None and not v.strip():
+            return ""
+        return v.strip() if v else None
 
 
 class UpdateWorkflowRequest(BaseModel):

@@ -445,9 +445,24 @@ class WorkflowService:
 
             update_data.update(update_fields)
 
-            result = await workflows_collection.update_one(
-                {"_id": workflow_id, "user_id": user_id}, {"$set": update_data}
-            )
+            try:
+                result = await workflows_collection.update_one(
+                    {"_id": workflow_id, "user_id": user_id}, {"$set": update_data}
+                )
+            except Exception as db_err:
+                # Compensate: unregister newly created triggers so they don't become orphaned
+                if registered_trigger_ids is not None:
+                    logger.error(
+                        f"MongoDB update failed for workflow {workflow_id}; "
+                        f"unregistering {len(registered_trigger_ids)} newly registered triggers"
+                    )
+                    await TriggerService.unregister_triggers(
+                        user_id,
+                        new_trigger_config.trigger_name or "",
+                        registered_trigger_ids,
+                        workflow_id,
+                    )
+                raise db_err
 
             if result.matched_count == 0:
                 return None

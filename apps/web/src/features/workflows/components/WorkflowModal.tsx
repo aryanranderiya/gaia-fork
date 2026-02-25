@@ -429,7 +429,13 @@ export default function WorkflowModal({
       await fetchWorkflows();
       handleClose();
     } catch (error) {
-      console.error("Failed to reset workflow:", error);
+      toast.error("Failed to reset workflow", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred",
+        duration: 4000,
+      });
     }
   };
 
