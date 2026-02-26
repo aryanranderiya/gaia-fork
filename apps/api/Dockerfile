@@ -79,11 +79,13 @@ COPY libs ./libs
 COPY apps/api/pyproject.toml ./apps/api/
 
 # Setup non-root user and permissions
+# chown libs so setuptools can create gaia_shared.egg-info during editable install
 RUN adduser --disabled-password --gecos '' appuser \
     && mkdir -p /home/appuser/.cache \
     && chown -R appuser:appuser /home/appuser \
     && mkdir -p /app/apps/api/logs \
-    && chown appuser:appuser /app/apps/api/logs
+    && chown appuser:appuser /app/apps/api/logs \
+    && chown -R appuser:appuser /app/libs
 
 # Copy API application code (root-owned, readable by appuser)
 COPY apps/api/app ./apps/api/app
