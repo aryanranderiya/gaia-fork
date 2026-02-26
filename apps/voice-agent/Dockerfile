@@ -78,6 +78,6 @@ COPY apps/voice-agent/src/ ./apps/voice-agent/src/
 WORKDIR /app/apps/voice-agent
 
 # Download model files (into /home/appuser/.cache/huggingface)
-RUN uv run python -m src download-files
+RUN uv run --frozen python -m src download-files
 
-CMD ["uv", "run", "python", "-m", "src", "start"]
+CMD ["uv", "run", "--frozen", "python", "-m", "src", "start"]
