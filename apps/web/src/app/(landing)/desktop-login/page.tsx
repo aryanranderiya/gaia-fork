@@ -25,7 +25,7 @@ export default function DesktopLoginPage() {
   const router = useRouter();
   const [timeOfDay] = useState<TimeOfDay>(() => getTimeOfDay());
   const [status, setStatus] = useState<
-    "ready" | "opened" | "waiting" | "error"
+    "ready" | "opened" | "waiting" | "redirecting" | "error"
   >("ready");
 
   // Redirect to normal login if not in Electron (after brief check)
@@ -40,6 +40,15 @@ export default function DesktopLoginPage() {
 
     return () => clearTimeout(timeout);
   }, [isElectron, router]);
+
+  // Listen for the main process signalling it's about to navigate to /c
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.api?.onAuthRedirecting) return;
+    const cleanup = window.api.onAuthRedirecting(() => {
+      setStatus("redirecting");
+    });
+    return cleanup;
+  }, []);
 
   const handleOpenLogin = () => {
     const apiBaseUrl =
@@ -114,17 +123,29 @@ export default function DesktopLoginPage() {
                 <p className="font-medium text-white">
                   Complete login in your browser
                 </p>
-                <p className="mt-1 text-sm text-zinc-300">
+                <p className="mt-1 text-sm text-white">
                   You&apos;ll be redirected back automatically
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setStatus("ready")}
-                className="mt-2 text-sm text-zinc-300 underline-offset-4 hover:text-zinc-200 hover:underline"
+                className="mt-2 text-sm text-white underline-offset-4 hover:text-zinc-200 hover:underline"
               >
                 Try again
               </button>
+            </div>
+          )}
+
+          {status === "redirecting" && (
+            <div className="flex flex-col items-center gap-4 py-4">
+              <Spinner variant="simple" />
+              <div className="text-center">
+                <p className="font-medium text-white">Signing you in…</p>
+                <p className="mt-1 text-sm text-zinc-400">
+                  Taking you to GAIA
+                </p>
+              </div>
             </div>
           )}
 
