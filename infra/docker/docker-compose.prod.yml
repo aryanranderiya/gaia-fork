@@ -35,6 +35,7 @@ services:
       PYTHONDONTWRITEBYTECODE: 1
       PYTHONPATH: /app/apps/api
       PYTHONIOENCODING: utf-8
+      UV_CACHE_DIR: /tmp/uv-cache
     env_file:
       - ../../apps/api/.env
     ports:
@@ -155,6 +156,7 @@ services:
     environment:
       - WORKER_TYPE=arq_worker
       - PYTHONPATH=/app/apps/api
+      - UV_CACHE_DIR=/tmp/uv-cache
     command:
       [
         "uv",
