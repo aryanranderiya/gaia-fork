@@ -8,15 +8,14 @@
  */
 
 export {
-  createSplashWindow,
-  closeSplashWindow,
-  isSplashAlive,
-} from "./splash";
-
-export {
+  consumePendingDeepLink,
   createMainWindow,
-  showMainWindow,
   getMainWindow,
   setPendingDeepLink,
-  consumePendingDeepLink,
+  showMainWindow,
 } from "./main";
+export {
+  closeSplashWindow,
+  createSplashWindow,
+  isSplashAlive,
+} from "./splash";

@@ -141,6 +141,7 @@ async def create_workflow_directly(
         request = CreateWorkflowRequest(
             title=draft.title,
             description=workflow_description,
+            prompt=workflow_description or draft.title,
             trigger_config=trigger_config,
             steps=None,  # Steps are embedded in the prompt
             generate_immediately=True,

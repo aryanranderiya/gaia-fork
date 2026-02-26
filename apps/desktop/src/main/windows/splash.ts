@@ -13,7 +13,7 @@
  */
 
 import { join } from "node:path";
-import { BrowserWindow, app, screen } from "electron";
+import { app, BrowserWindow, screen } from "electron";
 
 /** Reference to the current splash window (if any). */
 let splashWindow: BrowserWindow | null = null;

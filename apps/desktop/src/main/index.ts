@@ -22,7 +22,7 @@
 import "v8-compile-cache";
 
 import { electronApp, optimizer } from "@electron-toolkit/utils";
-import { BrowserWindow, app } from "electron";
+import { app, BrowserWindow } from "electron";
 import { checkForUpdatesAfterDelay, setupAutoUpdater } from "./auto-updater";
 import { handleDeepLink } from "./deep-link";
 import { registerIpcHandlers } from "./ipc";

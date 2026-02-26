@@ -75,8 +75,7 @@ export async function handleDeepLink(
           httpOnly: true,
           secure: true,
           sameSite: "no_restriction",
-          expirationDate:
-            Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
+          expirationDate: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
         });
 
         // Notify the renderer so it can show a redirecting spinner

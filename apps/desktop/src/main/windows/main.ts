@@ -15,7 +15,7 @@
 
 import { createConnection } from "node:net";
 import { join } from "node:path";
-import { BrowserWindow, app, shell } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 import { getServerUrl } from "../server";
 import { closeSplashWindow } from "./splash";
 

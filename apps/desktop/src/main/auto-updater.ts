@@ -104,10 +104,7 @@ export function setupAutoUpdater(): void {
 export function checkForUpdatesAfterDelay(delayMs = 3000): void {
   setTimeout(() => {
     autoUpdater.checkForUpdates().catch((err) => {
-      console.error(
-        "[AutoUpdater] Failed to check for updates:",
-        err.message,
-      );
+      console.error("[AutoUpdater] Failed to check for updates:", err.message);
     });
   }, delayMs);
 }

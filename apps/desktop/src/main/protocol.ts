@@ -70,7 +70,8 @@ export function registerLinuxDevProtocol(): void {
       "Name=GAIA (Dev)",
       "Type=Application",
       // %u passes the full URI (gaia://...) as the first argument
-      `Exec=${process.execPath} ${scriptPath} %u`,
+      // Paths are quoted to handle spaces and special characters
+      `Exec="${process.execPath}" "${scriptPath}" %u`,
       "Terminal=false",
       "MimeType=x-scheme-handler/gaia;",
       "NoDisplay=true",
@@ -94,7 +95,7 @@ export function registerLinuxDevProtocol(): void {
 
     console.log(
       "[Main] gaia:// protocol registered. Exec:",
-      `${process.execPath} ${scriptPath} %u`,
+      `"${process.execPath}" "${scriptPath}" %u`,
     );
   } catch (err) {
     console.error("[Main] Failed to register gaia:// protocol on Linux:", err);
