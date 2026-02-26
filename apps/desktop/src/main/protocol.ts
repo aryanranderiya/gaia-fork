@@ -19,7 +19,7 @@
  * @module protocol
  */
 
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
@@ -87,11 +87,17 @@ export function registerLinuxDevProtocol(): void {
     // Rebuild the MIME cache — this is what xdg-open actually reads.
     // xdg-mime default only writes to mimeapps.list; without rebuilding
     // mimeinfo.cache the system falls back to the app store.
-    execSync(`update-desktop-database "${appsDir}"`);
+    // Use spawnSync with an explicit args array (no shell) to avoid
+    // command injection and PATH-hijacking risks.
+    spawnSync("update-desktop-database", [appsDir], { shell: false });
 
     // Also write the mimeapps.list entry explicitly so it takes precedence
     // over any distro-level handlers.
-    execSync("xdg-mime default gaia-dev.desktop x-scheme-handler/gaia");
+    spawnSync(
+      "xdg-mime",
+      ["default", "gaia-dev.desktop", "x-scheme-handler/gaia"],
+      { shell: false },
+    );
 
     console.log(
       "[Main] gaia:// protocol registered. Exec:",
