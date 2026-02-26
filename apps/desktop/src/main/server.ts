@@ -1,4 +1,5 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { createServer } from "node:net";
 import { join } from "node:path";
 import { app } from "electron";
 import getPort from "get-port";
@@ -11,10 +12,10 @@ let serverPort: number = 5174;
  */
 async function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
-    const net = require("node:net");
-    const server = net.createServer();
+    const server = createServer();
 
     server.once("error", () => {
+      server.close();
       resolve(false);
     });
 
@@ -125,12 +126,34 @@ export async function startNextServer(): Promise<void> {
 }
 
 /**
- * Stop the Next.js server
+ * Stop the Next.js server and wait for it to fully exit
  */
 export async function stopNextServer(): Promise<void> {
-  if (serverProcess) {
-    console.log("Stopping Next.js server...");
-    serverProcess.kill("SIGTERM");
-    serverProcess = null;
+  if (!serverProcess) {
+    return;
   }
+
+  console.log("Stopping Next.js server...");
+
+  return new Promise((resolve) => {
+    const proc = serverProcess as ChildProcess;
+    serverProcess = null;
+
+    proc.once("exit", () => {
+      resolve();
+    });
+
+    proc.kill("SIGTERM");
+
+    // On Windows, SIGTERM may be ignored - force kill after 3s
+    if (process.platform === "win32") {
+      setTimeout(() => {
+        try {
+          proc.kill("SIGKILL");
+        } catch {
+          // Process already exited
+        }
+      }, 3000);
+    }
+  });
 }

@@ -21,10 +21,20 @@
 // Enable V8 code caching for faster subsequent startups (~20-30% improvement)
 import "v8-compile-cache";
 
+import { createConnection } from "node:net";
 import { join, resolve } from "node:path";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
-import { app, BrowserWindow, dialog, ipcMain, screen, shell } from "electron";
-import { autoUpdater } from "electron-updater";
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  screen,
+  session,
+  shell,
+} from "electron";
+import pkg from "electron-updater";
+const { autoUpdater } = pkg;
 import { getServerUrl, startNextServer, stopNextServer } from "./server";
 
 // Configure auto-updater
@@ -123,12 +133,13 @@ let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let serverStarted = false;
 let pendingDeepLink: string | null = null;
+let windowShown = false;
 
 /**
  * Handle deep link URLs (gaia://...)
  * Called when the app receives a gaia:// URL from the OS
  */
-function handleDeepLink(url: string): void {
+async function handleDeepLink(url: string): Promise<void> {
   console.log("[Main] Deep link received:", url);
 
   try {
@@ -149,11 +160,21 @@ function handleDeepLink(url: string): void {
           );
         }
       } else if (token) {
-        console.log("[Main] Auth token received, storing and navigating");
-        // Send token to renderer to store in cookies/localStorage
+        console.log("[Main] Auth token received, storing as cookie");
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("auth-callback", { token });
-          // Navigate to main app
+          const apiOrigin = (
+            process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.heygaia.io"
+          ).replace(/\/api\/v1\/?$/, "");
+          await session.defaultSession.cookies.set({
+            url: apiOrigin,
+            name: "wos_session",
+            value: token,
+            httpOnly: true,
+            secure: true,
+            sameSite: "no_restriction",
+            expirationDate:
+              Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 days
+          });
           const serverUrl = getServerUrl();
           mainWindow.loadURL(`${serverUrl}/c`);
         }
@@ -182,15 +203,13 @@ function createSplashWindow(): void {
     transparent: true,
     resizable: false,
     movable: false,
-    minimizable: false,
+    minimizable: true,
     maximizable: false,
-    // closable must be true for destroy() to work
     alwaysOnTop: false,
-    skipTaskbar: true,
-    focusable: false,
-    show: true, // Show immediately - splash is simple enough to render instantly
+    skipTaskbar: false,
+    focusable: true,
+    show: true,
     hasShadow: false,
-    // macOS vibrancy for native blur effect
     vibrancy: process.platform === "darwin" ? "under-window" : undefined,
     visualEffectState: "active",
     webPreferences: {
@@ -234,7 +253,9 @@ async function createMainWindow(): Promise<void> {
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 16 },
     backgroundColor: "#000000",
-    icon: join(__dirname, "../../resources/icons/256x256.png"),
+    icon: app.isPackaged
+      ? join(process.resourcesPath, "icons/256x256.png")
+      : join(__dirname, "../../resources/icons/256x256.png"),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
@@ -244,7 +265,12 @@ async function createMainWindow(): Promise<void> {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url);
+    if (
+      details.url.startsWith("https://") ||
+      details.url.startsWith("http://")
+    ) {
+      shell.openExternal(details.url);
+    }
     return { action: "deny" };
   });
 
@@ -261,7 +287,11 @@ async function createMainWindow(): Promise<void> {
       for (let i = 0; i < maxAttempts; i++) {
         if (serverStarted) {
           console.log("[Main] Server is ready, loading URL:", serverUrl);
-          mainWindow?.loadURL(serverUrl);
+          try {
+            await mainWindow?.loadURL(`${serverUrl}/desktop-login`);
+          } catch (err) {
+            console.error("[Main] Failed to load URL:", err);
+          }
           return;
         }
         await new Promise((resolve) => setTimeout(resolve, 100));
@@ -269,7 +299,11 @@ async function createMainWindow(): Promise<void> {
 
       // Fallback: try loading anyway after timeout
       console.log("[Main] Server wait timeout, attempting to load anyway");
-      mainWindow?.loadURL(serverUrl);
+      try {
+        await mainWindow?.loadURL(`${serverUrl}/desktop-login`);
+      } catch (err) {
+        console.error("[Main] Failed to load URL (fallback):", err);
+      }
     };
 
     waitForServerAndLoad().catch(console.error);
@@ -285,9 +319,8 @@ async function createMainWindow(): Promise<void> {
       for (let i = 0; i < maxAttempts; i++) {
         try {
           // Quick TCP check to see if server is up
-          const net = await import("node:net");
           const isReady = await new Promise<boolean>((resolve) => {
-            const socket = net.createConnection({
+            const socket = createConnection({
               port: 3000,
               host: "localhost",
             });
@@ -307,7 +340,11 @@ async function createMainWindow(): Promise<void> {
 
           if (isReady) {
             console.log("[Main] Dev server ready, loading...");
-            mainWindow?.loadURL(devUrl);
+            try {
+              await mainWindow?.loadURL(`${devUrl}/desktop-login`);
+            } catch (err) {
+              console.error("[Main] Failed to load dev URL:", err);
+            }
             return;
           }
         } catch {
@@ -318,7 +355,11 @@ async function createMainWindow(): Promise<void> {
 
       // Fallback: try loading anyway
       console.log("[Main] Dev server wait timeout, attempting to load anyway");
-      mainWindow?.loadURL(devUrl);
+      try {
+        await mainWindow?.loadURL(`${devUrl}/desktop-login`);
+      } catch (err) {
+        console.error("[Main] Failed to load dev URL (fallback):", err);
+      }
     };
 
     waitForDevServerAndLoad().catch(console.error);
@@ -330,6 +371,9 @@ async function createMainWindow(): Promise<void> {
  * Called when renderer signals it's ready via IPC
  */
 function showMainWindow(): void {
+  if (windowShown) return;
+  windowShown = true;
+
   console.log("[Main] showMainWindow called");
 
   if (!mainWindow || mainWindow.isDestroyed()) {
@@ -438,8 +482,30 @@ if (!gotTheLock) {
     // Handle open-external requests from renderer (for OAuth)
     ipcMain.on("open-external", (_event, url: string) => {
       console.log("[Main] Opening external URL:", url);
-      shell.openExternal(url);
+      if (url.startsWith("https://") || url.startsWith("http://")) {
+        shell.openExternal(url);
+      }
     });
+
+    // Fix SameSite on wos_session cookies so they're sent cross-origin
+    // (localhost → API domain) in Electron's session
+    const apiOrigin = (
+      process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.heygaia.io"
+    ).replace(/\/api\/v1\/?$/, "");
+    session.defaultSession.webRequest.onHeadersReceived(
+      { urls: [`${apiOrigin}/*`] },
+      (details, callback) => {
+        const headers = { ...details.responseHeaders };
+        if (headers["set-cookie"]) {
+          headers["set-cookie"] = headers["set-cookie"].map((c: string) =>
+            c.includes("wos_session")
+              ? c.replace(/SameSite=\w+/i, "SameSite=None")
+              : c,
+          );
+        }
+        callback({ responseHeaders: headers });
+      },
+    );
 
     // STEP 3: Start server AND create window in PARALLEL (non-blocking!)
     // Window creation now polls for server readiness internally
