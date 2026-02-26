@@ -1,3 +1,22 @@
+# Claude Code General-Purpose Workflow
+#
+# Purpose: Handles all general @claude mentions across issues and PRs. Claude
+#          reads the comment/issue body and performs whatever is asked — e.g.
+#          explain code, suggest a fix, update the PR description, answer
+#          questions. No specific plugin is loaded; Claude acts on free-form
+#          instructions from the triggering comment.
+#
+# Trigger: Any of the following containing "@claude":
+#   - A comment on an issue or PR
+#   - An inline pull request review comment
+#   - A submitted pull request review body
+#   - A newly opened or assigned issue (title or body)
+#
+# Permissions: Read-only on contents, PRs, issues, and CI actions so Claude
+#              can read context but not make changes without being asked.
+#
+# Secret required: CLAUDE_CODE_OAUTH_TOKEN
+
 name: Claude Code
 
 on:
