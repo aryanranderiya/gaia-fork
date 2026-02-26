@@ -96,9 +96,13 @@ class CommonSettings(BaseAppSettings):
     PROFILING_SAMPLE_RATE: float = 1.0  # 100% of requests by default
 
     # ----------------------------------------------
-    # Skill Learning (Agent Memory)
+    # GitHub Integration (for Skill Discovery)
     # ----------------------------------------------
-    SKILL_LEARNING_ENABLED: bool = False  # Disabled until ready for production
+    # Optional: Get a token at https://github.com/settings/tokens
+    # - No scopes needed (just public repo read)
+    # - Gives 5,000 API requests/hour vs 60/hour without token
+    # - Used for discovering and installing skills from GitHub
+    GITHUB_TOKEN: Optional[str] = None
 
     # ----------------------------------------------
     # Computed Properties
