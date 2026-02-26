@@ -61,10 +61,13 @@ RUN adduser --disabled-password --gecos '' --uid 1000 appuser \
 # Copy venv from builder (already owned by appuser — no chown layer needed)
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy workspace files needed for uv run (root-owned, readable by appuser)
+# Copy workspace files needed for uv run
 COPY pyproject.toml uv.lock ./
 COPY libs ./libs
 COPY apps/voice-agent/pyproject.toml ./apps/voice-agent/
+
+# setuptools needs write access to libs/ to create gaia_shared.egg-info
+RUN chown -R appuser:appuser /app/libs
 
 USER appuser
 
