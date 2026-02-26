@@ -1,7 +1,5 @@
 "use client";
 
-import React from "react";
-
 import type {
   TodoProgressData,
   TodoProgressItem,
@@ -35,7 +33,7 @@ function SourceCard({
   const completedCount = todos.filter((t) => t.status === "completed").length;
 
   return (
-    <div className="min-w-[280px] max-w-[420px] flex-1 rounded-xl bg-zinc-800/60 px-3 py-2.5">
+    <div className="min-w-70 max-w-105 flex-1 rounded-xl bg-zinc-800/60 px-3 py-2.5">
       <div className="mb-1.5 flex items-center justify-between">
         <span className="text-xs font-medium text-zinc-400">{source}</span>
         <span className="text-xs text-zinc-500">
