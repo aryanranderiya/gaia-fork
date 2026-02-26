@@ -83,11 +83,11 @@ RUN adduser --disabled-password --gecos '' appuser \
     && mkdir -p /home/appuser/.cache \
     && chown -R appuser:appuser /home/appuser \
     && mkdir -p /app/apps/api/logs \
-    && chown -R appuser:appuser /app
+    && chown appuser:appuser /app/apps/api/logs
 
-# Copy API application code with proper ownership
-COPY --chown=appuser:appuser apps/api/app ./apps/api/app
-COPY --chown=appuser:appuser apps/api/scripts ./apps/api/scripts
+# Copy API application code (root-owned, readable by appuser)
+COPY apps/api/app ./apps/api/app
+COPY apps/api/scripts ./apps/api/scripts
 
 WORKDIR /app/apps/api
 

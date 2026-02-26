@@ -17,19 +17,23 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpq-dev \
     libglib2.0-0
 
-# Create appuser before uv sync so venv is owned correctly from the start
+# Create appuser so the venv it creates in /app is owned correctly
 RUN adduser --disabled-password --gecos '' --uid 1000 appuser \
     && chown appuser:appuser /app
-
-USER appuser
 
 ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-COPY --chown=appuser:appuser pyproject.toml uv.lock ./
-COPY --chown=appuser:appuser libs ./libs
-COPY --chown=appuser:appuser apps/voice-agent/pyproject.toml ./apps/voice-agent/
+COPY pyproject.toml uv.lock ./
+COPY libs ./libs
+COPY apps/voice-agent/pyproject.toml ./apps/voice-agent/
+
+# setuptools needs write access to libs/ to create gaia_shared.egg-info during editable install
+# Run as root here (before USER appuser) so chown succeeds on the root-owned copies
+RUN chown -R appuser:appuser /app/libs
+
+USER appuser
 
 RUN --mount=type=cache,target=/home/appuser/.cache/uv,uid=1000 \
     uv sync --frozen --package gaia-voice-agent
@@ -57,10 +61,10 @@ RUN adduser --disabled-password --gecos '' --uid 1000 appuser \
 # Copy venv from builder (already owned by appuser — no chown layer needed)
 COPY --from=builder /app/.venv /app/.venv
 
-# Copy workspace files needed for uv run
-COPY --chown=appuser:appuser pyproject.toml uv.lock ./
-COPY --chown=appuser:appuser libs ./libs
-COPY --chown=appuser:appuser apps/voice-agent/pyproject.toml ./apps/voice-agent/
+# Copy workspace files needed for uv run (root-owned, readable by appuser)
+COPY pyproject.toml uv.lock ./
+COPY libs ./libs
+COPY apps/voice-agent/pyproject.toml ./apps/voice-agent/
 
 USER appuser
 
@@ -68,8 +72,8 @@ ENV PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy
 
-# Copy app source
-COPY --chown=appuser:appuser apps/voice-agent/src/ ./apps/voice-agent/src/
+# Copy app source (root-owned, readable by appuser)
+COPY apps/voice-agent/src/ ./apps/voice-agent/src/
 
 WORKDIR /app/apps/voice-agent
 

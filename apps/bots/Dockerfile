@@ -40,4 +40,6 @@ COPY --from=builder /deploy ./
 ENV NODE_ENV=production \
     BOT_NAME=${BOT_NAME}
 
+USER node
+
 CMD node dist/index.js
