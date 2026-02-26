@@ -241,7 +241,9 @@ async def workos_desktop_callback(
 
         # Return token via deep link - desktop app will handle storage
         token = auth_response.sealed_session or auth_response.access_token
-        return RedirectResponse(url=f"gaia://auth/callback?token={quote(token, safe='')}")
+        return RedirectResponse(
+            url=f"gaia://auth/callback?token={quote(token, safe='')}"
+        )
 
     except HTTPException as e:
         logger.error(f"HTTP error during WorkOS desktop auth: {e.detail}")

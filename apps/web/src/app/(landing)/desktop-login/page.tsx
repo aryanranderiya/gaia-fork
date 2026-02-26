@@ -142,9 +142,7 @@ export default function DesktopLoginPage() {
               <Spinner variant="simple" />
               <div className="text-center">
                 <p className="font-medium text-white">Signing you in…</p>
-                <p className="mt-1 text-sm text-zinc-400">
-                  Taking you to GAIA
-                </p>
+                <p className="mt-1 text-sm text-zinc-400">Taking you to GAIA</p>
               </div>
             </div>
           )}
