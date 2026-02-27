@@ -8,10 +8,6 @@ services:
     working_dir: /app/apps/api
     command:
       [
-        "uv",
-        "run",
-        "--group",
-        "backend",
         "python",
         "-m",
         "uvicorn",
@@ -35,16 +31,11 @@ services:
       PYTHONDONTWRITEBYTECODE: 1
       PYTHONPATH: /app/apps/api
       PYTHONIOENCODING: utf-8
-      UV_CACHE_DIR: /tmp/uv-cache
     env_file:
       - ../../apps/api/.env
     ports:
       - "8000:80"
     restart: on-failure
-    read_only: true
-    tmpfs:
-      - /tmp
-      - /app/apps/api/logs
     tty: true
     stdin_open: true
     depends_on:
@@ -156,22 +147,14 @@ services:
     environment:
       - WORKER_TYPE=arq_worker
       - PYTHONPATH=/app/apps/api
-      - UV_CACHE_DIR=/tmp/uv-cache
     command:
       [
-        "uv",
-        "run",
-        "--group",
-        "backend",
         "python",
         "-m",
         "arq",
         "app.worker.WorkerSettings",
       ]
     restart: always
-    read_only: true
-    tmpfs:
-      - /tmp
     depends_on:
       redis:
         condition: service_healthy
