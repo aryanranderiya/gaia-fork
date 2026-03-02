@@ -12,6 +12,7 @@ from typing import Any, Dict, List
 
 import httpx
 from app.config.loggers import chat_logger as logger
+from app.models.common_models import GatherContextInput
 from app.decorators import with_doc
 from app.models.notion_models import (
     CreateTestPageInput,
@@ -26,6 +27,7 @@ from app.templates.docstrings.notion_tool_docs import (
     INSERT_MARKDOWN_DOC,
     MOVE_PAGE_DOC,
 )
+from app.utils.context_utils import execute_tool
 from app.utils.notion_md import blocks_to_markdown, markdown_to_notion_blocks
 from composio import Composio
 from composio.core.models.tools import ToolExecutionResponse
@@ -332,10 +334,30 @@ def register_notion_custom_tools(composio: Composio) -> List[str]:
         except Exception as e:
             raise RuntimeError(f"Failed to create page: {e}")
 
+    @composio.tools.custom_tool(toolkit="NOTION")
+    def CUSTOM_GATHER_CONTEXT(
+        request: GatherContextInput,
+        execute_request: Any,
+        auth_credentials: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Get Notion workspace context: recently edited pages and databases.
+
+        Zero required parameters. Returns recently modified content for situational awareness.
+        """
+        user_id = auth_credentials.get("user_id", "")
+        if not user_id:
+            raise ValueError("Missing user_id in auth_credentials")
+        data = execute_tool(
+            "NOTION_SEARCH_NOTION_PAGE", {"query": "", "page_size": 10}, user_id
+        )
+        pages = data.get("results", data.get("pages", []))
+        return {"relevant_pages": pages}
+
     return [
         "NOTION_MOVE_PAGE",
         "NOTION_FETCH_PAGE_AS_MARKDOWN",
         "NOTION_INSERT_MARKDOWN",
         "NOTION_FETCH_DATA",
         "NOTION_CUSTOM_CREATE_TEST_PAGE",
+        "NOTION_CUSTOM_GATHER_CONTEXT",
     ]

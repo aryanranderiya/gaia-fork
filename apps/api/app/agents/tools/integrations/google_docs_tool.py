@@ -11,8 +11,11 @@ import json
 from typing import Any, Dict, List
 
 import httpx
+from composio import Composio
+from composio.core.models.tools import ToolExecutionResponse
 from app.config.loggers import chat_logger as logger
 from app.decorators import with_doc
+from app.models.common_models import GatherContextInput
 from app.models.google_docs_models import CreateTOCInput, DeleteDocInput, ShareDocInput
 from app.templates.docstrings.google_docs_tool_docs import (
     CUSTOM_CREATE_TOC as CUSTOM_CREATE_TOC_DOC,
@@ -27,8 +30,7 @@ from app.utils.google_docs_utils import (
     extract_headings_from_document,
     generate_toc_text,
 )
-from composio import Composio
-from composio.core.models.tools import ToolExecutionResponse
+
 
 DRIVE_API_BASE = "https://www.googleapis.com/drive/v3"
 
@@ -217,8 +219,51 @@ def register_google_docs_custom_tools(composio: Composio) -> List[str]:
             "document_id": request.document_id,
         }
 
+    @composio.tools.custom_tool(toolkit="GOOGLEDOCS")
+    def CUSTOM_GATHER_CONTEXT(
+        request: GatherContextInput,
+        execute_request: Any,
+        auth_credentials: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Get Google Docs context snapshot: recently viewed/modified documents.
+
+        Zero required parameters. Returns user's recently accessed Google Docs.
+        """
+        access_token = _get_access_token(auth_credentials)
+        headers = _auth_headers(access_token)
+
+        mime = "application/vnd.google-apps.document"
+        files: List[Dict[str, Any]] = []
+        try:
+            resp = _http_client.get(
+                "https://www.googleapis.com/drive/v3/files",
+                headers=headers,
+                params={
+                    "q": f"mimeType='{mime}'",
+                    "orderBy": "viewedByMeTime desc",
+                    "pageSize": 20,
+                    "fields": "files(id,name,modifiedTime,webViewLink)",
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            files = [
+                {
+                    "id": f.get("id"),
+                    "name": f.get("name"),
+                    "modified": f.get("modifiedTime"),
+                    "url": f.get("webViewLink"),
+                }
+                for f in resp.json().get("files", [])
+            ]
+        except Exception as e:
+            logger.debug(f"Google Docs fetch failed: {e}")
+
+        return {"recent_docs": files, "doc_count": len(files)}
+
     return [
         "GOOGLEDOCS_CUSTOM_SHARE_DOC",
         "GOOGLEDOCS_CUSTOM_CREATE_TOC",
         "GOOGLEDOCS_CUSTOM_DELETE_DOC",
+        "GOOGLEDOCS_CUSTOM_GATHER_CONTEXT",
     ]

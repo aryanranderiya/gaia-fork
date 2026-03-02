@@ -7,8 +7,10 @@ Note: Errors are raised as exceptions, not returned as dicts - Composio wraps
 responses in {successful: bool, data: Any, error: str} format automatically.
 """
 
+import asyncio
+import concurrent.futures
 import zoneinfo
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List
 
 import httpx
@@ -25,7 +27,9 @@ from app.models.calendar_models import (
     ListCalendarsInput,
     PatchEventInput,
 )
+from app.models.common_models import GatherContextInput
 from app.services import calendar_service, user_service
+from app.utils.context_utils import execute_tool
 from app.templates.docstrings.calendar_tool_docs import (
     CUSTOM_ADD_RECURRENCE as CUSTOM_ADD_RECURRENCE_DOC,
 )
@@ -100,28 +104,23 @@ def register_calendar_custom_tools(composio: Composio) -> List[str]:
         execute_request: Any,
         auth_credentials: Dict[str, Any],
     ) -> Dict[str, Any]:
-        import asyncio
-
         access_token = _get_access_token(auth_credentials)
         user_id = _get_user_id(auth_credentials)
 
         # Get user's timezone from their preferences
-        # Note: We need to run async code in sync context. Using run_until_complete
-        # with proper event loop handling.
         try:
             try:
-                loop = asyncio.get_running_loop()
-                # If we're already in an async context, we can't use run_until_complete
-                # Fall back to not fetching user timezone
-                user_timezone = None
+                asyncio.get_running_loop()
+                # Inside a running loop — offload to a new thread
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    user = pool.submit(
+                        lambda: asyncio.run(user_service.get_user_by_id(user_id))
+                    ).result(timeout=5)
+                user_timezone = user.get("timezone") if user else None
             except RuntimeError:
-                # No running loop - safe to create one and run
-                loop = asyncio.new_event_loop()
-                try:
-                    user = loop.run_until_complete(user_service.get_user_by_id(user_id))
-                    user_timezone = user.get("timezone") if user else None
-                finally:
-                    loop.close()
+                # No running loop — safe to use asyncio.run directly
+                user = asyncio.run(user_service.get_user_by_id(user_id))
+                user_timezone = user.get("timezone") if user else None
         except Exception:
             user_timezone = None
 
@@ -568,6 +567,24 @@ def register_calendar_custom_tools(composio: Composio) -> List[str]:
                 "message": f"{len(calendar_options)} event(s) prepared for confirmation.",
             }
 
+    @composio.tools.custom_tool(toolkit="GOOGLECALENDAR")
+    def CUSTOM_GATHER_CONTEXT(
+        request: GatherContextInput,
+        execute_request: Any,
+        auth_credentials: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Get Google Calendar context snapshot: today's events, busy hours, free slots.
+
+        Zero required parameters. Returns today's schedule for situational awareness.
+        """
+        user_id = _get_user_id(auth_credentials)
+        if not user_id:
+            raise ValueError("Missing user_id in auth_credentials")
+        date_str = date.today().strftime("%Y-%m-%d")
+        return execute_tool(
+            "GOOGLECALENDAR_CUSTOM_GET_DAY_SUMMARY", {"date": date_str}, user_id
+        )
+
     return [
         "GOOGLECALENDAR_CUSTOM_CREATE_EVENT",
         "GOOGLECALENDAR_CUSTOM_LIST_CALENDARS",
@@ -578,4 +595,5 @@ def register_calendar_custom_tools(composio: Composio) -> List[str]:
         "GOOGLECALENDAR_CUSTOM_DELETE_EVENT",
         "GOOGLECALENDAR_CUSTOM_PATCH_EVENT",
         "GOOGLECALENDAR_CUSTOM_ADD_RECURRENCE",
+        "GOOGLECALENDAR_CUSTOM_GATHER_CONTEXT",
     ]

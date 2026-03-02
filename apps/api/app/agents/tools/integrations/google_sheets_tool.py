@@ -10,6 +10,7 @@ from typing import Any, Dict, List
 
 import httpx
 from app.config.loggers import chat_logger as logger
+from app.models.common_models import GatherContextInput
 from app.decorators import with_doc
 from app.models.google_sheets_models import (
     ChartInput,
@@ -44,6 +45,7 @@ from app.utils.google_sheets_utils import (
     parse_a1_range,
 )
 from composio import Composio
+
 
 # Reusable sync HTTP client
 _http_client = httpx.Client(timeout=60)
@@ -707,10 +709,53 @@ def register_google_sheets_custom_tools(composio: Composio) -> List[str]:
             "chart_type": request.chart_type,
         }
 
+    @composio.tools.custom_tool(toolkit="GOOGLESHEETS")
+    def CUSTOM_GATHER_CONTEXT(
+        request: GatherContextInput,
+        execute_request: Any,
+        auth_credentials: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """Get Google Sheets context snapshot: recently viewed/modified spreadsheets.
+
+        Zero required parameters. Returns user's recently accessed spreadsheets.
+        """
+        access_token = get_access_token(auth_credentials)
+        headers = auth_headers(access_token)
+
+        mime = "application/vnd.google-apps.spreadsheet"
+        files: List[Dict[str, Any]] = []
+        try:
+            resp = _http_client.get(
+                "https://www.googleapis.com/drive/v3/files",
+                headers=headers,
+                params={
+                    "q": f"mimeType='{mime}'",
+                    "orderBy": "viewedByMeTime desc",
+                    "pageSize": 20,
+                    "fields": "files(id,name,modifiedTime,webViewLink)",
+                },
+                timeout=15,
+            )
+            resp.raise_for_status()
+            files = [
+                {
+                    "id": f.get("id"),
+                    "name": f.get("name"),
+                    "modified": f.get("modifiedTime"),
+                    "url": f.get("webViewLink"),
+                }
+                for f in resp.json().get("files", [])
+            ]
+        except Exception as e:
+            logger.debug(f"Google Sheets fetch failed: {e}")
+
+        return {"recent_spreadsheets": files, "spreadsheet_count": len(files)}
+
     return [
         "GOOGLESHEETS_CUSTOM_SHARE_SPREADSHEET",
         "GOOGLESHEETS_CUSTOM_CREATE_PIVOT_TABLE",
         "GOOGLESHEETS_CUSTOM_SET_DATA_VALIDATION",
         "GOOGLESHEETS_CUSTOM_ADD_CONDITIONAL_FORMAT",
         "GOOGLESHEETS_CUSTOM_CREATE_CHART",
+        "GOOGLESHEETS_CUSTOM_GATHER_CONTEXT",
     ]
