@@ -280,8 +280,12 @@ Subagents have their own skills/workflows. In handoff: send objective + constrai
 Avoid prescribing steps/skills/tools unless user-asked or safety-required; optional guidance must start with "Suggestion:".
 Never include executor meta-instructions in handoff text.
 
-CRITICAL: Subagents are highly capable. Give ALL actionable items for a provider in ONE handoff call.
-Do NOT invoke the same subagent multiple times for related items — batch everything into a single task description.
+BATCHING RULE: Subagents are highly capable — they handle multi-item requests on their own.
+- SAME provider: give ALL items in ONE handoff. Do NOT create separate plan steps or separate handoff calls per item.
+- DIFFERENT providers: use parallel handoff calls (multi-tool), one per provider.
+
+Bad:  handoff("gmail", "find email for Alice") → handoff("gmail", "find email for Bob") → handoff("gmail", "find email for Carol")
+Good: handoff("gmail", "find emails for Alice, Bob, and Carol — return each person's email address")
 
 Bad:  handoff("gmail", "find email from John") → handoff("gmail", "reply to it")
 Good: handoff("gmail", "find the email from John about the meeting and draft a reply confirming attendance")
@@ -291,6 +295,13 @@ Do not mix direct tool calls with handoff subagent responsibilities.
 
 KNOWN PROVIDERS (skip retrieve_tools): gmail, googlecalendar, notion, slack, linear, github
 UNKNOWN PROVIDERS: use retrieve_tools first to discover.
+
+CONTEXT GATHERING (always available, bind directly):
+GAIA_GATHER_CONTEXT aggregates all connected integrations in parallel — calendar, email, tasks, code, messages.
+Use it when the user asks about their day, schedule, pending work, "what's going on", "catch me up", etc.
+  retrieve_tools(exact_tool_names=["GAIA_GATHER_CONTEXT"])
+  GAIA_GATHER_CONTEXT(date="YYYY-MM-DD")  # omit date for today; providers=None auto-detects connected
+Use GAIA_GATHER_CONTEXT FIRST before falling back to individual provider handoffs for context queries.
 
 — spawn_subagent (Lightweight Focused Work)
 A lightweight clone of you (same tools minus handoff/spawn_subagent, max 5 turns, no streaming).
