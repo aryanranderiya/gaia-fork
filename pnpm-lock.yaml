@@ -146,9 +146,6 @@ importers:
       electron-updater:
         specifier: ^6.3.9
         version: 6.6.2
-      get-port:
-        specifier: ^7.1.0
-        version: 7.1.0
       v8-compile-cache:
         specifier: ^2.4.0
         version: 2.4.0
@@ -12201,10 +12198,6 @@ packages:
   get-package-type@0.1.0:
     resolution: {integrity: sha512-pjzuKtY64GYfWizNAJ0fr9VqttZkNiK2iS430LtIHzjBEr6bX8Am2zm4sW4Ro5wjWW5cAlRL1qAMTcXbjNAO2Q==}
     engines: {node: '>=8.0.0'}
-
-  get-port@7.1.0:
-    resolution: {integrity: sha512-QB9NKEeDg3xxVwCCwJQ9+xycaz6pBB6iQ76wiWMl1927n0Kir6alPiP+yuiICLLU4jpMe08dXfpebuQppFA2zw==}
-    engines: {node: '>=16'}
 
   get-proto@1.0.1:
     resolution: {integrity: sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==}
@@ -29839,7 +29832,7 @@ snapshots:
 
   axios@1.13.2:
     dependencies:
-      follow-redirects: 1.15.11(debug@4.4.3)
+      follow-redirects: 1.15.11
       form-data: 4.0.5
       proxy-from-env: 1.1.0
     transitivePeerDependencies:
@@ -32881,6 +32874,8 @@ snapshots:
 
   flow-enums-runtime@0.0.6: {}
 
+  follow-redirects@1.15.11: {}
+
   follow-redirects@1.15.11(debug@4.4.3):
     optionalDependencies:
       debug: 4.4.3
@@ -33069,8 +33064,6 @@ snapshots:
   get-own-enumerable-property-symbols@3.0.2: {}
 
   get-package-type@0.1.0: {}
-
-  get-port@7.1.0: {}
 
   get-proto@1.0.1:
     dependencies:
