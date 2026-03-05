@@ -78,7 +78,7 @@ async function findAvailablePort(): Promise<number> {
  * @returns URL string like `http://localhost:5174` (prod) or `http://localhost:3000` (dev).
  */
 export function getServerUrl(): string {
-  if (process.env.NODE_ENV !== "production") {
+  if (!app.isPackaged && process.env.NODE_ENV !== "production") {
     return "http://localhost:3000";
   }
   return `http://localhost:${serverPort}`;
