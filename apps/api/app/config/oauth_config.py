@@ -44,6 +44,7 @@ from app.agents.prompts.memory_prompts import (
     TRELLO_MEMORY_PROMPT,
     TWITTER_MEMORY_PROMPT,
     YELP_MEMORY_PROMPT,
+    ZOOM_MEMORY_PROMPT,
 )
 from app.agents.prompts.subagent_prompts import (
     AGENTMAIL_AGENT_SYSTEM_PROMPT,
@@ -81,6 +82,7 @@ from app.agents.prompts.subagent_prompts import (
     TRELLO_AGENT_SYSTEM_PROMPT,
     TWITTER_AGENT_SYSTEM_PROMPT,
     YELP_AGENT_SYSTEM_PROMPT,
+    ZOOM_AGENT_SYSTEM_PROMPT,
 )
 from app.constants.mcp import INSTACART_MCP_SERVER_URL, YELP_MCP_SERVER_URL
 from app.langchain.core.subgraphs.github_subgraph import GITHUB_TOOLS
@@ -1379,32 +1381,33 @@ OAUTH_INTEGRATIONS: List[OAuthIntegration] = [
             memory_prompt=MICROSOFT_TEAMS_MEMORY_PROMPT,
         ),
     ),
-    # OAuthIntegration(
-    #     id="zoom",
-    #     name="Zoom",
-    #     description="Create and manage Zoom meetings, webinars, and video conferencing",
-    #     category="communication",
-    #     provider="zoom",
-    #     scopes=[],
-    #     available=True,
-    #     short_name="zoom",
-    #     managed_by="composio",
-    #     composio_config=ComposioConfig(
-    #         auth_config_id="ac_fABNBG17lf2A",
-    #         toolkit="ZOOM",
-    #         toolkit_version="20260130_00",
-    #     ),
-    #     subagent_config=SubAgentConfig(
-    #         has_subagent=True,
-    #         agent_name="zoom_agent",
-    #         tool_space="zoom",
-    #         handoff_tool_name="call_zoom_agent",
-    #         domain="video conferencing and webinar management",
-    #         capabilities="creating meetings, scheduling webinars, managing participants, cloud recording, meeting invitations, attendance tracking, and automating video conferencing workflows",
-    #         use_cases="scheduling meetings, managing webinars, recording conferences, tracking attendance, or any Zoom video conferencing task",
-    #         system_prompt=ZOOM_AGENT_SYSTEM_PROMPT,
-    #     ),
-    # ),
+    OAuthIntegration(
+        id="zoom",
+        name="Zoom",
+        description="Create and manage Zoom meetings, webinars, and video conferencing",
+        category="communication",
+        provider="zoom",
+        scopes=[],
+        available=True,
+        short_name="zoom",
+        managed_by="composio",
+        composio_config=ComposioConfig(
+            auth_config_id="ac_fABNBG17lf2A",
+            toolkit="ZOOM",
+            toolkit_version="20260130_00",
+        ),
+        subagent_config=SubAgentConfig(
+            has_subagent=True,
+            agent_name="zoom_agent",
+            tool_space="zoom",
+            handoff_tool_name="call_zoom_agent",
+            domain="video conferencing and webinar management",
+            capabilities="creating meetings, scheduling webinars, managing participants, cloud recording, meeting invitations, attendance tracking, and automating video conferencing workflows",
+            use_cases="scheduling meetings, managing webinars, recording conferences, tracking attendance, or any Zoom video conferencing task",
+            system_prompt=ZOOM_AGENT_SYSTEM_PROMPT,
+            memory_prompt=ZOOM_MEMORY_PROMPT,
+        ),
+    ),
     OAuthIntegration(
         id="googlemeet",
         name="Google Meet",

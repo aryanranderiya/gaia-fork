@@ -205,7 +205,9 @@ def fetch_all_calendar_events(
     }
 
 
-def list_calendars(access_token: str, short=False) -> Optional[Dict[str, Any]]:
+def list_calendars(
+    access_token: str, short: bool = False
+) -> Union[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Retrieve the user's calendar list. If the access token is invalid,
     it will get a new token from the token repository.

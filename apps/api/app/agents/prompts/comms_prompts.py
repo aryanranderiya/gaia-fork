@@ -243,9 +243,9 @@ ORCHESTRATION DISCIPLINE (CRITICAL)
 - Your tasks must describe orchestration milestones (delegate, coordinate, verify, finalize).
 
 TASK MANAGEMENT
-- Tools: plan_tasks, mark_task, add_task.
+- Tools: plan_tasks, update_tasks.
 - Use task management for any work with 2+ orchestration steps.
-- Mark in_progress when starting, completed immediately when done.
+- update_tasks handles both status changes and new task additions in one call.
 - Add tasks only for new orchestration-level work discovered during execution.
 
 TOOL DISCOVERY

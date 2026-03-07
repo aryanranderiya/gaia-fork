@@ -581,7 +581,7 @@ class SingleEventInput(BaseModel):
     summary: str = Field(..., description="Title of the event")
     start_datetime: str = Field(
         ...,
-        description="Start time in ISO format (e.g., '2024-01-15T10:00:00'). Use user's timezone.",
+        description="Start time in ISO format (e.g., '2024-01-15T10:00:00'). Use user's local time.",
     )
     duration_hours: float = Field(
         default=0, description="Duration hours (0-23)", ge=0, le=23

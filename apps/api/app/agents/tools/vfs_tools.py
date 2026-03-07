@@ -41,13 +41,65 @@ from langgraph.config import get_stream_writer
 
 
 def _get_context(config: RunnableConfig) -> Dict[str, Any]:
-    """Extract user_id, conversation_id, and agent_name from config."""
-    metadata = config.get("metadata", {}) if config else {}
+    """Extract VFS context fields from config.
+
+    When vfs_session_id is present in configurable every agent in the chain
+    (executor + all handoff subagents) shares the same VFS session and workspace
+    root (executor). This keeps their file namespaces in sync so they can read
+    each other's files without passing absolute paths.
+
+    Returned keys:
+        user_id           - owner of the VFS namespace
+        conversation_id   - VFS session anchor (vfs_session_id in shared mode)
+        agent_name        - workspace root owner ("executor" in shared mode)
+        written_by        - actual agent writing the file (subagent_id or agent_name)
+        agent_thread_id   - writer's own thread_id
+        vfs_session_id    - shared session anchor (None when not in shared mode)
+    """
     configurable = config.get("configurable", {}) if config else {}
+    metadata = config.get("metadata", {}) if config else {}
+
+    user_id: str | None = configurable.get("user_id") or metadata.get("user_id")
+    vfs_session_id: str | None = configurable.get("vfs_session_id")
+    thread_id: str | None = configurable.get("thread_id")
+    subagent_id: str | None = configurable.get("subagent_id")
+
+    if vfs_session_id:
+        # Shared-session mode: all agents in this executor invocation use the
+        # executor's workspace so they can read/write each other's files.
+        agent_name_meta: str | None = metadata.get("agent_name")
+        written_by = subagent_id or agent_name_meta
+        if not written_by:
+            raise ValueError(
+                "VFS context requires 'subagent_id' in configurable or 'agent_name' in metadata"
+            )
+        return {
+            "user_id": user_id,
+            "conversation_id": vfs_session_id,
+            "agent_name": "executor",
+            "written_by": written_by,
+            "agent_thread_id": thread_id,
+            "vfs_session_id": vfs_session_id,
+        }
+
+    # Fallback for agents without a shared session (comms, standalone subagent calls).
+    if not thread_id:
+        raise ValueError(
+            "VFS context requires either 'vfs_session_id' or 'thread_id' in configurable"
+        )
+    agent_name_fallback: str | None = metadata.get("agent_name")
+    written_by_fallback = subagent_id or agent_name_fallback
+    if not written_by_fallback:
+        raise ValueError(
+            "VFS context requires 'subagent_id' in configurable or 'agent_name' in metadata"
+        )
     return {
-        "user_id": metadata.get("user_id") or configurable.get("user_id"),
-        "conversation_id": configurable.get("thread_id") or metadata.get("thread_id"),
-        "agent_name": metadata.get("agent_name", "executor"),
+        "user_id": user_id,
+        "conversation_id": thread_id,
+        "agent_name": written_by_fallback,
+        "written_by": written_by_fallback,
+        "agent_thread_id": thread_id,
+        "vfs_session_id": None,
     }
 
 
@@ -245,12 +297,17 @@ async def vfs_write(
             ctx["conversation_id"],
         )
 
-        # Add context metadata
-        metadata = {
+        # Provenance metadata — who created this file and in which session
+        metadata: Dict[str, Any] = {
             "agent_name": ctx["agent_name"],
+            "written_by": ctx["written_by"],
         }
         if ctx["conversation_id"]:
             metadata["conversation_id"] = ctx["conversation_id"]
+        if ctx["agent_thread_id"]:
+            metadata["agent_thread_id"] = ctx["agent_thread_id"]
+        if ctx["vfs_session_id"]:
+            metadata["vfs_session_id"] = ctx["vfs_session_id"]
 
         if append:
             await vfs.append(resolved_path, content, user_id=ctx["user_id"])
@@ -289,7 +346,7 @@ async def vfs_cmd(
     Execute filesystem commands. Working directory is your agent's workspace.
 
     Supported commands:
-      ls [path]              - List directory (-l for details, -a for hidden)
+      ls [path]              - List directory (-l for details, -a for hidden, -R recursive)
       tree [path] [-L n]     - Directory tree (default depth: 3)
       find [path] -name "pattern" - Find files by name pattern
       grep "pattern" [path]  - Search file contents (-i case insensitive, -r recursive)
@@ -302,6 +359,7 @@ async def vfs_cmd(
 
     Examples:
       vfs_cmd("ls -la notes/")
+      vfs_cmd("ls -R")
       vfs_cmd("tree sessions/ -L 2")
       vfs_cmd("find . -name '*.json'")
       vfs_cmd("grep 'error' notes/log.txt")
@@ -320,6 +378,9 @@ async def vfs_cmd(
             user_id=ctx["user_id"],
             agent_name=ctx["agent_name"],
             conversation_id=ctx["conversation_id"],
+            written_by=ctx["written_by"],
+            agent_thread_id=ctx["agent_thread_id"],
+            vfs_session_id=ctx["vfs_session_id"],
         )
         return result
 

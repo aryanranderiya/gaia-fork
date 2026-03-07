@@ -7,6 +7,8 @@ Supports Unix-like commands for navigating and searching the virtual filesystem.
 Supported commands:
   ls, tree, find, grep, cat, pwd, stat, echo, mv
 
+  ls supports: -l (long), -a (hidden), -R (recursive)
+
 Blocked commands (for safety):
   rm, cp, mkdir, chmod, chown, touch, rmdir
 """
@@ -16,7 +18,7 @@ import asyncio
 import contextlib
 import shlex
 from dataclasses import dataclass
-from typing import NoReturn, Optional
+from typing import Any, NoReturn, Optional
 
 from app.agents.tools.vfs_constants import (
     USER_VISIBLE_FOLDER,
@@ -110,6 +112,9 @@ class VFSCommandParser:
         ls_parser.add_argument("-l", "--long", action="store_true", help="Long format")
         ls_parser.add_argument(
             "-a", "--all", action="store_true", help="Show hidden files"
+        )
+        ls_parser.add_argument(
+            "-R", "--recursive", action="store_true", help="Recursive listing"
         )
         parsers["ls"] = ls_parser
 
@@ -282,6 +287,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str = "executor",
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """
         Parse and execute a VFS command.
@@ -290,6 +298,10 @@ class VFSCommandParser:
             command_str: The command string to execute
             user_id: User ID for path resolution
             agent_name: Agent name for workspace root
+            conversation_id: Session anchor for path resolution
+            written_by: Actual agent writing the file (for provenance metadata)
+            agent_thread_id: Writer's own thread_id (for provenance metadata)
+            vfs_session_id: Shared session anchor (for provenance metadata)
 
         Returns:
             Command output as string
@@ -311,6 +323,9 @@ class VFSCommandParser:
                 user_id,
                 agent_name,
                 conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
             )
             return result
         except Exception as e:
@@ -398,6 +413,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Show current working directory."""
         result = get_agent_root(user_id, agent_name)
@@ -409,6 +427,9 @@ class VFSCommandParser:
                 user_id,
                 agent_name,
                 conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
             )
 
         return result
@@ -420,6 +441,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """List directory contents."""
         vfs = await self._get_vfs()
@@ -431,28 +455,68 @@ class VFSCommandParser:
             conversation_id,
         )
 
+        if getattr(args, "recursive", False):
+            output = await self._ls_recursive(
+                vfs,
+                resolved_path,
+                args.path,
+                user_id,
+                show_all=args.all,
+                long_format=args.long,
+            )
+        else:
+            output = await self._ls_single(
+                vfs,
+                resolved_path,
+                args.path,
+                user_id,
+                show_all=args.all,
+                long_format=args.long,
+            )
+
+        if redirect:
+            return await self._handle_redirect(
+                output,
+                redirect,
+                user_id,
+                agent_name,
+                conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
+            )
+
+        return output
+
+    async def _ls_single(
+        self,
+        vfs: Any,
+        resolved_path: str,
+        display_path: str,
+        user_id: str,
+        *,
+        show_all: bool,
+        long_format: bool,
+    ) -> str:
+        """List a single directory."""
         try:
             result = await vfs.list_dir(resolved_path, user_id=user_id)
         except Exception as e:
-            return f"ls: cannot access '{args.path}': {e}"
+            return f"ls: cannot access '{display_path}': {e}"
 
         if not result.items:
             return "(empty directory)"
 
-        # Filter hidden files unless -a
         items = result.items
-        if not args.all:
+        if not show_all:
             items = [item for item in items if not item.name.startswith(".")]
 
-        # Limit output
         truncated = len(items) > self.MAX_LS_ITEMS
         if truncated:
             items = items[: self.MAX_LS_ITEMS]
 
-        # Format output
         lines = []
-
-        if args.long:
+        if long_format:
             lines.append(f"total {len(items)}")
             for item in items:
                 type_char = "d" if item.node_type.value == "folder" else "-"
@@ -464,7 +528,6 @@ class VFSCommandParser:
                 name = item.name + ("/" if item.node_type.value == "folder" else "")
                 lines.append(f"{type_char}{perms}  {size:>8}  {date}  {name}")
         else:
-            # Simple format - names in columns
             names = []
             for item in items:
                 name = item.name + ("/" if item.node_type.value == "folder" else "")
@@ -474,18 +537,90 @@ class VFSCommandParser:
         if truncated:
             lines.append(f"... and {result.total_count - self.MAX_LS_ITEMS} more items")
 
-        output = "\n".join(lines)
+        return "\n".join(lines)
 
-        if redirect:
-            return await self._handle_redirect(
-                output,
-                redirect,
-                user_id,
-                agent_name,
-                conversation_id,
-            )
+    async def _ls_recursive(
+        self,
+        vfs: Any,
+        resolved_path: str,
+        display_path: str,
+        user_id: str,
+        *,
+        show_all: bool,
+        long_format: bool,
+        _depth: int = 0,
+        _max_depth: int = 6,
+        _total_lines: list[int] | None = None,
+        _max_lines: int = 500,
+    ) -> str:
+        """Recursively list directories, mirroring Unix `ls -R` output format."""
+        if _total_lines is None:
+            _total_lines = [0]
 
-        return output
+        lines: list[str] = []
+
+        # Header: "path/to/dir:"
+        lines.append(f"{display_path}:")
+
+        try:
+            result = await vfs.list_dir(resolved_path, user_id=user_id)
+        except Exception as e:
+            lines.append(f"ls: cannot access '{display_path}': {e}")
+            return "\n".join(lines)
+
+        items = result.items or []
+        if not show_all:
+            items = [item for item in items if not item.name.startswith(".")]
+
+        if not items:
+            lines.append("(empty directory)")
+        elif long_format:
+            lines.append(f"total {len(items)}")
+            for item in items:
+                type_char = "d" if item.node_type.value == "folder" else "-"
+                perms = "rwxr-xr-x" if item.node_type.value == "folder" else "rw-r--r--"
+                size = self._format_size(item.size_bytes or 0)
+                date = (
+                    item.updated_at.strftime("%Y-%m-%d %H:%M")
+                    if item.updated_at
+                    else ""
+                )
+                name = item.name + ("/" if item.node_type.value == "folder" else "")
+                lines.append(f"{type_char}{perms}  {size:>8}  {date}  {name}")
+        else:
+            names = [
+                item.name + ("/" if item.node_type.value == "folder" else "")
+                for item in items
+            ]
+            lines.append("  ".join(names))
+
+        _total_lines[0] += len(lines)
+
+        # Recurse into subdirectories
+        if _depth < _max_depth and _total_lines[0] < _max_lines:
+            subdirs = [item for item in items if item.node_type.value == "folder"]
+            for subdir in subdirs:
+                if _total_lines[0] >= _max_lines:
+                    lines.append(f"... output truncated at {_max_lines} lines")
+                    break
+                child_display = display_path.rstrip("/") + "/" + subdir.name
+                child_resolved = resolved_path.rstrip("/") + "/" + subdir.name
+                lines.append("")  # blank separator like real ls -R
+                child_output = await self._ls_recursive(
+                    vfs,
+                    child_resolved,
+                    child_display,
+                    user_id,
+                    show_all=show_all,
+                    long_format=long_format,
+                    _depth=_depth + 1,
+                    _max_depth=_max_depth,
+                    _total_lines=_total_lines,
+                    _max_lines=_max_lines,
+                )
+                lines.append(child_output)
+
+        return "\n".join(lines)
 
     async def _cmd_tree(
         self,
@@ -494,6 +629,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Show directory tree."""
         vfs = await self._get_vfs()
@@ -540,6 +678,9 @@ class VFSCommandParser:
                 user_id,
                 agent_name,
                 conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
             )
 
         return output
@@ -551,6 +692,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Find files by pattern."""
         vfs = await self._get_vfs()
@@ -601,6 +745,9 @@ class VFSCommandParser:
                 user_id,
                 agent_name,
                 conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
             )
 
         return output
@@ -612,6 +759,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Search file contents."""
         vfs = await self._get_vfs()
@@ -759,6 +909,9 @@ class VFSCommandParser:
                 user_id,
                 agent_name,
                 conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
             )
 
         return output
@@ -770,6 +923,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Display file content."""
         vfs = await self._get_vfs()
@@ -798,6 +954,9 @@ class VFSCommandParser:
                     user_id,
                     agent_name,
                     conversation_id,
+                    written_by,
+                    agent_thread_id,
+                    vfs_session_id,
                 )
 
             return content
@@ -811,6 +970,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Show file metadata."""
         vfs = await self._get_vfs()
@@ -851,6 +1013,9 @@ class VFSCommandParser:
                     user_id,
                     agent_name,
                     conversation_id,
+                    written_by,
+                    agent_thread_id,
+                    vfs_session_id,
                 )
 
             return output
@@ -864,6 +1029,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Echo text, optionally to a file."""
         content = " ".join(args.text) if args.text else ""
@@ -875,6 +1043,9 @@ class VFSCommandParser:
                 user_id,
                 agent_name,
                 conversation_id,
+                written_by,
+                agent_thread_id,
+                vfs_session_id,
             )
 
         return content
@@ -886,6 +1057,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Move/rename a file or directory."""
         if redirect:
@@ -986,6 +1160,9 @@ class VFSCommandParser:
         user_id: str,
         agent_name: str,
         conversation_id: str | None = None,
+        written_by: str | None = None,
+        agent_thread_id: str | None = None,
+        vfs_session_id: str | None = None,
     ) -> str:
         """Handle redirect to file."""
         vfs = await self._get_vfs()
@@ -1004,7 +1181,24 @@ class VFSCommandParser:
                     await self._emit_artifact_event(resolved_path, user_id)
                 return f"Appended to {redirect.filepath}"
             else:
-                await vfs.write(resolved_path, content, user_id=user_id)
+                # Provenance metadata for writes via echo redirect
+                if not written_by:
+                    raise ValueError(
+                        "VFS redirect write requires 'written_by' (subagent_id or agent_name)"
+                    )
+                metadata: dict[str, Any] = {
+                    "agent_name": agent_name,
+                    "written_by": written_by,
+                }
+                if conversation_id:
+                    metadata["conversation_id"] = conversation_id
+                if agent_thread_id:
+                    metadata["agent_thread_id"] = agent_thread_id
+                if vfs_session_id:
+                    metadata["vfs_session_id"] = vfs_session_id
+                await vfs.write(
+                    resolved_path, content, user_id=user_id, metadata=metadata
+                )
                 if is_user_visible_path(resolved_path):
                     await self._emit_artifact_event(resolved_path, user_id)
                 return f"Wrote to {redirect.filepath}"
