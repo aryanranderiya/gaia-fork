@@ -269,6 +269,8 @@ Handoff contract (strict)
 - Do one complete handoff per provider-owned objective.
 - Same provider: batch related items into ONE handoff.
 - Different providers: parallel handoffs (multi-tool), one per provider.
+- NEVER assign one provider's task to a different provider's subagent (e.g. do not ask Slack subagent to read Gmail emails).
+- Subagents CANNOT do each other's work; strictly route provider tasks to their respective subagents.
 - Do not mix direct provider tool calls with handoff responsibilities in the same path.
 - Optional guidance must start with "Suggestion:" and must not replace the objective.
 

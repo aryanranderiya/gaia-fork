@@ -104,6 +104,8 @@ def _format_calendar_option_for_stream(opt: Dict[str, Any]) -> Dict[str, Any]:
         formatted["location"] = opt["location"]
     if opt.get("attendees"):
         formatted["attendees"] = opt["attendees"]
+    if opt.get("create_meeting_room"):
+        formatted["create_meeting_room"] = True
     return formatted
 
 
@@ -639,15 +641,26 @@ def register_calendar_custom_tools(composio: Composio) -> List[str]:
                 body["location"] = event.location
             if event.attendees:
                 body["attendees"] = [{"email": email} for email in event.attendees]
+            if event.create_meeting_room:
+                body["conferenceData"] = {
+                    "createRequest": {
+                        "requestId": f"meet_{index}_{int(datetime.now().timestamp())}",
+                        "conferenceSolutionKey": {"type": "hangoutsMeet"},
+                    }
+                }
 
             if request.confirm_immediately:
                 # Create immediately
                 url = f"{CALENDAR_API_BASE}/calendars/{event.calendar_id}/events"
+                params = {"sendUpdates": "all"}
+                if event.create_meeting_room:
+                    params["conferenceDataVersion"] = "1"
+
                 resp = _http_client.post(
                     url,
                     headers=headers,
                     json=body,
-                    params={"sendUpdates": "all"},
+                    params=params,
                 )
                 resp.raise_for_status()
                 created_event = resp.json()
@@ -679,6 +692,8 @@ def register_calendar_custom_tools(composio: Composio) -> List[str]:
                     calendar_option["location"] = event.location
                 if event.attendees:
                     calendar_option["attendees"] = event.attendees
+                if event.create_meeting_room:
+                    calendar_option["create_meeting_room"] = True
                 calendar_options.append(calendar_option)
 
         # If all events failed with validation errors, raise

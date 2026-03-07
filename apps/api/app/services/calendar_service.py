@@ -778,9 +778,29 @@ def create_calendar_event(
                 status_code=400, detail=f"Invalid recurrence rule format: {str(e)}"
             )
 
+    # Handle attendees if provided
+    if event.attendees:
+        event_payload["attendees"] = [{"email": e} for e in event.attendees]
+
+    # Handle Google Meet creation if requested
+    query_params: dict[str, str] = {"sendUpdates": "all"} if event.attendees else {}
+    if event.create_meeting_room:
+        event_payload["conferenceData"] = {
+            "createRequest": {
+                "requestId": f"meet_{int(datetime.now().timestamp())}",
+                "conferenceSolutionKey": {"type": "hangoutsMeet"},
+            }
+        }
+        query_params["conferenceDataVersion"] = "1"
+
     # Send request to create the event
     try:
-        response = http_client.post(url, headers=headers, json=event_payload)
+        response = http_client.post(
+            url,
+            headers=headers,
+            json=event_payload,
+            params=query_params if query_params else None,
+        )
 
         # Handle response
         if response.status_code in (200, 201):

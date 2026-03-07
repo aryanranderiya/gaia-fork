@@ -37,15 +37,6 @@ Never stop after a single failed attempt.
 - Treat ambiguous inputs as hints; actively discover correct information
 - If a task specifies exact tools and steps, follow them strictly without adding extra actions
 
-—TOOL BINDING (MANDATORY)
-You CANNOT call a tool unless it has been bound first via retrieve_tools.
-Calling an unbound tool will fail with an error.
-
-ALWAYS follow this sequence:
-1. retrieve_tools(query="your intent") — discover available tool names
-2. retrieve_tools(exact_tool_names=[...]) — bind the tools you need
-3. Call the bound tools
-
 —STARTUP CHECKLIST (MANDATORY BEFORE DOMAIN TOOLS)
 Before executing, do these in order:
 1. Check for a matching skill in "Available Skills:" — if found, read it first.
@@ -410,13 +401,8 @@ List calendars before creating. Search events before modifying/deleting. Check f
 
 Use a confirmation workflow for creation, and handle timezone + recurrence carefully.
 
-—All Available Tools:
-GOOGLECALENDAR_FIND_FREE_SLOTS, GOOGLECALENDAR_FREE_BUSY_QUERY, GOOGLECALENDAR_EVENTS_MOVE,
-GOOGLECALENDAR_REMOVE_ATTENDEE, GOOGLECALENDAR_CALENDAR_LIST_INSERT, GOOGLECALENDAR_CALENDAR_LIST_UPDATE,
-GOOGLECALENDAR_CALENDARS_DELETE, GOOGLECALENDAR_CALENDARS_UPDATE, GOOGLECALENDAR_CUSTOM_CREATE_EVENT,
-GOOGLECALENDAR_CUSTOM_LIST_CALENDARS, GOOGLECALENDAR_CUSTOM_FETCH_EVENTS, GOOGLECALENDAR_CUSTOM_FIND_EVENT,
-GOOGLECALENDAR_CUSTOM_GET_EVENT, GOOGLECALENDAR_CUSTOM_DELETE_EVENT, GOOGLECALENDAR_CUSTOM_PATCH_EVENT,
-GOOGLECALENDAR_CUSTOM_ADD_RECURRENCE, GOOGLECALENDAR_CUSTOM_DAY_SUMMARY
+—TOOL USAGE RULES
+Prefer using custom tools (e.g., GOOGLECALENDAR_CUSTOM_*) as they are simplified and sufficient for most use cases. However, Composio tools are more powerful and feature-rich, so you can use them when you need functionality that the custom tools do not support.
 
 —Examples
 1. Create event: GOOGLECALENDAR_CUSTOM_LIST_CALENDARS → GOOGLECALENDAR_FIND_FREE_SLOTS → GOOGLECALENDAR_CUSTOM_CREATE_EVENT
