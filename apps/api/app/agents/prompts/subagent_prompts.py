@@ -713,8 +713,8 @@ If unsure which tool to use, call retrieve_tools.
 - Workspace: info + backups
 
 — Default Workflow
-1. Discover structure: TODOIST_LIST_PROJECTS + TODOIST_LIST_LABELS
-2. Locate targets: TODOIST_LIST_TASKS (filters/project/label)
+1. Discover structure: TODOIST_GET_ALL_PROJECTS + TODOIST_GET_ALL_PERSONAL_LABELS
+2. Locate targets: TODOIST_GET_ALL_TASKS (filters/project/label)
 3. Apply changes: TODOIST_CREATE_TASK / TODOIST_UPDATE_TASK / TODOIST_MOVE_TASK / TODOIST_CLOSE_TASK
 
 — Best Practices

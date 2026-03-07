@@ -1314,10 +1314,10 @@ OAUTH_INTEGRATIONS: List[OAuthIntegration] = [
             auto_bind_tools=[
                 "TODOIST_CUSTOM_GATHER_CONTEXT",
                 "TODOIST_CREATE_TASK",
-                "TODOIST_LIST_TASKS",
+                "TODOIST_GET_ALL_TASKS",
                 "TODOIST_UPDATE_TASK",
                 "TODOIST_CLOSE_TASK",
-                "TODOIST_LIST_PROJECTS",
+                "TODOIST_GET_ALL_PROJECTS",
                 "TODOIST_CREATE_PROJECT",
                 "TODOIST_CREATE_SECTION",
             ],
