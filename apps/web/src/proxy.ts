@@ -27,7 +27,7 @@ const intlMiddlewareDefaultOnly = createMiddleware({
   localePrefix: "never",
 });
 
-export default function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   if (isTranslatedRoute(request.nextUrl.pathname)) {
     return intlMiddleware(request);
   }

@@ -296,6 +296,8 @@ services:
       - ./observability/loki-config.yaml:/etc/loki/local-config.yaml
       - loki_data:/loki
     command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "127.0.0.1:${LOKI_HOST_PORT:-3100}:3100"
     restart: unless-stopped
     networks:
       - gaia_network
@@ -315,7 +317,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       # In prod the API always runs in Docker, so this mount is a no-op safety fallback
       - ../../apps/api/logs:/var/log/gaia-api:ro
-    command: -config.file=/etc/promtail/config.yaml
+    command: -config.file=/etc/promtail/config.yaml -config.expand-env=true
+    environment:
+      LOKI_PUSH_URL: ${LOKI_PUSH_URL:-http://loki:3100/loki/api/v1/push}
+      LOKI_BASIC_AUTH_USER: ${LOKI_BASIC_AUTH_USER:-}
+      LOKI_BASIC_AUTH_PASSWORD: ${LOKI_BASIC_AUTH_PASSWORD:-}
     restart: unless-stopped
     depends_on:
       loki:

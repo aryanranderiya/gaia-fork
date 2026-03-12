@@ -27,6 +27,7 @@ from app.models.chat_models import (
     tool_fields,
 )
 from app.models.message_models import MessageRequestWithHistory
+from app.models.models_models import ModelConfig
 from app.models.payment_models import PlanType
 from app.services.conversation_service import update_messages
 from app.services.file_service import get_files
@@ -70,7 +71,7 @@ async def run_chat_stream_background(
         )
 
 
-async def _get_user_model_config(user_id: Optional[str]) -> Any:
+async def _get_user_model_config(user_id: Optional[str]) -> Optional[ModelConfig]:
     """Fetch the user-selected model config, returning None on failure."""
     if not user_id:
         return None
@@ -87,7 +88,7 @@ def _set_stream_log_context(
     conversation_id: str,
     stream_id: str,
     is_new_conversation: bool,
-    user_model_config: Any,
+    user_model_config: Optional[ModelConfig],
 ) -> None:
     """Attach structured log context for the stream."""
     log.set(
@@ -112,8 +113,8 @@ def _set_stream_log_context(
     if user_model_config:
         log.set(
             model=ModelContext(
-                name=user_model_config.get("model_id"),
-                provider=user_model_config.get("provider"),
+                name=user_model_config.model_id,
+                provider=user_model_config.model_provider.value,
             )
         )
 
@@ -344,7 +345,12 @@ async def _run_chat_stream(
         user_id = user.get("user_id")
         user_model_config = await _get_user_model_config(user_id)
         _set_stream_log_context(
-            body, user_id, conversation_id, stream_id, is_new_conversation, user_model_config
+            body,
+            user_id,
+            conversation_id,
+            stream_id,
+            is_new_conversation,
+            user_model_config,
         )
 
         usage_metadata_callback = UsageMetadataCallbackHandler()
@@ -389,7 +395,10 @@ async def _run_chat_stream(
             # Process complete message marker (internal, not sent to client)
             if chunk.startswith("nostream: "):
                 nostream_json = json.loads(chunk.replace("nostream: ", ""))
-                if isinstance(nostream_json, dict) and "complete_message" in nostream_json:
+                if (
+                    isinstance(nostream_json, dict)
+                    and "complete_message" in nostream_json
+                ):
                     complete_message = str(nostream_json["complete_message"])
                 else:
                     complete_message = ""
