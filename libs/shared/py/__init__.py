@@ -7,7 +7,11 @@ Provides common utilities for GAIA applications including:
 - Base settings classes (Pydantic)
 """
 
-from shared.py.logging import configure_file_logging, configure_loguru, get_contextual_logger
+from shared.py.logging import (
+    configure_file_logging,
+    configure_loguru,
+    get_contextual_logger,
+)
 from shared.py.wide_events import log, wide_task
 
 __all__ = [
