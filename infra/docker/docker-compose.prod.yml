@@ -246,7 +246,7 @@ services:
   # ---------------------------------------------------------------------------
 
   postgres_exporter:
-    image: prometheuscommunity/postgres-exporter:v0.15.0
+    image: prometheuscommunity/postgres-exporter:v0.17.0
     container_name: postgres_exporter
     environment:
       DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres:5432/langgraph?sslmode=disable" # pragma: allowlist secret
