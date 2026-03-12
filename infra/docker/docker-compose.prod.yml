@@ -128,8 +128,10 @@ services:
     ports:
       - "5672:5672" # AMQP protocol
       - "15672:15672" # Management UI
+      - "15692:15692" # Prometheus metrics
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./observability/rabbitmq-enabled-plugins:/etc/rabbitmq/enabled_plugins:ro
     restart: always
     healthcheck:
       test: ["CMD", "rabbitmqctl", "status"]
@@ -269,11 +271,55 @@ services:
     networks:
       - gaia_network
 
+  # Container metrics (CPU, memory, network, disk I/O per container)
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    command:
+      - "--docker_only=true"
+      - "--store_container_labels=false"
+    restart: unless-stopped
+    networks:
+      - gaia_network
+
+  # Host machine metrics (CPU, memory, disk, network)
+  node_exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: node_exporter
+    pid: host
+    command:
+      - "--path.rootfs=/host"
+    volumes:
+      - /:/host:ro,rslave
+    restart: unless-stopped
+    networks:
+      - gaia_network
+
+  # HTTP probe for services without native Prometheus metrics (e.g. ChromaDB)
+  blackbox_exporter:
+    image: prom/blackbox-exporter:v0.25.0
+    container_name: blackbox_exporter
+    volumes:
+      - ./observability/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    restart: unless-stopped
+    networks:
+      - gaia_network
+
   prometheus:
     image: prom/prometheus:v3.1.0
     container_name: prometheus
     volumes:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./observability/metrics_token:/etc/prometheus/metrics_token:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
