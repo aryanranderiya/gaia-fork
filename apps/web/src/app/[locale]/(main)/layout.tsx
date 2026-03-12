@@ -62,28 +62,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   } = useHoloCardModalStore();
   const { phase: onboardingPhase, setPhase } = useOnboardingPhaseStore();
 
-  // TODO: remove — toast wrapping test
-  useEffect(() => {
-    // Short title — stays in pill as normal
-    toast.success("File saved");
-    // Really long title only — auto-promoted to description, pill shows "error"
-    setTimeout(() => {
-      toast.error(
-        "Failed to sync your files because the connection to the remote server timed out after multiple retries — please check your network connection and try again later or contact support if the issue persists",
-      );
-    }, 900);
-    // Long title + long description — title truncates in pill, description wraps below
-    setTimeout(() => {
-      toast.warning(
-        "Failed to sync your files because the connection timed out after multiple retries. Failed to sync your files because the connection timed out after multiple retries",
-        {
-          description:
-            "The remote server did not respond within the expected timeout window. This can happen due to network instability, server overload, or a firewall blocking the connection. Please check your internet connection and try again. If the problem persists, contact support with error code NET-408.",
-        },
-      );
-    }, 1800);
-  }, []);
-
   // Check if user needs onboarding
   useOnboardingGuard();
   useBackgroundSync();
