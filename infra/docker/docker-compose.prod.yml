@@ -370,6 +370,12 @@ services:
     # Run as root so Promtail can read the Docker socket (owned by root:docker).
     # Promtail 3.x defaults to uid 10001 which lacks socket access.
     user: root
+    # Disable Docker logging for Promtail itself — it collects other containers'
+    # logs via the Docker socket, so its own stdout should never be captured.
+    # Without this, a JSON parse error → debug log → Docker capture feedback
+    # loop can fill the disk (35 GB in one incident).
+    logging:
+      driver: "none"
     volumes:
       - ./observability/promtail-config.yaml:/etc/promtail/config.yaml
       - /var/run/docker.sock:/var/run/docker.sock

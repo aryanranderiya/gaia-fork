@@ -412,6 +412,10 @@ services:
     image: grafana/promtail:3.3.2
     container_name: promtail
     user: root
+    # Prevent log feedback loop — Promtail's own stdout must not be captured by
+    # Docker, or JSON parse errors spiral into tens of GB of disk usage.
+    logging:
+      driver: "none"
     volumes:
       - ./observability/promtail-config.yaml:/etc/promtail/config.yaml
       - /var/run/docker.sock:/var/run/docker.sock
