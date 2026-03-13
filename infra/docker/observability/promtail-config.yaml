@@ -8,9 +8,6 @@ positions:
 
 clients:
   - url: ${LOKI_PUSH_URL:-http://loki:3100/loki/api/v1/push}
-    basic_auth:
-      username: ${LOKI_BASIC_AUTH_USER:-}
-      password: ${LOKI_BASIC_AUTH_PASSWORD:-}
 
 scrape_configs:
   # File-based scrape for locally-running Python services (nx dev api, nx worker api,
