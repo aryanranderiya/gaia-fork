@@ -54,10 +54,6 @@ export async function generateStaticParams() {
     }));
 
     const allParams = [...exploreParams, ...communityParams];
-    console.log(
-      `[SSG Use Cases] Generating ${allParams.length} pages (${exploreParams.length} explore + ${communityParams.length} community)`,
-    );
-
     return allParams;
   } catch (error) {
     console.error("Error generating static params for use-cases:", error);
@@ -101,7 +97,6 @@ export async function generateMetadata({
     const response = await workflowApi.getPublicWorkflow(slug);
     const workflow = response.workflow;
 
-    // Convert workflow to use case format for metadata generation
     const workflowAsUseCase: UseCase = {
       title: workflow.title,
       description: workflow.description || "",
@@ -109,13 +104,12 @@ export async function generateMetadata({
       slug: workflow.slug ?? workflow.id,
       action_type: "workflow",
       integrations: workflow.steps?.map((s) => s.category) || [],
-      categories: ["Community"],
+      categories: ["featured"],
       published_id: workflow.id,
       creator: workflow.creator,
     };
 
-    const meta = generateUseCaseMetadata(workflowAsUseCase);
-    return meta;
+    return generateUseCaseMetadata(workflowAsUseCase);
   } catch {
     return {
       title: "Use Case Not Found",
@@ -124,21 +118,12 @@ export async function generateMetadata({
   }
 }
 
-/**
- * Use Case Detail Page
- *
- * This page handles both static use cases and dynamic community workflows:
- * 1. First attempts to find the slug in static useCasesData
- * 2. If not found, attempts to fetch from API as a community workflow
- * 3. Displays appropriate content based on the data source
- */
 export default async function UseCaseDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
   let useCase: UseCase | null = null;
   let communityWorkflow: Workflow | null = null;
 
-  // First, try to find the use-case in explore workflows
   try {
     const resp = await workflowApi.getExploreWorkflows(200, 0);
     const found = resp.workflows.find((w) => w.id === slug || w.slug === slug);
@@ -212,35 +197,43 @@ export default async function UseCaseDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const structuredData = useCase
-    ? generateUseCaseStructuredData(useCase)
-    : communityWorkflow
-      ? generateUseCaseStructuredData({
-          title: communityWorkflow.title,
-          description: communityWorkflow.description || "",
-          slug: communityWorkflow.id,
-          action_type: "workflow",
-          integrations: communityWorkflow.steps?.map((s) => s.category) || [],
-          categories: ["Community"],
-          published_id: communityWorkflow.id,
-          creator: communityWorkflow.creator,
-          steps: communityWorkflow.steps,
-        })
-      : null;
+  const displayTitle = useCase?.title ?? communityWorkflow?.title ?? "";
+  const displayDescription =
+    useCase?.description ?? communityWorkflow?.description ?? "";
+  const displayIntegrations =
+    useCase?.integrations ??
+    communityWorkflow?.steps?.map((s) => s.category) ??
+    [];
+  const displayCategories = useCase?.categories ?? ["featured"];
+  const displayPublishedId =
+    useCase?.published_id ?? communityWorkflow?.id ?? "";
+  const displayCreator = useCase?.creator ?? communityWorkflow?.creator;
+  const displaySteps = useCase?.steps ?? communityWorkflow?.steps;
+
+  const structuredData = generateUseCaseStructuredData({
+    title: displayTitle,
+    description: displayDescription,
+    slug,
+    action_type: "workflow",
+    integrations: displayIntegrations,
+    categories: displayCategories,
+    published_id: displayPublishedId,
+    creator: displayCreator,
+    steps: displaySteps,
+  });
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: siteConfig.url },
     { name: "Use Cases", url: `${siteConfig.url}/use-cases` },
     {
-      name: useCase?.title || communityWorkflow?.title || "",
+      name: displayTitle,
       url: `${siteConfig.url}/use-cases/${slug}`,
     },
   ]);
 
   return (
     <>
-      {structuredData && <JsonLd data={[structuredData, breadcrumbSchema]} />}
-      {!structuredData && <JsonLd data={breadcrumbSchema} />}
+      <JsonLd data={[structuredData, breadcrumbSchema]} />
       <UseCaseDetailClient
         useCase={useCase}
         communityWorkflow={communityWorkflow}

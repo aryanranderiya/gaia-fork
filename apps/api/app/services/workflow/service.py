@@ -37,7 +37,9 @@ from .scheduler import workflow_scheduler
 from .validators import WorkflowValidator
 
 
-async def generate_unique_workflow_slug(title: str, exclude_id: Optional[str] = None) -> str:
+async def generate_unique_workflow_slug(
+    title: str, exclude_id: Optional[str] = None
+) -> str:
     """Generate a slug from title, appending a numeric suffix if taken."""
     base = slugify(title)
     if not base:
@@ -157,7 +159,9 @@ class WorkflowService:
             workflow_dict["_id"] = workflow_dict["id"]
 
             if workflow_dict.get("is_public") and not workflow_dict.get("slug"):
-                workflow_dict["slug"] = await generate_unique_workflow_slug(workflow_dict["title"])
+                workflow_dict["slug"] = await generate_unique_workflow_slug(
+                    workflow_dict["title"]
+                )
 
             result = await workflows_collection.insert_one(workflow_dict)
             if not result.inserted_id:
@@ -982,8 +986,9 @@ class WorkflowService:
                     }
                     normalized_steps.append(normalized_step)
 
+                wf_id = workflow["_id"]
                 formatted_workflow = {
-                    "id": workflow["_id"],
+                    "id": wf_id,
                     "title": workflow["title"],
                     "description": workflow.get("description"),
                     "slug": workflow.get("slug"),
@@ -1059,8 +1064,9 @@ class WorkflowService:
                     }
                     normalized_steps.append(normalized_step)
 
+                wf_id = workflow["_id"]
                 formatted_workflow = {
-                    "id": workflow["_id"],
+                    "id": wf_id,
                     "title": workflow["title"],
                     "description": workflow.get("description", ""),
                     "slug": workflow.get("slug"),

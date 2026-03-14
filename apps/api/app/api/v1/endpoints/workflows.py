@@ -37,6 +37,7 @@ from app.services.workflow.generation_service import WorkflowGenerationService
 from app.services.workflow.execution_service import (
     get_workflow_executions as get_executions,
 )
+from app.helpers.slug_helpers import parse_workflow_slug
 from app.services.system_workflows.provisioner import reset_system_workflow_to_default
 from app.utils.exceptions import TriggerRegistrationError
 from app.utils.workflow_utils import transform_workflow_document
@@ -583,6 +584,17 @@ async def get_public_workflow(request: Request, workflow_ref: str):
             query = {"slug": workflow_ref, "is_public": True}
 
         workflow_doc = await workflows_collection.find_one(query)
+
+        # Fallback: parse slug to extract 8-char ID prefix
+        if not workflow_doc:
+            short_id = parse_workflow_slug(workflow_ref)
+            if short_id:
+                workflow_doc = await workflows_collection.find_one(
+                    {
+                        "_id": {"$regex": f"^wf_{short_id}"},
+                        "is_public": True,
+                    }
+                )
 
         if not workflow_doc:
             raise HTTPException(

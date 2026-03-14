@@ -23,6 +23,7 @@ from app.services.mcp.mcp_tools_store import get_mcp_tools_store
 from app.config.oauth_config import OAUTH_INTEGRATIONS
 from app.helpers.integration_helpers import (
     build_public_integration_pipeline,
+    build_slug_lookup_pipeline,
     format_public_integration_response,
     generate_integration_slug,
     parse_integration_slug,
@@ -84,19 +85,19 @@ async def get_public_integration(
                 content=native.content,
             )
 
-        # 2. Fall back to MongoDB (community/published integrations)
-        slug_parts = parse_integration_slug(identifier)
-        short_id = slug_parts.get("shortid")
-
-        if not short_id:
-            raise HTTPException(
-                status_code=404,
-                detail="Integration not found",
-            )
-
-        pipeline = build_public_integration_pipeline(short_id)
+        # 2. Try direct slug match first (new format without hash)
+        pipeline = build_slug_lookup_pipeline(identifier)
         cursor = integrations_collection.aggregate(pipeline)
         docs = await cursor.to_list(length=1)
+
+        # Fallback: legacy hash-based lookup
+        if not docs:
+            slug_parts = parse_integration_slug(identifier)
+            short_id = slug_parts.get("shortid")
+            if short_id:
+                pipeline = build_public_integration_pipeline(short_id)
+                cursor = integrations_collection.aggregate(pipeline)
+                docs = await cursor.to_list(length=1)
 
         if not docs:
             raise HTTPException(status_code=404, detail="Integration not found")
