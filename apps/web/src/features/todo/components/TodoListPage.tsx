@@ -60,10 +60,8 @@ export default function TodoListPage({
   // Use refs to store latest callback versions to avoid stale closures
   const updateTodoRef = useRef(updateTodo);
   const deleteTodoRef = useRef(deleteTodo);
-  const clearSelectionRef = useRef(clearSelection);
   updateTodoRef.current = updateTodo;
   deleteTodoRef.current = deleteTodo;
-  clearSelectionRef.current = clearSelection;
 
   // Stable callbacks that don't change reference
   const handleTodoUpdate = useCallback(
@@ -77,20 +75,13 @@ export default function TodoListPage({
     [],
   );
 
-  const handleTodoDelete = useCallback(
-    async (todoId: string) => {
-      try {
-        await deleteTodoRef.current(todoId);
-      } catch (error) {
-        console.error("Failed to delete todo:", error);
-      }
-      // Always close sidebar after deletion — effects alone miss the case
-      // where the deleted todo was the last one in the current filtered view
-      clearSelectionRef.current();
-      closeRightSidebar();
-    },
-    [closeRightSidebar],
-  );
+  const handleTodoDelete = useCallback(async (todoId: string) => {
+    try {
+      await deleteTodoRef.current(todoId);
+    } catch (error) {
+      console.error("Failed to delete todo:", error);
+    }
+  }, []);
 
   // Stable click handler
   const handleTodoClick = useCallback(
@@ -120,11 +111,11 @@ export default function TodoListPage({
         />,
       );
       openRightSidebar("sheet");
-    } else if (selectedTodoId) {
-      // selectedTodoId exists but todo not found (deleted or stale) - clear selection
+    } else if (selectedTodoId && todos.length > 0) {
+      // selectedTodoId exists but todo not found - clear selection
       clearSelection();
       closeRightSidebar();
-    } else {
+    } else if (!selectedTodoId) {
       // No selection - ensure sidebar is closed
       setRightSidebarContent(null);
       closeRightSidebar();
@@ -156,7 +147,7 @@ export default function TodoListPage({
 
   // Effect: Handle todo deletion while selected
   useEffect(() => {
-    if (selectedTodoId) {
+    if (selectedTodoId && todos.length > 0) {
       const todoExists = todos.some((t) => t.id === selectedTodoId);
       if (!todoExists) {
         // Todo was deleted, clear selection
