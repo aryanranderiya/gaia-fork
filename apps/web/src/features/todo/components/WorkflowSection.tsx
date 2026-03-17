@@ -9,6 +9,7 @@ import { useWorkflowSelection } from "@/features/chat/hooks/useWorkflowSelection
 import { todoApi } from "@/features/todo/api/todoApi";
 import { useTodoWorkflowWebSocket } from "@/features/todo/hooks/useTodoWorkflowWebSocket";
 import WorkflowSteps from "@/features/workflows/components/shared/WorkflowSteps";
+import { useRouter } from "@/i18n/navigation";
 import { toast } from "@/lib/toast";
 import { useTodoStore } from "@/stores/todoStore";
 import type { Workflow as WorkflowType } from "@/types/features/workflowTypes";
@@ -32,6 +33,7 @@ export default function WorkflowSection({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const router = useRouter();
   const { selectWorkflow } = useWorkflowSelection();
 
   // WebSocket handlers
@@ -54,9 +56,14 @@ export default function WorkflowSection({
         workflow_categories: categories,
       });
 
-      toast.success("Workflow generated!");
+      toast.success("Workflow generated!", {
+        action: {
+          label: "Open",
+          onClick: () => router.push(`/todos?todoId=${todoId}`),
+        },
+      });
     },
-    [onWorkflowLinked, todoId],
+    [onWorkflowLinked, todoId, router],
   );
 
   const handleWorkflowFailed = useCallback((errorMsg: string) => {
