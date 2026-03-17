@@ -109,35 +109,34 @@ class TodoService:
         todo_id: Optional[str] = None,
         operation: Optional[str] = None,
     ):
-        """Invalidate relevant caches based on the operation context.
-
-        Operations:
-          - update_minor: title/description only — clear individual todo cache
-          - update/delete: visibility changes — clear individual todo + all list caches
-          - create/bulk_*: broad — clear all todo caches
-        """
+        """Invalidate relevant caches based on the operation context."""
         try:
-            # Always invalidate stats since any mutation can change counts
+            # Always invalidate stats since they might change
             await delete_cache(f"stats:{user_id}")
 
-            if operation == "update_minor" and todo_id:
-                # Minor updates (title, description) only affect the individual todo,
-                # not list ordering or filter membership
+            # For specific todo operations, invalidate only affected caches
+            if todo_id and operation in ["update", "delete"]:
                 await delete_cache(f"todo:{user_id}:{todo_id}")
-            elif operation in ["update", "delete"] and todo_id:
-                # Visibility-affecting updates and deletes: clear the individual todo
-                # and ALL list caches (filtered views use varying key suffixes like
-                # completed:, priority:, project: before page:)
-                await delete_cache(f"todo:{user_id}:{todo_id}")
-                await delete_cache_by_pattern(f"todos:{user_id}:*")
+
+                # Only invalidate list caches if the operation affects list visibility
+                # (e.g., completion status change, project change, priority change)
+                if operation == "delete" or operation == "update":
+                    # Invalidate project-specific caches
+                    if project_id:
+                        await delete_cache_by_pattern(
+                            f"todos:{user_id}:project:{project_id}:*"
+                        )
+                    # Invalidate main list cache
+                    await delete_cache_by_pattern(f"todos:{user_id}:page:*")
             else:
-                # Create or bulk operations — invalidate everything
-                await delete_cache_by_pattern(f"todos:{user_id}:*")
+                # For create or bulk operations, invalidate broader caches
+                await delete_cache_by_pattern(f"todos:{user_id}*")
                 await delete_cache_by_pattern(f"todo:{user_id}:*")
 
-            # Project cache invalidation (scoped to this user)
+            # Project cache invalidation
             if project_id:
                 await delete_cache(f"projects:{user_id}")
+                await delete_cache_by_pattern(f"*:project:{project_id}*")
         except Exception as e:
             log.warning(f"Cache invalidation failed: {str(e)}")
 
@@ -443,8 +442,7 @@ class TodoService:
         if params.q and params.mode in [SearchMode.SEMANTIC, SearchMode.HYBRID]:
             return await cls._search_todos(user_id, params)
 
-        # Generate cache key for this specific query — must include ALL filter
-        # params to prevent cache collisions between different filtered views
+        # Generate cache key for this specific query
         cache_key_parts = [f"todos:{user_id}"]
         if params.project_id:
             cache_key_parts.append(f"project:{params.project_id}")
@@ -452,20 +450,6 @@ class TodoService:
             cache_key_parts.append(f"completed:{params.completed}")
         if params.priority:
             cache_key_parts.append(f"priority:{params.priority.value}")
-        if params.labels:
-            cache_key_parts.append(f"labels:{','.join(sorted(params.labels))}")
-        if params.has_due_date is not None:
-            cache_key_parts.append(f"has_due:{params.has_due_date}")
-        if params.overdue is not None:
-            cache_key_parts.append(f"overdue:{params.overdue}")
-        if params.due_date_start:
-            cache_key_parts.append(f"from:{params.due_date_start.isoformat()}")
-        if params.due_date_end:
-            cache_key_parts.append(f"to:{params.due_date_end.isoformat()}")
-        if params.q:
-            cache_key_parts.append(f"q:{params.q}")
-        if params.per_page != 50:
-            cache_key_parts.append(f"pp:{params.per_page}")
         cache_key_parts.append(f"page:{params.page}")
         cache_key = ":".join(cache_key_parts)
 
@@ -764,8 +748,6 @@ class TodoService:
                         )
             except Exception as e:
                 log.warning(f"Failed to cleanup search index: {str(e)}")
-
-        await cls._invalidate_cache(user_id, operation="bulk_delete")
 
         return BulkOperationResponse(
             success=todo_ids[: result.deleted_count],  # Approximation
