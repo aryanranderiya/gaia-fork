@@ -55,18 +55,18 @@ const useFetchUser = () => {
       });
       hasIdentified.current = true;
 
-        const isAuthRedirectPage = currentPath === "/redirect";
-        const hasTrackedSessionResumed =
-          sessionStorage.getItem(SESSION_RESUMED_KEY);
+      const isAuthRedirectPage = currentPath === "/redirect";
+      const hasTrackedSessionResumed =
+        sessionStorage.getItem(SESSION_RESUMED_KEY);
 
-        if (!isAuthRedirectPage && !hasTrackedSessionResumed) {
-          trackEvent(ANALYTICS_EVENTS.USER_SESSION_RESUMED, {
-            method: "wos_session_cookie",
-            has_completed_onboarding: data.onboarding?.completed ?? false,
-          });
-          sessionStorage.setItem(SESSION_RESUMED_KEY, "true");
-        }
+      if (!isAuthRedirectPage && !hasTrackedSessionResumed) {
+        trackEvent(ANALYTICS_EVENTS.USER_SESSION_RESUMED, {
+          method: "wos_session_cookie",
+          has_completed_onboarding: data.onboarding?.completed ?? false,
+        });
+        sessionStorage.setItem(SESSION_RESUMED_KEY, "true");
       }
+    }
 
     // OAuth redirect routing — only runs when tokens are present in URL
     const accessToken = searchParams.get("access_token");

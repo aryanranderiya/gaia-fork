@@ -12,8 +12,8 @@ import { NewChatLayout } from "@/features/chat/components/interface/layouts/NewC
 import { useConversation } from "@/features/chat/hooks/useConversation";
 import { useFetchIntegrationStatus } from "@/features/integrations/hooks/useIntegrations";
 import { useDragAndDrop } from "@/hooks/ui/useDragAndDrop";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { useSendMessage } from "@/hooks/useSendMessage";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { db } from "@/lib/db/chatDb";
 import { syncSingleConversation } from "@/services/syncService";
 import { useChatStore } from "@/stores/chatStore";
