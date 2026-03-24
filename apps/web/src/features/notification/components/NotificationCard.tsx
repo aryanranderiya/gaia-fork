@@ -2,7 +2,9 @@
 
 import { Card } from "@heroui/react";
 import { ArrowDown01Icon, ArrowLeft01Icon } from "@icons";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import type { Notification } from "@/types/notifications";
 import { getNotificationIcon } from "@/utils/notifications";
 
@@ -19,6 +21,13 @@ export const NotificationCard = ({
   notification,
   onAction,
 }: NotificationCardProps) => {
+  useEffect(() => {
+    trackEvent(ANALYTICS_EVENTS.NOTIFICATION_VIEWED, {
+      notification_id: notification.id,
+      notification_source: notification.source,
+    });
+  }, [notification.id, notification.source]);
+
   return (
     <Card className="w-full rounded-2xl border-none bg-zinc-800 p-4">
       <div className="flex items-start gap-3">

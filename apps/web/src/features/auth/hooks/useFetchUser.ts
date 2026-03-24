@@ -15,6 +15,7 @@ import {
 
 export const authPages = ["/login", "/signup"];
 export const publicPages = [...authPages, "/terms", "/privacy", "/contact"];
+const SESSION_RESUMED_KEY = "gaia_session_resumed_tracked";
 
 const useFetchUser = () => {
   const { setUser, clearUser } = useUserActions();
@@ -54,15 +55,18 @@ const useFetchUser = () => {
       });
       hasIdentified.current = true;
 
-      const accessToken = searchParams.get("access_token");
-      const refreshToken = searchParams.get("refresh_token");
-      if (accessToken || refreshToken) {
-        trackEvent(ANALYTICS_EVENTS.USER_LOGGED_IN, {
-          method: "workos",
-          has_completed_onboarding: data.onboarding?.completed ?? false,
-        });
+        const isAuthRedirectPage = currentPath === "/redirect";
+        const hasTrackedSessionResumed =
+          sessionStorage.getItem(SESSION_RESUMED_KEY);
+
+        if (!isAuthRedirectPage && !hasTrackedSessionResumed) {
+          trackEvent(ANALYTICS_EVENTS.USER_SESSION_RESUMED, {
+            method: "wos_session_cookie",
+            has_completed_onboarding: data.onboarding?.completed ?? false,
+          });
+          sessionStorage.setItem(SESSION_RESUMED_KEY, "true");
+        }
       }
-    }
 
     // OAuth redirect routing — only runs when tokens are present in URL
     const accessToken = searchParams.get("access_token");

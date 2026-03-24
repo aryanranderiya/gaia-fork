@@ -1,5 +1,6 @@
 import { Menu02Icon, SidebarLeftIcon } from "@icons";
 import useMediaQuery from "@/hooks/ui/useMediaQuery";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 import { Button } from "../../ui/button";
 
@@ -20,7 +21,14 @@ function CloseOpenSidebarBtn({
       className={`group rounded-lg hover:bg-[#00bbff]/20 ${isSidebarVisible ? "sm:hidden sm:opacity-0" : "sm:flex sm:opacity-100"}`}
       size="icon"
       variant={"ghost"}
-      onClick={toggleSidebar}
+      onClick={() => {
+        trackEvent(
+          isSidebarVisible
+            ? ANALYTICS_EVENTS.UI_SIDEBAR_COLLAPSED
+            : ANALYTICS_EVENTS.UI_SIDEBAR_EXPANDED,
+        );
+        toggleSidebar();
+      }}
     >
       {isMobileScreen ? (
         <Menu02Icon

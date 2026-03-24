@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { goalsApi } from "@/features/goals/api/goalsApi";
 import { useConfirmation } from "@/hooks/useConfirmation";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import type { Goal } from "@/types/api/goalsApiTypes";
 import { parseDate2 } from "@/utils/date/dateUtils";
 
@@ -32,6 +33,7 @@ export function GoalCard({
   async function deleteGoal(goalId: string) {
     try {
       await goalsApi.deleteGoal(goalId);
+      trackEvent(ANALYTICS_EVENTS.GOALS_DELETED, { goal_id: goalId });
       fetchGoals();
     } catch (error) {
       console.error("Error deleting goal:", error);

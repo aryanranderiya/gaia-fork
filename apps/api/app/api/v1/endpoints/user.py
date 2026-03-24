@@ -7,6 +7,7 @@ from shared.py.wide_events import log
 from app.config.settings import settings
 from app.db.mongodb.collections import users_collection
 from app.models.user_models import UserUpdateResponse
+from app.services.analytics_service import track_logout
 from app.services.onboarding.onboarding_service import get_user_onboarding_status
 from app.services.user_service import update_user_profile
 from bson import ObjectId
@@ -331,6 +332,21 @@ async def logout(
 
         if not session:
             raise HTTPException(status_code=401, detail="Invalid session")
+
+        user_email: Optional[str] = None
+        try:
+            auth_response = session.authenticate()
+            if auth_response and getattr(auth_response, "authenticated", False):
+                workos_user = getattr(auth_response, "user", None)
+                user_email = getattr(workos_user, "email", None)
+        except Exception as auth_error:
+            log.warning(f"Failed to resolve user from WorkOS session during logout: {auth_error}")
+
+        if user_email:
+            try:
+                track_logout(user_id=user_email, email=user_email)
+            except Exception as analytics_error:
+                log.warning(f"Failed to track logout analytics for {user_email}: {analytics_error}")
 
         logout_url = session.get_logout_url()
 

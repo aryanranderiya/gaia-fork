@@ -16,7 +16,7 @@ from app.db.mongodb.collections import user_integrations_collection, users_colle
 from app.db.redis import delete_cache
 from app.decorators.caching import Cacheable
 from app.models.user_models import BioStatus
-from app.services.analytics_service import track_signup
+from app.services.analytics_service import track_login, track_signup
 from app.services.composio.composio_service import get_composio_service
 from app.services.provider_metadata_service import (
     fetch_and_store_provider_metadata,
@@ -29,7 +29,11 @@ from app.services.integrations.user_integration_status import (
 from app.services.system_workflows.provisioner import provision_system_workflows
 
 
-async def store_user_info(name: str, email: str, picture_url: Optional[str]):
+async def store_user_info(
+    name: str,
+    email: str,
+    picture_url: Optional[str],
+) -> tuple[ObjectId, bool]:
     """
     Stores user info from Google callback.
 
@@ -42,7 +46,7 @@ async def store_user_info(name: str, email: str, picture_url: Optional[str]):
         picture_url (str): The URL of the profile picture from Google.
 
     Returns:
-        The user's MongoDB _id.
+        tuple[ObjectId, bool]: (user_id, is_new_user)
 
     Raises:
         HTTPException: If any step in the process fails.
@@ -68,7 +72,17 @@ async def store_user_info(name: str, email: str, picture_url: Optional[str]):
             update_data["picture"] = ""
 
         await users_collection.update_one({"email": email}, {"$set": update_data})
-        return existing_user["_id"]
+        try:
+            track_login(
+                user_id=email,
+                email=email,
+                name=name,
+                login_method="workos",
+            )
+        except Exception as e:
+            log.error(f"Failed to track login in PostHog for {email}: {str(e)}")
+
+        return existing_user["_id"], False
     else:
         user_data = {
             "name": name,
@@ -108,7 +122,7 @@ async def store_user_info(name: str, email: str, picture_url: Optional[str]):
             log.error(f"Failed to add contact to Resend audience for {email}: {str(e)}")
             # Don't raise exception - user creation should still succeed
 
-        return result.inserted_id
+        return result.inserted_id, True
 
 
 @Cacheable(ttl=86400, key_pattern=f"{OAUTH_STATUS_KEY}:{{user_id}}")
