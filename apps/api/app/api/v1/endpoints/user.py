@@ -340,13 +340,17 @@ async def logout(
                 workos_user = getattr(auth_response, "user", None)
                 user_email = getattr(workos_user, "email", None)
         except Exception as auth_error:
-            log.warning(f"Failed to resolve user from WorkOS session during logout: {auth_error}")
+            log.warning(
+                f"Failed to resolve user from WorkOS session during logout: {auth_error}"
+            )
 
         if user_email:
             try:
                 track_logout(user_id=user_email, email=user_email)
             except Exception as analytics_error:
-                log.warning(f"Failed to track logout analytics for {user_email}: {analytics_error}")
+                log.warning(
+                    f"Failed to track logout analytics for {user_email}: {analytics_error}"
+                )
 
         logout_url = session.get_logout_url()
 
