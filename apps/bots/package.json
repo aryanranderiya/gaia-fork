@@ -10,6 +10,7 @@
     "@gaia/bot-telegram": "workspace:*"
   },
   "devDependencies": {
+    "vite": "^7.1.12",
     "vitest": "^4.0.15"
   }
 }
