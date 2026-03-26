@@ -18,8 +18,8 @@ export const publicPages = [...authPages, "/terms", "/privacy", "/contact"];
 
 const useFetchUser = () => {
   const { setUser, clearUser } = useUserActions();
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const currentPath = usePathname();
   const hasIdentified = useRef(false);
 
