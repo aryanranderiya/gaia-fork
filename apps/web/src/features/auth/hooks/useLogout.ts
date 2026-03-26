@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { del } from "idb-keyval";
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { ANALYTICS_EVENTS, posthog, resetUser } from "@/lib/analytics";
+import { resetUser } from "@/lib/analytics";
 import { db } from "@/lib/db/chatDb";
 import { authApi } from "../api/authApi";
 
@@ -78,13 +78,6 @@ export const useLogout = () => {
   }, [queryClient]);
 
   const logout = useCallback(async () => {
-    // Track logout with sendBeacon transport so event survives redirects/navigation
-    posthog.capture(
-      ANALYTICS_EVENTS.USER_LOGGED_OUT,
-      { timestamp: new Date().toISOString() },
-      { transport: "sendBeacon" },
-    );
-
     try {
       await authApi.logout();
     } catch (error) {

@@ -173,7 +173,6 @@ export const useOnboarding = () => {
       trackEvent(ANALYTICS_EVENTS.ONBOARDING_STEP_COMPLETED, {
         step_number: onboardingState.currentQuestionIndex + 1,
         step_name: currentQuestion.fieldName,
-        response_value: rawValue ?? responseText,
         question_id: currentQuestion.id,
       });
 

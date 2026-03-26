@@ -2,7 +2,7 @@
 
 import { Card } from "@heroui/react";
 import { ArrowDown01Icon, ArrowLeft01Icon } from "@icons";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import type { Notification } from "@/types/notifications";
@@ -21,15 +21,50 @@ export const NotificationCard = ({
   notification,
   onAction,
 }: NotificationCardProps) => {
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const hasTrackedRef = useRef(false);
+
   useEffect(() => {
-    trackEvent(ANALYTICS_EVENTS.NOTIFICATION_VIEWED, {
-      notification_id: notification.id,
-      notification_source: notification.source,
+    hasTrackedRef.current = false;
+
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      trackEvent(ANALYTICS_EVENTS.NOTIFICATION_VIEWED, {
+        notification_id: notification.id,
+        notification_source: notification.source,
+      });
+      hasTrackedRef.current = true;
+      return;
+    }
+
+    const element = cardRef.current;
+    if (!element) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      const [entry] = entries;
+      if (!entry?.isIntersecting || hasTrackedRef.current) return;
+
+      trackEvent(ANALYTICS_EVENTS.NOTIFICATION_VIEWED, {
+        notification_id: notification.id,
+        notification_source: notification.source,
+      });
+      hasTrackedRef.current = true;
+      observer.disconnect();
     });
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
   }, [notification.id, notification.source]);
 
   return (
-    <Card className="w-full rounded-2xl border-none bg-zinc-800 p-4">
+    <div ref={cardRef}>
+      <Card className="w-full rounded-2xl border-none bg-zinc-800 p-4">
       <div className="flex items-start gap-3">
         <div className="mt-1 flex-shrink-0 text-zinc-400">
           {getNotificationIcon(notification.source)}
@@ -109,6 +144,7 @@ export const NotificationCard = ({
           </div>
         </div>
       </div>
-    </Card>
+      </Card>
+    </div>
   );
 };

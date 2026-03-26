@@ -141,7 +141,7 @@ export default function MemoryManagement({
     } finally {
       setIsClearing(false);
     }
-  }, [confirm]);
+  }, [confirm, memories.length]);
 
   const handleExport = useCallback(() => {
     const exportType = Array.from(selectedExportType)[0];

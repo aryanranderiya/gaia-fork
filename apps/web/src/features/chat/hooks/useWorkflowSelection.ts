@@ -11,6 +11,8 @@ import {
 
 export type { SelectedWorkflowData, WorkflowSelectionOptions };
 
+const FEATURE_DISCOVERED_WORKFLOWS_KEY = "feature_discovered_workflows";
+
 export const useWorkflowSelection = () => {
   const {
     selectedWorkflow,
@@ -43,10 +45,20 @@ export const useWorkflowSelection = () => {
       );
 
       // Track first workflow use as feature discovery
-      trackEvent(ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
-        feature: "workflows",
-        workflow_title: workflow.title,
-      });
+      const hasTrackedFeatureDiscovered =
+        typeof window !== "undefined" &&
+        localStorage.getItem(FEATURE_DISCOVERED_WORKFLOWS_KEY);
+
+      if (!hasTrackedFeatureDiscovered) {
+        trackEvent(ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
+          feature: "workflows",
+          workflow_title: workflow.title,
+        });
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem(FEATURE_DISCOVERED_WORKFLOWS_KEY, "true");
+        }
+      }
 
       // Navigate to chat page if not already there
       if (pathname !== "/c") {

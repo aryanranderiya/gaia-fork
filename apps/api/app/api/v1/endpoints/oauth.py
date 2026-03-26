@@ -181,7 +181,8 @@ async def workos_mobile_callback(
         log.set(fields_extracted=fields_extracted)
 
         # Store user info in DB
-        await store_user_info(name, email, picture_url)
+        user_id, is_new_user = await store_user_info(name, email, picture_url)
+        log.set(user_id=str(user_id), is_new_user=is_new_user)
 
         token = auth_response.sealed_session or auth_response.access_token
         return RedirectResponse(url=f"{mobile_redirect}?token={quote(token, safe='')}")
@@ -262,7 +263,8 @@ async def workos_desktop_callback(
         log.set(fields_extracted=fields_extracted)
 
         # Store user info in our database
-        await store_user_info(name, email, picture_url)
+        user_id, is_new_user = await store_user_info(name, email, picture_url)
+        log.set(user_id=str(user_id), is_new_user=is_new_user)
 
         # Return token via deep link - desktop app will handle storage
         token = auth_response.sealed_session or auth_response.access_token
@@ -338,7 +340,8 @@ async def workos_callback(
         log.set(fields_extracted=fields_extracted)
 
         # Store user info in our database
-        await store_user_info(name, email, picture_url)
+        user_id, is_new_user = await store_user_info(name, email, picture_url)
+        log.set(user_id=str(user_id), is_new_user=is_new_user)
 
         # Redirect to return_url if provided, otherwise default /redirect
         destination = return_url or f"{settings.FRONTEND_URL}/redirect"

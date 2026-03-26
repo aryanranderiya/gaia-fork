@@ -178,13 +178,12 @@ export const useIntegrations = (): UseIntegrationsReturn => {
 
       try {
         const result = await integrationsApi.connectIntegration(integrationId);
-        // Track integration connection attempt
-        trackEvent(ANALYTICS_EVENTS.INTEGRATION_CONNECTED, {
-          integration: integrationId,
-          source: "integration_settings",
-        });
 
         if (result.status === "connected") {
+          trackEvent(ANALYTICS_EVENTS.INTEGRATION_CONNECTED, {
+            integration: integrationId,
+            source: "integration_settings",
+          });
           toast.success(`Connected to ${result.name}`, { id: toastId });
           // Refetch all data
           await Promise.all([
