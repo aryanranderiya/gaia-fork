@@ -19,8 +19,8 @@ const SESSION_RESUMED_KEY = "gaia_session_resumed_tracked";
 
 const useFetchUser = () => {
   const { setUser, clearUser } = useUserActions();
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const currentPath = usePathname();
   const hasIdentified = useRef(false);
 

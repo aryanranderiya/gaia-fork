@@ -121,6 +121,18 @@ docs/plans/
 # Populate it with your actual bearer token for production scraping.
 .opencode/plans
 
+docs/superpowers
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+# dagger
+.dagger/sdk
+
+bin/dagger
+
+.beads/
 .coverage
 i18n.cache
 .worktrees/
@@ -129,3 +141,8 @@ i18n.cache
 .dagger/sdk
 
 bin/dagger
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key

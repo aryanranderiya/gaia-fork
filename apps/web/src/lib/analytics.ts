@@ -76,7 +76,6 @@ export const ANALYTICS_EVENTS = {
 
   // Goal events
   GOALS_CREATED: "goals:created",
-  GOALS_COMPLETED: "goals:completed",
   GOALS_DELETED: "goals:deleted",
 
   // Calendar events
@@ -86,22 +85,16 @@ export const ANALYTICS_EVENTS = {
   // Email events
   EMAIL_OPENED: "email:opened",
   EMAIL_REPLIED: "email:replied",
-  EMAIL_ARCHIVED: "email:archived",
   EMAIL_COMPOSE_OPENED: "email:compose_opened",
   EMAIL_AI_DRAFT_GENERATED: "email:ai_draft_generated",
 
   // Settings events
-  SETTINGS_PROFILE_UPDATED: "settings:profile_updated",
   SETTINGS_PREFERENCES_CHANGED: "settings:preferences_changed",
   SETTINGS_NOTIFICATIONS_TOGGLED: "settings:notifications_toggled",
 
   // UI/UX events
-  UI_SIDEBAR_TOGGLED: "ui:sidebar_toggled",
   UI_SIDEBAR_COLLAPSED: "ui:sidebar_collapsed",
   UI_SIDEBAR_EXPANDED: "ui:sidebar_expanded",
-  UI_THEME_TOGGLED: "ui:theme_toggled",
-  UI_MODAL_OPENED: "ui:modal_opened",
-  UI_MODAL_CLOSED: "ui:modal_closed",
 
   // Search and filtering
   SEARCH_PERFORMED: "search:performed",
@@ -124,30 +117,9 @@ export const ANALYTICS_EVENTS = {
   NOTIFICATION_VIEWED: "notification:viewed",
   NOTIFICATION_CLICKED: "notification:clicked",
   NOTIFICATION_DISMISSED: "notification:dismissed",
-  NOTIFICATION_SETTINGS_CHANGED: "notification:settings_changed",
 
   // Content/Learning events
   BLOG_ARTICLE_VIEWED: "blog:article_viewed",
-  LEARN_HUB_OPENED: "learn:hub_opened",
-  USE_CASE_VIEWED: "use_case:viewed",
-
-  // Bots/Discord/Slack/Telegram invites
-  BOT_INVITE_CLICKED: "bot:invite_clicked",
-
-  // Deeplink/Share events
-  LINK_SHARED: "link:shared",
-  DEEPLINK_ACCESSED: "deeplink:accessed",
-
-  // Session and performance
-  SESSION_STARTED: "session:started",
-  SESSION_ENDED: "session:ended",
-  PERFORMANCE_METRIC_RECORDED: "performance:metric_recorded",
-
-  // User behavior
-  FEATURE_USAGE_INTENSITY: "feature:usage_intensity",
-  USER_FRUSTRATION_INDICATOR: "user:frustration_indicator",
-  CONVERSION_ATTEMPT: "conversion:attempt",
-  RETENTION_CHECKPOINT: "retention:checkpoint",
 
   // Navigation events
   NAVIGATION_SIDEBAR_CLICKED: "navigation:sidebar_clicked",

@@ -46,6 +46,8 @@ export const appConfig = {
     name: "GAIA",
     copyright: "Copyright © 2025 The Experience Company. All rights reserved.",
     domain: "heygaia.io",
+    mobileWaitlist:
+      "https://heygaia.notion.site/307023640e7b802ca404dee12cb04e89?pvs=105",
   },
 
   // Core link definitions - single source of truth
@@ -75,6 +77,7 @@ export const appConfig = {
         requiresAuth: false,
         description: "Sign Up / Login to GAIA",
       },
+
       {
         href: "/use-cases",
         label: "Use Cases",
@@ -88,30 +91,16 @@ export const appConfig = {
         description: "Explore community integrations",
       },
       {
-        href: "/pricing",
-        label: "Pricing",
-        icon: (
-          <CreditCardPosIcon width={20} height={20} color={"currentColor"} />
-        ),
-        description: "Choose the perfect plan for your needs",
+        href: "/features",
+        label: "Features",
+        icon: <MapsIcon width={20} height={20} color={"currentColor"} />,
+        description: "Explore everything GAIA can do",
       },
       {
         href: "/download",
         label: "Download",
         icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
         description: "Get GAIA for desktop, mobile, and web",
-      },
-      {
-        href: "/bots",
-        label: "Bots",
-        icon: (
-          <MessageMultiple02Icon
-            width={20}
-            height={20}
-            color={"currentColor"}
-          />
-        ),
-        description: "Chat with GAIA on Discord, Telegram, Slack, and WhatsApp",
       },
       {
         href: "/roadmap",
@@ -186,6 +175,13 @@ export const appConfig = {
         label: "Automation Combos",
         icon: <ConnectIcon width={20} height={20} color={"currentColor"} />,
         description: "Automate any two tools together with GAIA",
+        hideNavbar: true,
+      },
+      {
+        href: "/feed.xml",
+        label: "RSS Feed",
+        icon: <GlobalIcon width={20} height={20} color={"currentColor"} />,
+        description: "Subscribe to all GAIA pages and updates via RSS",
         hideNavbar: true,
       },
     ] as AppLink[],

@@ -9,6 +9,10 @@ import { prepareNewChat } from "@/features/chat/utils/newChatNavigation";
 import { NotificationCenter } from "@/features/notification/components/NotificationCenter";
 import { usePlatform } from "@/hooks/ui/usePlatform";
 
+function preloadCommandMenu() {
+  void import("@/features/search/components/CommandMenu");
+}
+
 export default function ChatHeader() {
   const { isMac, modifierKeyName } = usePlatform();
 
@@ -31,6 +35,8 @@ export default function ChatHeader() {
       <div className="relative ml-auto flex items-center">
         <SidebarHeaderButton
           onClick={handleSearchClick}
+          onMouseEnter={preloadCommandMenu}
+          onFocus={preloadCommandMenu}
           aria-label="Search"
           tooltip={
             <div className="flex items-center gap-2">

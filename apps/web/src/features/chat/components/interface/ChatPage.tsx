@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import { chatApi } from "@/features/chat/api/chatApi";
 import { VoiceApp } from "@/features/chat/components/composer/VoiceModeOverlay";
@@ -33,7 +33,6 @@ const ChatPage = React.memo(function MainChat() {
     (state) => state.setActiveConversationId,
   );
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   // --- Workflow auto-send ---
   // This runs at the ChatPage level (not inside Composer) so that the
@@ -42,8 +41,6 @@ const ChatPage = React.memo(function MainChat() {
   const selectedWorkflow = useWorkflowSelectionStore((s) => s.selectedWorkflow);
   const autoSend = useWorkflowSelectionStore((s) => s.autoSend);
   const autoSendFiredRef = useRef(false);
-  const shouldSync = searchParams.get("sync") === "true";
-  const queryParam = searchParams.get("q");
 
   // Fetching status on chat-page to resolve caching issues when new integration is connected
   useFetchIntegrationStatus({
@@ -123,7 +120,6 @@ const ChatPage = React.memo(function MainChat() {
   }, [
     convoIdParam,
     setActiveConversationId,
-    shouldSync,
     // NOTE: Not including conversations or upsertConversation in deps
     // to avoid re-triggering when manually toggling read/unread status
   ]);
@@ -155,15 +151,18 @@ const ChatPage = React.memo(function MainChat() {
     }
   }, [pendingPrompt, clearPendingPrompt, appendToInputRef]);
 
-  // Handle ?q= query parameter for external app deep linking
+  // Handle ?q= query parameter for external app deep linking — read on
+  // mount only; avoids subscribing to all searchParam changes.
   useEffect(() => {
+    const queryParam = new URLSearchParams(window.location.search).get("q");
     if (queryParam && appendToInputRef.current) {
       appendToInputRef.current(queryParam);
       const url = new URL(window.location.href);
       url.searchParams.delete("q");
       router.replace(url.pathname + url.search, { scroll: false });
     }
-  }, [queryParam, appendToInputRef, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Common composer props
   const composerProps = {
