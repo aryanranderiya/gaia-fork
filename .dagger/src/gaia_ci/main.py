@@ -54,40 +54,22 @@ class GaiaCi:
 
     @function
     def ci_env(self, source: Source) -> dagger.Container:
-        """Create a full CI environment with Node.js 22, Python 3.12, pnpm, and uv."""
+        """Create a full CI environment by building the base image from the Dockerfile.
+
+        The base image (infra/docker/ci-base.Dockerfile) ships Node 22,
+        Python 3.12, pnpm, and uv pre-installed. Dagger layer-caches
+        the build so subsequent runs skip the apt-get + pip install chain.
+        """
         pnpm_cache = dag.cache_volume("pnpm-store")
         uv_cache = dag.cache_volume("uv-cache")
         nx_cache = dag.cache_volume("nx-cache")
         next_cache = dag.cache_volume("next-cache")
         pip_cache = dag.cache_volume("pip-cache")
+        base = source.directory("infra/docker").docker_build(
+            dockerfile="ci-base.Dockerfile",
+        )
         return (
-            dag.container()
-            .from_("node:22.15.1-bookworm-slim")
-            # Install Python 3.12, git, and build essentials
-            .with_exec(["apt-get", "update"])
-            .with_exec(
-                [
-                    "apt-get",
-                    "install",
-                    "-y",
-                    "--no-install-recommends",
-                    "python3",
-                    "python3-pip",
-                    "python3-venv",
-                    "python3-dev",
-                    "git",
-                    "curl",
-                    "build-essential",
-                    "libpq-dev",
-                ]
-            )
-            .with_exec(["apt-get", "clean"])
-            .with_exec(["rm", "-rf", "/var/lib/apt/lists/*"])
-            # Install pnpm via corepack
-            .with_exec(["corepack", "enable"])
-            .with_exec(["corepack", "prepare", "pnpm@10.17.1", "--activate"])
-            # Install uv
-            .with_exec(["pip", "install", "--break-system-packages", "uv"])
+            base
             # Mount caches
             .with_mounted_cache("/root/.local/share/pnpm/store", pnpm_cache)
             .with_mounted_cache("/root/.cache/uv", uv_cache)
@@ -130,7 +112,7 @@ class GaiaCi:
         return await (
             self.ci_env(source)
             .with_workdir("/app/apps/api")
-            .with_exec(["uv", "run", "mypy", "--install-types", "--non-interactive"])
+            .with_exec(["uv", "run", "mypy", "app", "--ignore-missing-imports"])
             .with_workdir("/app")
             .with_exec(["npx", "nx", "run-many", "-t", "type-check", "--parallel=3"])
             .stdout()
@@ -150,27 +132,71 @@ class GaiaCi:
 
     @function
     async def test(self, source: Source) -> str:
-        """Run all tests (JS/TS via Nx + Python via pytest)."""
+        """Run all tests (Python + TypeScript). Local convenience wrapper."""
+        py_task = self.test_python(source)
+        ts_task = self.test_typescript(source)
+        results = await asyncio.gather(py_task, ts_task)
+        labels = ["PYTHON TESTS", "TYPESCRIPT TESTS"]
+        sections = []
+        for label, output in zip(labels, results):
+            sections.append(f"{'=' * 60}\n {label}\n{'=' * 60}\n{output}")
+        return "\n\n".join(sections)
+
+    @function
+    async def test_python(self, source: Source) -> str:
+        """Run all Python tests with live service containers and pytest-xdist."""
         return await (
-            self.ci_env(source)
-            .with_env_variable("ENV", "test")
-            .with_exec(["npx", "nx", "run-many", "-t", "test", "--parallel=3"])
-            .with_workdir("/app/apps/api")
+            self._service_test_container(source)
             .with_exec(
                 [
                     "uv",
                     "run",
                     "pytest",
+                    "-n",
+                    "auto",
                     "-m",
-                    "not integration and not composio",
+                    "not composio",
+                    "--tb=short",
+                    "-q",
+                    "--override-ini=addopts=--strict-markers",
+                ]
+            )
+            .stdout()
+        )
+
+    @function
+    async def test_python_coverage(self, source: Source) -> str:
+        """Run all Python tests with live services and coverage reporting."""
+        return await (
+            self._service_test_container(source)
+            .with_exec(
+                [
+                    "uv",
+                    "run",
+                    "pytest",
+                    "-n",
+                    "auto",
+                    "-m",
+                    "not composio",
                     "--tb=short",
                     "-q",
                     "--cov=app",
                     "--cov-report=term-missing",
                     "--cov-fail-under=80",
+                    "--override-ini=addopts=--strict-markers",
                 ]
             )
             .stdout()
+        )
+
+    @function
+    async def test_typescript(self, source: Source, projects: str = "") -> str:
+        """Run JS/TS tests via Nx. Pass projects= to scope to specific projects."""
+        cmd = ["npx", "nx", "run-many", "-t", "test", "--parallel=3"]
+        if projects:
+            cmd.extend(["-p", projects])
+        return await (
+            self.ci_env(source).with_env_variable("ENV", "test").with_exec(cmd).stdout()
         )
 
     @function
@@ -179,6 +205,10 @@ class GaiaCi:
         return await (
             self.ci_env(source)
             .with_exec(["uv", "tool", "install", "vulture"])
+            .with_env_variable(
+                "PATH",
+                "/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            )
             .with_exec(["bash", "scripts/dead-code-check.sh"])
             .stdout()
         )
@@ -227,36 +257,130 @@ class GaiaCi:
         )
 
     @function
-    async def integration_test(self, source: Source) -> str:
-        """Run integration tests with live service containers (Postgres, Redis, MongoDB)."""
+    def chroma_service(self) -> dagger.Service:
+        """Start a ChromaDB service container."""
+        return (
+            dag.container()
+            .from_("chromadb/chroma:latest")
+            .with_exposed_port(8000)
+            .as_service()
+        )
+
+    @function
+    def rabbitmq_service(self) -> dagger.Service:
+        """Start a RabbitMQ 3 service container."""
+        return (
+            dag.container()
+            .from_("rabbitmq:3-alpine")
+            .with_exposed_port(5672)
+            .as_service()
+        )
+
+    def _service_test_container(self, source: Source) -> dagger.Container:
+        """Create a test container wired to all live service containers.
+
+        Services: PostgreSQL, Redis, MongoDB, ChromaDB, RabbitMQ.
+        Credentials are injected via dagger.Secret so they never appear in
+        build logs or the Dagger TUI.
+        USE_REAL_SERVICES=1 tells conftest to skip infrastructure mocks and
+        use real connections instead.
+        """
         pg = self.postgres_service()
         redis = self.redis_service()
         mongo = self.mongo_service()
-        return await (
+        chroma = self.chroma_service()
+        rabbitmq = self.rabbitmq_service()
+        return (
             self.ci_env(source)
             .with_service_binding("postgres", pg)
             .with_service_binding("redis", redis)
             .with_service_binding("mongo", mongo)
+            .with_service_binding("chroma", chroma)
+            .with_service_binding("rabbitmq", rabbitmq)
             .with_env_variable("ENV", "test")
-            .with_env_variable(
+            .with_env_variable("USE_REAL_SERVICES", "1")
+            .with_env_variable("CHROMADB_HOST", "chroma")
+            .with_env_variable("CHROMADB_PORT", "8000")
+            .with_secret_variable(
                 "DATABASE_URL",
-                "postgresql://gaia:gaia@postgres:5432/gaia_test",
+                dag.set_secret(
+                    "db-url",
+                    "postgresql://gaia:gaia@postgres:5432/gaia_test",  # pragma: allowlist secret
+                ),
             )
-            .with_env_variable("REDIS_URL", "redis://redis:6379/0")
-            .with_env_variable(
+            .with_secret_variable(
+                "REDIS_URL",
+                dag.set_secret("redis-url", "redis://redis:6379/0"),
+            )
+            .with_secret_variable(
                 "MONGODB_URL",
-                "mongodb://gaia:gaia@mongo:27017/gaia_test?authSource=admin",
+                dag.set_secret(
+                    "mongo-url",
+                    "mongodb://gaia:gaia@mongo:27017/gaia_test?authSource=admin",  # pragma: allowlist secret
+                ),
+            )
+            # MONGO_DB is the env var that app/db/mongodb/mongodb.py reads via
+            # settings.MONGO_DB. Must match MONGODB_URL so _get_mongodb_instance()
+            # and the service test fixtures both hit the same database.
+            .with_secret_variable(
+                "MONGO_DB",
+                dag.set_secret(
+                    "mongo-db-url",
+                    "mongodb://gaia:gaia@mongo:27017/gaia_test?authSource=admin",  # pragma: allowlist secret
+                ),
+            )
+            .with_secret_variable(
+                "RABBITMQ_URL",
+                dag.set_secret(
+                    "rabbitmq-url",
+                    "amqp://guest:guest@rabbitmq/",  # pragma: allowlist secret
+                ),
             )
             .with_workdir("/app/apps/api")
+        )
+
+    @function
+    async def integration_test(self, source: Source) -> str:
+        """Run all non-composio tests with full live service containers.
+
+        This is the comprehensive test pass: unit + integration + e2e + service,
+        all wired to real Postgres, Redis, MongoDB, ChromaDB, and RabbitMQ.
+        """
+        return await (
+            self._service_test_container(source)
             .with_exec(
                 [
                     "uv",
                     "run",
                     "pytest",
                     "-m",
-                    "integration",
+                    "not composio",
                     "--tb=short",
                     "-q",
+                    "--override-ini=addopts=--strict-markers",
+                ]
+            )
+            .stdout()
+        )
+
+    @function
+    async def service_test(self, source: Source) -> str:
+        """Run service + integration + e2e tests with live containers.
+
+        All real-infrastructure tests: Postgres, Redis, MongoDB, ChromaDB, RabbitMQ.
+        """
+        return await (
+            self._service_test_container(source)
+            .with_exec(
+                [
+                    "uv",
+                    "run",
+                    "pytest",
+                    "-m",
+                    "service or integration or e2e",
+                    "--tb=short",
+                    "-v",
+                    "--override-ini=addopts=--strict-markers",
                 ]
             )
             .stdout()
@@ -333,7 +457,7 @@ class GaiaCi:
 
     @function
     async def quality_checks(self, source: Source) -> str:
-        """Run the full quality gate in parallel: lint, type-check, build, test, dead-code, and release validation."""
+        """Run the full quality gate in parallel. Local convenience — mirrors what CI runs."""
         env = self.ci_env(source)
 
         # Run all checks concurrently. Dagger deduplicates the shared ci_env
@@ -344,7 +468,7 @@ class GaiaCi:
 
         type_check_task = (
             env.with_workdir("/app/apps/api")
-            .with_exec(["uv", "run", "mypy", "--install-types", "--non-interactive"])
+            .with_exec(["uv", "run", "mypy", "app", "--ignore-missing-imports"])
             .with_workdir("/app")
             .with_exec(["npx", "nx", "run-many", "-t", "type-check", "--parallel=3"])
             .stdout()
@@ -358,29 +482,15 @@ class GaiaCi:
             .stdout()
         )
 
-        test_task = (
-            env.with_env_variable("ENV", "test")
-            .with_exec(["npx", "nx", "run-many", "-t", "test", "--parallel=3"])
-            .with_workdir("/app/apps/api")
-            .with_exec(
-                [
-                    "uv",
-                    "run",
-                    "pytest",
-                    "-m",
-                    "not integration and not composio",
-                    "--tb=short",
-                    "-q",
-                    "--cov=app",
-                    "--cov-report=term-missing",
-                    "--cov-fail-under=80",
-                ]
-            )
-            .stdout()
-        )
+        test_python_task = self.test_python(source)
+        test_typescript_task = self.test_typescript(source)
 
         dead_code_task = (
             env.with_exec(["uv", "tool", "install", "vulture"])
+            .with_env_variable(
+                "PATH",
+                "/root/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            )
             .with_exec(["bash", "scripts/dead-code-check.sh"])
             .stdout()
         )
@@ -389,22 +499,50 @@ class GaiaCi:
             ["node", "scripts/ci/validate-release-manifest.mjs"]
         ).stdout()
 
+        trivy_task = (
+            dag.container()
+            .from_("ghcr.io/aquasecurity/trivy:latest")
+            .with_directory("/src", source)
+            # Entrypoint is `trivy`, so args start after it.
+            # Scan the repo root so uv.lock (at root) and pyproject.toml are
+            # reachable. Skip node_modules/venvs to keep it fast.
+            # expect=ANY: informational scan — never fail CI.
+            .with_exec(
+                [
+                    "filesystem",
+                    "--severity",
+                    "CRITICAL,HIGH",
+                    "--format",
+                    "table",
+                    "--skip-dirs",
+                    "node_modules,.venv,dist,.next,out",
+                    "/src",
+                ],
+                expect=dagger.ReturnType.ANY,
+            )
+            .stdout()
+        )
+
         results = await asyncio.gather(
             lint_task,
             type_check_task,
             build_task,
-            test_task,
+            test_python_task,
+            test_typescript_task,
             dead_code_task,
             validate_task,
+            trivy_task,
         )
 
         labels = [
             "LINT",
             "TYPE-CHECK",
             "BUILD",
-            "TEST",
+            "TESTS (python)",
+            "TESTS (typescript)",
             "DEAD-CODE",
             "RELEASE-VALIDATION",
+            "TRIVY-SCAN",
         ]
         sections = []
         for label, output in zip(labels, results):

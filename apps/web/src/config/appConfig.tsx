@@ -3,7 +3,6 @@ import {
   BlushBrush02Icon,
   BookOpen02Icon,
   ConnectIcon,
-  CreditCardPosIcon,
   GlobalIcon,
   Home01Icon,
   Idea01Icon,
@@ -384,7 +383,7 @@ const getFooterSections = (): LinkSection[] => {
 export const footerSections = getFooterSections();
 
 // Direct access to link categories for navigation
-export const { main, product, resources, personas, company, connect, auth } =
+export const { main, product, resources, company, connect, auth } =
   appConfig.links;
 
 // Utility function to get description for a link by label
