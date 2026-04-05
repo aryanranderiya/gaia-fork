@@ -20,6 +20,7 @@ import {
   Layers01Icon,
   Logout02Icon,
   MapsIcon,
+  PackageOpenIcon,
   QuillWrite01Icon,
   Settings01Icon,
 } from "@icons";
@@ -36,6 +37,8 @@ import { Github } from "@/components/shared/icons";
 import { getLinkByLabel } from "@/config/appConfig";
 import { useUserSubscriptionStatus } from "@/features/pricing/hooks/usePricing";
 import ContactSupportModal from "@/features/support/components/ContactSupportModal";
+import { WhatsNewTimelineMenu } from "@/features/whats-new/components/WhatsNewTimelineMenu";
+import { useReleases } from "@/features/whats-new/hooks/useReleases";
 import {
   type PlatformInfo,
   usePlatformDetection,
@@ -58,6 +61,7 @@ interface MenuItem {
   external?: boolean;
   hasSubmenu?: boolean;
   iconColor?: string;
+  badge?: React.ReactNode;
   customClassNames?: {
     title?: string;
   };
@@ -85,7 +89,9 @@ export default function SettingsMenu({
   const [modalAction, setModalAction] = useState<ModalAction | null>(null);
   const { data: subscriptionStatus } = useUserSubscriptionStatus();
   const openPricingModal = usePricingModalStore((s) => s.openModal);
+  const { unseen: unseenReleases } = useReleases();
 
+  const whatsNewMenu = useNestedMenu();
   const resourcesMenu = useNestedMenu();
   const supportMenu = useNestedMenu();
   const downloadMenu = useNestedMenu();
@@ -248,6 +254,16 @@ export default function SettingsMenu({
       showDivider: false,
       items: [
         {
+          key: "whats-new",
+          label: "What's new",
+          icon: PackageOpenIcon,
+          hasSubmenu: true,
+          badge:
+            unseenReleases.length > 0 ? (
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+            ) : undefined,
+        },
+        {
           key: "download",
           label: `Download for ${currentPlatform.isMobile ? "Desktop" : currentPlatform.shortName.split(" ")[0]}`,
           icon: CloudDownloadIcon,
@@ -304,14 +320,16 @@ export default function SettingsMenu({
                 const iconColor =
                   item.iconColor || socialMediaColorMap[item.key];
 
-                // Handle nested menus (Download, Resources, and Support)
+                // Handle nested menus (What's new, Download, Resources, Support)
                 if (item.hasSubmenu) {
                   const menu =
-                    item.key === "download"
-                      ? downloadMenu
-                      : item.key === "resources"
-                        ? resourcesMenu
-                        : supportMenu;
+                    item.key === "whats-new"
+                      ? whatsNewMenu
+                      : item.key === "download"
+                        ? downloadMenu
+                        : item.key === "resources"
+                          ? resourcesMenu
+                          : supportMenu;
 
                   return (
                     <DropdownItem
@@ -323,7 +341,10 @@ export default function SettingsMenu({
                       className="text-zinc-400 transition hover:text-white"
                       startContent={Icon && <Icon className={iconClasses} />}
                       endContent={
-                        <ArrowRight01Icon className="h-4 w-4 text-zinc-500" />
+                        <div className="flex items-center gap-1.5">
+                          {item.badge}
+                          <ArrowRight01Icon className="h-4 w-4 text-zinc-500" />
+                        </div>
                       }
                     >
                       {item.label}
@@ -359,6 +380,15 @@ export default function SettingsMenu({
           ))}
         </DropdownMenu>
       </Dropdown>
+
+      <NestedMenuTooltip
+        isOpen={whatsNewMenu.isOpen}
+        onOpenChange={whatsNewMenu.setIsOpen}
+        itemRef={whatsNewMenu.itemRef}
+        customContent={
+          <WhatsNewTimelineMenu onClose={() => whatsNewMenu.setIsOpen(false)} />
+        }
+      />
 
       <NestedMenuTooltip
         isOpen={resourcesMenu.isOpen}

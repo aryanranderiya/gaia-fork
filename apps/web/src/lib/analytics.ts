@@ -144,6 +144,14 @@ export const ANALYTICS_EVENTS = {
   // Error events
   ERROR_OCCURRED: "error:occurred",
   API_ERROR: "api:error",
+
+  // What's new events
+  WHATS_NEW_CARD_SHOWN: "whats_new:card_shown",
+  WHATS_NEW_CARD_CLICKED: "whats_new:card_clicked",
+  WHATS_NEW_CARD_DISMISSED: "whats_new:card_dismissed",
+  WHATS_NEW_MODAL_OPENED: "whats_new:modal_opened",
+  WHATS_NEW_SLIDE_VIEWED: "whats_new:slide_viewed",
+  WHATS_NEW_DOCS_CLICKED: "whats_new:docs_clicked",
 } as const;
 
 export type AnalyticsEvent =
