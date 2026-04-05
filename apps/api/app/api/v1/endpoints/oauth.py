@@ -6,6 +6,14 @@ import httpx
 from shared.py.wide_events import log
 from app.config.oauth_config import get_integration_by_config
 from app.config.settings import settings
+from app.constants.auth import (
+    DESKTOP_DEEP_LINK,
+    MOBILE_DEEP_LINK,
+    OAUTH_FLOW_DESKTOP,
+    OAUTH_FLOW_MOBILE,
+    OAUTH_FLOW_WEB,
+    WOS_SESSION_COOKIE,
+)
 from app.constants.cache import MOBILE_REDIRECT_TTL
 from app.db.redis import redis_cache
 from app.helpers.mcp_helpers import get_api_base_url
@@ -110,10 +118,10 @@ async def login_workos_mobile(redirect_uri: Optional[str] = None):
 
     # Store the mobile app's redirect URI
     # Default to gaiamobile:// scheme if not provided
-    mobile_callback = redirect_uri or "gaiamobile://auth/callback"
+    mobile_callback = redirect_uri or MOBILE_DEEP_LINK
     await _store_mobile_redirect(state, mobile_callback)
 
-    log.set(oauth_flow_type="mobile")
+    log.set(oauth_flow_type=OAUTH_FLOW_MOBILE)
     log.info(
         f"Mobile OAuth started with redirect_uri: {mobile_callback}, state: {state[:8]}..."
     )
@@ -141,12 +149,12 @@ async def workos_mobile_callback(
         mobile_redirect = await _get_and_delete_mobile_redirect(state)
 
     if not mobile_redirect:
-        mobile_redirect = "gaiamobile://auth/callback"
+        mobile_redirect = MOBILE_DEEP_LINK
         log.warning(
             f"No stored redirect URI for state, using default: {mobile_redirect}"
         )
 
-    log.set(oauth_flow_type="mobile")
+    log.set(oauth_flow_type=OAUTH_FLOW_MOBILE)
     log.info(f"Mobile OAuth callback, redirecting to: {mobile_redirect}")
 
     try:
@@ -229,12 +237,12 @@ async def workos_desktop_callback(
     Returns:
         RedirectResponse to gaia:// deep link with token
     """
-    log.set(oauth_flow_type="desktop")
+    log.set(oauth_flow_type=OAUTH_FLOW_DESKTOP)
     try:
         # Validate code parameter
         if not code:
             log.error("No authorization code received from WorkOS (desktop)")
-            return RedirectResponse(url="gaia://auth/callback?error=missing_code")
+            return RedirectResponse(url=f"{DESKTOP_DEEP_LINK}?error=missing_code")
 
         auth_response = workos.user_management.authenticate_with_code(
             code=code,
@@ -269,16 +277,16 @@ async def workos_desktop_callback(
         # Return token via deep link - desktop app will handle storage
         token = auth_response.sealed_session or auth_response.access_token
         return RedirectResponse(
-            url=f"gaia://auth/callback?token={quote(token, safe='')}"
+            url=f"{DESKTOP_DEEP_LINK}?token={quote(token, safe='')}"
         )
 
     except HTTPException as e:
         log.error(f"HTTP error during WorkOS desktop auth: {e.detail}")
-        return RedirectResponse(url=f"gaia://auth/callback?error={e.detail}")
+        return RedirectResponse(url=f"{DESKTOP_DEEP_LINK}?error={e.detail}")
 
     except Exception as e:
         log.error(f"Unexpected error during WorkOS desktop callback: {str(e)}")
-        return RedirectResponse(url="gaia://auth/callback?error=server_error")
+        return RedirectResponse(url=f"{DESKTOP_DEEP_LINK}?error=server_error")
 
 
 @router.get("/workos/callback")
@@ -304,7 +312,7 @@ async def workos_callback(
         if return_url:
             await redis_cache.client.delete(key)
 
-    log.set(oauth_flow_type="web")
+    log.set(oauth_flow_type=OAUTH_FLOW_WEB)
     try:
         # Validate code parameter
         if not code:
@@ -359,7 +367,7 @@ async def workos_callback(
 
         # Set cookies with appropriate security settings
         response.set_cookie(
-            key="wos_session",
+            key=WOS_SESSION_COOKIE,
             value=auth_response.sealed_session or auth_response.access_token,
             httponly=True,
             secure=settings.ENV == "production",

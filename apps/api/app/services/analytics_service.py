@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from shared.py.wide_events import log
+from app.constants.auth import LOGIN_METHOD_WORKOS
 from app.core.lazy_loader import providers
 
 
@@ -102,7 +103,7 @@ def track_signup(
     user_id: str,
     email: str,
     name: Optional[str] = None,
-    signup_method: str = "workos",
+    signup_method: str = LOGIN_METHOD_WORKOS,
     properties: Optional[dict[str, Any]] = None,
 ) -> None:
     """
@@ -145,7 +146,7 @@ def track_login(
     user_id: str,
     email: str,
     name: Optional[str] = None,
-    login_method: str = "workos",
+    login_method: str = LOGIN_METHOD_WORKOS,
     properties: Optional[dict[str, Any]] = None,
 ) -> None:
     """

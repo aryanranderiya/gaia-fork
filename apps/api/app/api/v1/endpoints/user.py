@@ -5,6 +5,7 @@ import pytz
 from app.api.v1.dependencies.oauth_dependencies import get_current_user
 from shared.py.wide_events import log
 from app.config.settings import settings
+from app.constants.auth import WOS_SESSION_COOKIE
 from app.db.mongodb.collections import users_collection
 from app.models.user_models import UserUpdateResponse
 from app.services.analytics_service import track_logout
@@ -318,7 +319,7 @@ async def logout(
     """
     Logout user and return logout URL for frontend redirection.
     """
-    wos_session = request.cookies.get("wos_session")
+    wos_session = request.cookies.get(WOS_SESSION_COOKIE)
 
     if not wos_session:
         raise HTTPException(status_code=401, detail="No active session")
@@ -352,7 +353,7 @@ async def logout(
 
         # Clear the session cookie
         response.delete_cookie(
-            "wos_session",
+            WOS_SESSION_COOKIE,
             httponly=True,
             path="/",
             secure=settings.ENV == "production",
