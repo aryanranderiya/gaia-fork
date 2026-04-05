@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import functools
 import time
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, Callable, Coroutine, TypeVar
 
 from prometheus_client import CollectorRegistry, Counter, Histogram, start_http_server
 
@@ -38,8 +38,8 @@ TASK_TOTAL = Counter(
 
 
 def instrument_task(
-    func: Callable[..., Awaitable[T]],
-) -> Callable[..., Awaitable[T]]:
+    func: Callable[..., Coroutine[Any, Any, T]],
+) -> Callable[..., Coroutine[Any, Any, T]]:
     """Wrap an ARQ task coroutine to record duration and outcome metrics."""
 
     task_name = func.__name__
