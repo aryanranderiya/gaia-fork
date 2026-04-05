@@ -18,6 +18,8 @@
  *   await handleStreamingChat(gaia, request, editMessage, onAuth, onErr,
  *     STREAMING_DEFAULTS.discord);
  */
+import type { Analytics } from "../../analytics";
+import { BOT_EVENTS } from "../../analytics/events/bots";
 import type { GaiaClient } from "../api";
 import type { ChatRequest } from "../types";
 import { formatBotError } from "./formatters";
@@ -249,16 +251,77 @@ export async function handleStreamingChat(
   onAuthError: (authUrl: string) => Promise<void>,
   onGenericError: (formattedError: string) => Promise<void>,
   options: StreamingOptions,
+  analytics?: Analytics,
 ): Promise<void> {
-  return _handleStream(
-    (onChunk, onDone, onError) =>
-      gaia.chatStream(request, onChunk, onDone, onError),
-    request,
-    gaia,
-    editMessage,
-    sendNewMessage,
-    onAuthError,
-    onGenericError,
-    options,
-  );
+  const distinctId = `${request.platform}:${request.platformUserId}`;
+  const startMs = Date.now();
+  let responseLength = 0;
+  let hadError = false;
+
+  analytics?.capture(distinctId, BOT_EVENTS.MESSAGE_RECEIVED, {
+    interaction_type: "chat",
+    channel_id: request.channelId,
+    message_length: request.message.length,
+  });
+
+  analytics?.capture(distinctId, BOT_EVENTS.CHAT_STARTED, {
+    channel_id: request.channelId,
+    message_length: request.message.length,
+    streaming_enabled: options.streaming,
+  });
+
+  const wrappedOnAuthError = async (authUrl: string) => {
+    // Auth failures are terminal — skip chat_completed in the finally block.
+    hadError = true;
+    await onAuthError(authUrl);
+  };
+
+  const wrappedOnGenericError = async (formattedError: string) => {
+    hadError = true;
+    // Do not ship the raw error string — it can contain paths, request IDs,
+    // or upstream-echoed tokens. `context` is enough to bucket failures.
+    analytics?.capture(distinctId, BOT_EVENTS.ERROR, {
+      context: "chat:streaming",
+      channel_id: request.channelId,
+      duration_ms: Date.now() - startMs,
+    });
+    await onGenericError(formattedError);
+  };
+
+  const streamFn = (
+    onChunk: (text: string) => void | Promise<void>,
+    onDone: (fullText: string, conversationId: string) => void | Promise<void>,
+    onError: (error: Error) => void | Promise<void>,
+  ) =>
+    gaia.chatStream(
+      request,
+      onChunk,
+      async (fullText, conversationId) => {
+        responseLength = fullText.length;
+        await onDone(fullText, conversationId);
+      },
+      onError,
+    );
+
+  try {
+    await _handleStream(
+      streamFn,
+      request,
+      gaia,
+      editMessage,
+      sendNewMessage,
+      wrappedOnAuthError,
+      wrappedOnGenericError,
+      options,
+    );
+  } finally {
+    if (!hadError) {
+      analytics?.capture(distinctId, BOT_EVENTS.CHAT_COMPLETED, {
+        channel_id: request.channelId,
+        duration_ms: Date.now() - startMs,
+        response_length: responseLength,
+        streaming_enabled: options.streaming,
+      });
+    }
+  }
 }
