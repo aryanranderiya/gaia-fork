@@ -13,9 +13,11 @@ import type React from "react";
 import { useRef, useState } from "react";
 import { authApi } from "@/features/auth/api/authApi";
 import { useUser, useUserActions } from "@/features/auth/hooks/useUser";
-import { SettingsPage } from "@/features/settings/components/ui/SettingsPage";
-import { SettingsRow } from "@/features/settings/components/ui/SettingsRow";
-import { SettingsSection } from "@/features/settings/components/ui/SettingsSection";
+import {
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+} from "@/features/settings/components/ui";
 import { toast } from "@/lib/toast";
 import type { ModalAction } from "./SettingsMenu";
 

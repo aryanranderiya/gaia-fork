@@ -42,7 +42,6 @@ from app.models.workflow_models import (  # noqa: E402
     TriggerType,
     WorkflowStep,
 )
-from shared.py.utils.slugify import slugify  # noqa: E402
 
 
 def generate_run_count() -> tuple[int, int]:
@@ -1331,7 +1330,6 @@ def create_workflow_document(config: dict[str, Any], user_id: str) -> dict[str, 
         "user_id": user_id,
         "title": config["title"],
         "description": config["description"],
-        "slug": slugify(config["title"]),
         "steps": steps,
         "trigger_config": trigger_config.model_dump(mode="json"),
         "activated": True,

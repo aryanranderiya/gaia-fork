@@ -8,19 +8,14 @@ export default function Spinner({
 } = {}) {
   if (variant === "logo")
     return (
-      <div className="animate-spin">
-        <Image
-          alt="GAIA Logo"
-          src={"/images/logos/logo.webp"}
-          width={30}
-          height={30}
-        />
-      </div>
+      <Image
+        alt="GAIA Logo"
+        src={"/images/logos/logo.webp"}
+        width={30}
+        height={30}
+        className={`animate-spin`}
+      />
     );
 
-  return (
-    <div className="animate-spin">
-      <RedoIcon className="text-[24px] text-zinc-700" />
-    </div>
-  );
+  return <RedoIcon className="animate-spin text-[24px] text-zinc-700" />;
 }

@@ -32,7 +32,9 @@ export default function DemoChatTab({ label, active }: DemoChatTabProps) {
       onMouseOver={() => setButtonHovered(true)}
     >
       <Button
-        className={`w-full justify-start px-2 text-sm font-light ${active ? "text-zinc-300" : "text-zinc-400 hover:text-zinc-300"}`}
+        className={`w-full justify-start px-2 text-sm font-light ${
+          active ? "text-zinc-300" : "text-zinc-400 hover:text-zinc-300"
+        }`}
         size="sm"
         variant={active ? "flat" : "light"}
       >
@@ -49,14 +51,18 @@ export default function DemoChatTab({ label, active }: DemoChatTabProps) {
           <DropdownTrigger>
             <button
               type="button"
-              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-700 hover:text-white ${buttonHovered ? "backdrop-blur-lg" : ""}`}
+              className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-zinc-400 hover:bg-zinc-700 hover:text-white ${
+                buttonHovered ? "backdrop-blur-lg" : ""
+              }`}
               onClick={(e) => e.stopPropagation()}
               aria-label="Chat options"
             >
               <MoreVerticalIcon
                 width={16}
                 height={16}
-                className={`transition-all ${buttonHovered ? "opacity-100" : "opacity-0"}`}
+                className={`transition-all ${
+                  buttonHovered ? "opacity-100" : "opacity-0"
+                }`}
               />
             </button>
           </DropdownTrigger>

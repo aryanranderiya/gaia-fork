@@ -76,10 +76,9 @@ const CATEGORY_ORDER = [
 export default async function LearnHubPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, allTerms] = await Promise.all([
-    getTranslations({ locale, namespace: "glossary" }),
-    getAllTranslatedGlossaryTerms(locale),
-  ]);
+  const t = await getTranslations({ locale, namespace: "glossary" });
+
+  const allTerms = await getAllTranslatedGlossaryTerms(locale);
 
   const webPageSchema = generateWebPageSchema(
     t("hub_title"),

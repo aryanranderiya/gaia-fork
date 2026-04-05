@@ -8,8 +8,8 @@
  * 3. convertToTelegramMarkdown: the formatter applied to all outbound messages.
  */
 
+import { describe, it, expect } from "vitest";
 import { convertToTelegramMarkdown } from "@gaia/shared";
-import { describe, expect, it } from "vitest";
 import {
   hasTelegramMention,
   stripTelegramMention,
@@ -17,10 +17,7 @@ import {
 
 describe("Telegram mention detection", () => {
   it("strips @BotName mention at start", () => {
-    const result = stripTelegramMention(
-      "@GaiaBot what is the weather",
-      "GaiaBot",
-    );
+    const result = stripTelegramMention("@GaiaBot what is the weather", "GaiaBot");
     expect(result).toBe("what is the weather");
   });
 
@@ -44,10 +41,7 @@ describe("Telegram mention detection", () => {
 
   it("strips mention anywhere in message", () => {
     // replaceAll removes all occurrences regardless of position.
-    const result = stripTelegramMention(
-      "hey @GaiaBot what time is it",
-      "GaiaBot",
-    );
+    const result = stripTelegramMention("hey @GaiaBot what time is it", "GaiaBot");
     expect(result).toBe("hey  what time is it".trim());
   });
 

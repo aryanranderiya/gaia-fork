@@ -10,8 +10,7 @@ import DOMPurify from "dompurify";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { Gmail } from "@/components/shared/icons";
-import { Separator } from "@/components/ui/separator";
+import { Gmail, Separator } from "@/components";
 import { mailApi } from "@/features/mail/api/mailApi";
 import { toast } from "@/lib/toast";
 
@@ -286,7 +285,7 @@ export default function EmailComposeCard({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.issues.forEach((err) => {
+        error.errors.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0].toString()] = err.message;
           }
@@ -304,7 +303,7 @@ export default function EmailComposeCard({
       return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        setCustomEmailError(error.issues[0]?.message || "Invalid email");
+        setCustomEmailError(error.errors[0]?.message || "Invalid email");
       }
       return false;
     }

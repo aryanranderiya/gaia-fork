@@ -19,7 +19,7 @@
  * 10. handleTelegramStreaming — unknown/unauthenticated chat (no chatId) returns early
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mock grammy before importing the adapter so the module sees the mocks.
@@ -73,16 +73,12 @@ vi.mock("@gaia/shared", () => {
     protected async dispatchCommand(
       name: string,
       target: {
-        sendEphemeral: (
-          t: string,
-        ) => Promise<{ id: string; edit: (t: string) => Promise<void> }>;
+        sendEphemeral: (t: string) => Promise<{ id: string; edit: (t: string) => Promise<void> }>;
       },
       args: Record<string, string | number | boolean | undefined> = {},
       rawText?: string,
     ) {
-      const cmd = (
-        this.commands as Map<string, { execute: (p: unknown) => Promise<void> }>
-      ).get(name);
+      const cmd = (this.commands as Map<string, { execute: (p: unknown) => Promise<void> }>).get(name);
       if (!cmd) {
         await target.sendEphemeral(`Unknown command: /${name}`);
         return;
@@ -111,16 +107,10 @@ vi.mock("@gaia/shared", () => {
     ),
     handleStreamingChat: vi.fn().mockResolvedValue(undefined),
     STREAMING_DEFAULTS: {
-      telegram: {
-        editIntervalMs: 1200,
-        streaming: false,
-        platform: "telegram",
-      },
+      telegram: { editIntervalMs: 1200, streaming: false, platform: "telegram" },
     },
     convertToTelegramMarkdown: vi.fn((t: string) => t),
-    richMessageToMarkdown: vi
-      .fn()
-      .mockReturnValue("**GAIA Settings**\nYour settings"),
+    richMessageToMarkdown: vi.fn().mockReturnValue("**GAIA Settings**\nYour settings"),
     parseTextArgs: vi.fn((text: string) => ({
       subcommand: text.split(" ")[0] || undefined,
     })),
@@ -131,12 +121,12 @@ vi.mock("@gaia/shared", () => {
 // Now import the real adapter (which will use the mocks above).
 // ---------------------------------------------------------------------------
 
+import { TelegramAdapter } from "../../telegram/src/adapter";
 import {
-  convertToTelegramMarkdown,
   handleStreamingChat,
+  convertToTelegramMarkdown,
   richMessageToMarkdown,
 } from "@gaia/shared";
-import { TelegramAdapter } from "../../telegram/src/adapter";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -146,22 +136,20 @@ import { TelegramAdapter } from "../../telegram/src/adapter";
  * Builds a minimal grammy Context mock.
  * chat.type defaults to "private" unless overridden.
  */
-function makeCtx(
-  overrides: {
-    chatId?: number;
-    chatType?: "private" | "group" | "supergroup";
-    userId?: number;
-    text?: string;
-    match?: string;
-    fromFirstName?: string;
-    fromLastName?: string;
-    fromUsername?: string;
-    replyFn?: ReturnType<typeof vi.fn>;
-    editMessageTextFn?: ReturnType<typeof vi.fn>;
-    sendMessageFn?: ReturnType<typeof vi.fn>;
-    sendChatActionFn?: ReturnType<typeof vi.fn>;
-  } = {},
-) {
+function makeCtx(overrides: {
+  chatId?: number;
+  chatType?: "private" | "group" | "supergroup";
+  userId?: number;
+  text?: string;
+  match?: string;
+  fromFirstName?: string;
+  fromLastName?: string;
+  fromUsername?: string;
+  replyFn?: ReturnType<typeof vi.fn>;
+  editMessageTextFn?: ReturnType<typeof vi.fn>;
+  sendMessageFn?: ReturnType<typeof vi.fn>;
+  sendChatActionFn?: ReturnType<typeof vi.fn>;
+} = {}) {
   const {
     chatId = 123456,
     chatType = "private",
@@ -222,10 +210,6 @@ describe("TelegramAdapter - platform identity", () => {
 
 describe("TelegramAdapter - group mention message handling (registerEvents)", () => {
   let adapter: TelegramAdapter;
-  // Retrieved once in beforeEach after registerEvents() registers it via bot.on("message:text", ...)
-  let onHandler:
-    | ((ctx: ReturnType<typeof makeCtx>) => Promise<void>)
-    | undefined;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -234,11 +218,6 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
     await (
       adapter as unknown as { registerEvents: () => Promise<void> }
     ).registerEvents();
-    onHandler = vi
-      .mocked(mockBotOn)
-      .mock.calls.find((c) => c[0] === "message:text")?.[1] as
-      | ((ctx: ReturnType<typeof makeCtx>) => Promise<void>)
-      | undefined;
   });
 
   afterEach(() => {
@@ -246,6 +225,11 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
   });
 
   it("strips @botUsername from group message and streams the cleaned content", async () => {
+    // Retrieve the handler registered via bot.on("message:text", ...)
+    const onHandler = vi.mocked(mockBotOn).mock.calls.find(
+      (c) => c[0] === "message:text",
+    )?.[1] as ((ctx: ReturnType<typeof makeCtx>) => Promise<void>) | undefined;
+
     expect(onHandler).toBeDefined();
 
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
@@ -255,7 +239,7 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
       replyFn,
     });
 
-    await onHandler!(ctx); // NOSONAR — non-null assertion needed; type includes undefined from find()?.[1]
+    await onHandler!(ctx);
 
     // handleStreamingChat must be called with the mention stripped
     expect(handleStreamingChat).toHaveBeenCalledWith(
@@ -275,6 +259,10 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
   });
 
   it("replies 'How can I help you?' when mention text is empty after stripping", async () => {
+    const onHandler = vi.mocked(mockBotOn).mock.calls.find(
+      (c) => c[0] === "message:text",
+    )?.[1] as ((ctx: ReturnType<typeof makeCtx>) => Promise<void>) | undefined;
+
     expect(onHandler).toBeDefined();
 
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
@@ -291,6 +279,10 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
   });
 
   it("ignores group messages that do not mention the bot", async () => {
+    const onHandler = vi.mocked(mockBotOn).mock.calls.find(
+      (c) => c[0] === "message:text",
+    )?.[1] as ((ctx: ReturnType<typeof makeCtx>) => Promise<void>) | undefined;
+
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
     const ctx = makeCtx({
       chatType: "group",
@@ -305,6 +297,10 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
   });
 
   it("routes private chat messages directly to handleTelegramStreaming", async () => {
+    const onHandler = vi.mocked(mockBotOn).mock.calls.find(
+      (c) => c[0] === "message:text",
+    )?.[1] as ((ctx: ReturnType<typeof makeCtx>) => Promise<void>) | undefined;
+
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
     const ctx = makeCtx({
       chatType: "private",
@@ -312,7 +308,7 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
       replyFn,
     });
 
-    await onHandler!(ctx); // NOSONAR — non-null assertion needed; type includes undefined from find()?.[1]
+    await onHandler!(ctx);
 
     expect(handleStreamingChat).toHaveBeenCalledWith(
       expect.anything(),
@@ -329,6 +325,10 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
   });
 
   it("skips messages that start with a command prefix '/'", async () => {
+    const onHandler = vi.mocked(mockBotOn).mock.calls.find(
+      (c) => c[0] === "message:text",
+    )?.[1] as ((ctx: ReturnType<typeof makeCtx>) => Promise<void>) | undefined;
+
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
     const ctx = makeCtx({
       chatType: "private",
@@ -336,7 +336,7 @@ describe("TelegramAdapter - group mention message handling (registerEvents)", ()
       replyFn,
     });
 
-    await onHandler!(ctx); // NOSONAR — non-null assertion needed; type includes undefined from find()?.[1]
+    await onHandler!(ctx);
 
     expect(handleStreamingChat).not.toHaveBeenCalled();
   });
@@ -360,13 +360,8 @@ describe("TelegramAdapter - createCtxTarget.send", () => {
 
     const target = (
       adapter as unknown as {
-        createCtxTarget: (
-          ctx: typeof ctx,
-          userId: string,
-        ) => {
-          send: (
-            text: string,
-          ) => Promise<{ id: string; edit: (t: string) => Promise<void> }>;
+        createCtxTarget: (ctx: typeof ctx, userId: string) => {
+          send: (text: string) => Promise<{ id: string; edit: (t: string) => Promise<void> }>;
           platform: string;
           userId: string;
           channelId?: string;
@@ -393,10 +388,7 @@ describe("TelegramAdapter - createCtxTarget.send", () => {
 
     const target = (
       adapter as unknown as {
-        createCtxTarget: (
-          ctx: typeof ctx,
-          userId: string,
-        ) => {
+        createCtxTarget: (ctx: typeof ctx, userId: string) => {
           send: (text: string) => Promise<{ id: string }>;
         };
       }
@@ -415,10 +407,7 @@ describe("TelegramAdapter - createCtxTarget.send", () => {
 
     const target = (
       adapter as unknown as {
-        createCtxTarget: (
-          ctx: typeof ctx,
-          userId: string,
-        ) => {
+        createCtxTarget: (ctx: typeof ctx, userId: string) => {
           platform: string;
           userId: string;
           channelId?: string;
@@ -446,10 +435,7 @@ describe("TelegramAdapter - createCtxTarget.sendRich", () => {
 
     const target = (
       adapter as unknown as {
-        createCtxTarget: (
-          ctx: typeof ctx,
-          userId: string,
-        ) => {
+        createCtxTarget: (ctx: typeof ctx, userId: string) => {
           sendRich: (msg: object) => Promise<{ id: string }>;
         };
       }
@@ -541,12 +527,7 @@ describe("TelegramAdapter - handleTelegramStreaming (streaming setup)", () => {
     // Build a ctx where chat is undefined — adapter must not proceed
     const ctx = {
       chat: undefined,
-      from: {
-        id: 999,
-        first_name: "Alice",
-        last_name: undefined,
-        username: "aliceuser",
-      },
+      from: { id: 999, first_name: "Alice", last_name: undefined, username: "aliceuser" },
       message: { text: "hello", message_id: 10 },
       match: "",
       reply: replyFn,
@@ -559,17 +540,9 @@ describe("TelegramAdapter - handleTelegramStreaming (streaming setup)", () => {
 
     await (
       adapter as unknown as {
-        handleTelegramStreaming: (
-          ctx: typeof ctx,
-          userId: string,
-          message: string,
-        ) => Promise<void>;
+        handleTelegramStreaming: (ctx: typeof ctx, userId: string, message: string) => Promise<void>;
       }
-    ).handleTelegramStreaming(
-      ctx as unknown as ReturnType<typeof makeCtx>,
-      "999",
-      "hello",
-    );
+    ).handleTelegramStreaming(ctx as unknown as ReturnType<typeof makeCtx>, "999", "hello");
 
     expect(replyFn).not.toHaveBeenCalled();
     expect(handleStreamingChat).not.toHaveBeenCalled();
@@ -592,16 +565,16 @@ describe("TelegramAdapter - markdown fallback retry (editMessage callback)", () 
     const editMessageTextFn = vi
       .fn()
       .mockRejectedValueOnce(
-        new Error(
-          "Bad Request: can't parse entities: Character '@' is reserved",
-        ),
+        new Error("Bad Request: can't parse entities: Character '@' is reserved"),
       )
       .mockResolvedValueOnce({});
 
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
     const ctx = makeCtx({ chatId: 100, replyFn, editMessageTextFn });
 
-    let capturedEditCallback: ((text: string) => Promise<void>) | undefined;
+    let capturedEditCallback:
+      | ((text: string) => Promise<void>)
+      | undefined;
 
     vi.mocked(handleStreamingChat).mockImplementationOnce(
       async (_gaia, _req, editMessage) => {
@@ -645,12 +618,16 @@ describe("TelegramAdapter - markdown fallback retry (editMessage callback)", () 
   it("does NOT retry for 'message is not modified' errors (returns silently)", async () => {
     const editMessageTextFn = vi
       .fn()
-      .mockRejectedValueOnce(new Error("Bad Request: message is not modified"));
+      .mockRejectedValueOnce(
+        new Error("Bad Request: message is not modified"),
+      );
 
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
     const ctx = makeCtx({ chatId: 100, replyFn, editMessageTextFn });
 
-    let capturedEditCallback: ((text: string) => Promise<void>) | undefined;
+    let capturedEditCallback:
+      | ((text: string) => Promise<void>)
+      | undefined;
 
     vi.mocked(handleStreamingChat).mockImplementationOnce(
       async (_gaia, _req, editMessage) => {
@@ -684,18 +661,16 @@ describe("TelegramAdapter - markdown fallback retry (editMessage callback)", () 
     //   3rd call: ctx.reply(text)           → succeeds (message_id: 99, fallback)
     const replyFn = vi
       .fn()
-      .mockResolvedValueOnce({ message_id: 42 }) // Thinking...
+      .mockResolvedValueOnce({ message_id: 42 })          // Thinking...
       .mockRejectedValueOnce(
         new Error("Bad Request: can't parse entities in bold text"),
       )
-      .mockResolvedValueOnce({ message_id: 99 }); // plain fallback
+      .mockResolvedValueOnce({ message_id: 99 });          // plain fallback
 
     const ctx = makeCtx({ chatId: 100, replyFn });
 
     let capturedSendNewMessage:
-      | ((
-          text: string,
-        ) => Promise<((updated: string) => Promise<void>) | undefined>)
+      | ((text: string) => Promise<((updated: string) => Promise<void>) | undefined>)
       | undefined;
 
     vi.mocked(handleStreamingChat).mockImplementationOnce(
@@ -749,26 +724,23 @@ describe("TelegramAdapter - registerCommands command routing", () => {
       options: [],
       execute: todoExecute,
     };
-    (adapter as unknown as { commands: Map<string, unknown> }).commands.set(
-      "todo",
-      todoCommand,
-    );
+    (
+      adapter as unknown as { commands: Map<string, unknown> }
+    ).commands.set("todo", todoCommand);
 
     await (
       adapter as unknown as {
-        registerCommands: (cmds: (typeof todoCommand)[]) => Promise<void>;
+        registerCommands: (cmds: typeof todoCommand[]) => Promise<void>;
       }
     ).registerCommands([todoCommand]);
 
     // Find the handler registered for "todo"
-    const todoCall = vi
-      .mocked(mockBotCommand)
-      .mock.calls.find((c) => c[0] === "todo");
+    const todoCall = vi.mocked(mockBotCommand).mock.calls.find(
+      (c) => c[0] === "todo",
+    );
     expect(todoCall).toBeDefined();
 
-    const todoHandler = todoCall![1] as (
-      ctx: ReturnType<typeof makeCtx>,
-    ) => Promise<void>;
+    const todoHandler = todoCall![1] as (ctx: ReturnType<typeof makeCtx>) => Promise<void>;
 
     const ctx = makeCtx({ match: "list" });
     await todoHandler(ctx);
@@ -789,25 +761,22 @@ describe("TelegramAdapter - registerCommands command routing", () => {
       options: [],
       execute: helpExecute,
     };
-    (adapter as unknown as { commands: Map<string, unknown> }).commands.set(
-      "help",
-      helpCommand,
-    );
+    (
+      adapter as unknown as { commands: Map<string, unknown> }
+    ).commands.set("help", helpCommand);
 
     await (
       adapter as unknown as {
-        registerCommands: (cmds: (typeof helpCommand)[]) => Promise<void>;
+        registerCommands: (cmds: typeof helpCommand[]) => Promise<void>;
       }
     ).registerCommands([helpCommand]);
 
-    const startCall = vi
-      .mocked(mockBotCommand)
-      .mock.calls.find((c) => c[0] === "start");
+    const startCall = vi.mocked(mockBotCommand).mock.calls.find(
+      (c) => c[0] === "start",
+    );
     expect(startCall).toBeDefined();
 
-    const startHandler = startCall![1] as (
-      ctx: ReturnType<typeof makeCtx>,
-    ) => Promise<void>;
+    const startHandler = startCall![1] as (ctx: ReturnType<typeof makeCtx>) => Promise<void>;
     const ctx = makeCtx();
     await startHandler(ctx);
 
@@ -824,14 +793,14 @@ describe("TelegramAdapter - registerCommands command routing", () => {
 
     await (
       adapter as unknown as {
-        registerCommands: (cmds: (typeof gaiaCommand)[]) => Promise<void>;
+        registerCommands: (cmds: typeof gaiaCommand[]) => Promise<void>;
       }
     ).registerCommands([gaiaCommand]);
 
     // 'gaia' should be registered via bot.command("gaia", ...) from registerGaiaCommand
-    const gaiaCalls = vi
-      .mocked(mockBotCommand)
-      .mock.calls.filter((c) => c[0] === "gaia");
+    const gaiaCalls = vi.mocked(mockBotCommand).mock.calls.filter(
+      (c) => c[0] === "gaia",
+    );
     expect(gaiaCalls.length).toBeGreaterThanOrEqual(1);
   });
 });
@@ -845,9 +814,7 @@ describe("TelegramAdapter - dispatchCommand error recovery", () => {
     vi.clearAllMocks();
     const adapter = makeAdapter();
 
-    const sendEphemeralFn = vi
-      .fn()
-      .mockResolvedValue({ id: "x", edit: vi.fn() });
+    const sendEphemeralFn = vi.fn().mockResolvedValue({ id: "x", edit: vi.fn() });
     const target = {
       platform: "telegram" as const,
       userId: "999",
@@ -860,13 +827,14 @@ describe("TelegramAdapter - dispatchCommand error recovery", () => {
 
     await (
       adapter as unknown as {
-        dispatchCommand: (name: string, target: typeof target) => Promise<void>;
+        dispatchCommand: (
+          name: string,
+          target: typeof target,
+        ) => Promise<void>;
       }
     ).dispatchCommand("nonexistent", target);
 
-    expect(sendEphemeralFn).toHaveBeenCalledWith(
-      "Unknown command: /nonexistent",
-    );
+    expect(sendEphemeralFn).toHaveBeenCalledWith("Unknown command: /nonexistent");
   });
 
   it("sends ephemeral error when a registered command throws", async () => {
@@ -879,14 +847,11 @@ describe("TelegramAdapter - dispatchCommand error recovery", () => {
       options: [],
       execute: vi.fn().mockRejectedValue(new Error("something blew up")),
     };
-    (adapter as unknown as { commands: Map<string, unknown> }).commands.set(
-      "broken",
-      throwingCommand,
-    );
+    (
+      adapter as unknown as { commands: Map<string, unknown> }
+    ).commands.set("broken", throwingCommand);
 
-    const sendEphemeralFn = vi
-      .fn()
-      .mockResolvedValue({ id: "e", edit: vi.fn() });
+    const sendEphemeralFn = vi.fn().mockResolvedValue({ id: "e", edit: vi.fn() });
     const target = {
       platform: "telegram" as const,
       userId: "999",
@@ -899,7 +864,10 @@ describe("TelegramAdapter - dispatchCommand error recovery", () => {
 
     await (
       adapter as unknown as {
-        dispatchCommand: (name: string, target: typeof target) => Promise<void>;
+        dispatchCommand: (
+          name: string,
+          target: typeof target,
+        ) => Promise<void>;
       }
     ).dispatchCommand("broken", target);
 
@@ -923,34 +891,20 @@ describe("TelegramAdapter - /gaia command", () => {
     // registerGaiaCommand is private; trigger it by registering a gaia command.
     await (
       adapter as unknown as {
-        registerCommands: (
-          cmds: {
-            name: string;
-            description: string;
-            options: unknown[];
-            execute: ReturnType<typeof vi.fn>;
-          }[],
-        ) => Promise<void>;
+        registerCommands: (cmds: { name: string; description: string; options: unknown[]; execute: ReturnType<typeof vi.fn> }[]) => Promise<void>;
       }
     ).registerCommands([
-      {
-        name: "gaia",
-        description: "Chat with GAIA",
-        options: [],
-        execute: vi.fn(),
-      },
+      { name: "gaia", description: "Chat with GAIA", options: [], execute: vi.fn() },
     ]);
   });
 
   it("sends 'Usage: /gaia <your message>' when invoked with no text", async () => {
-    const gaiaCall = vi
-      .mocked(mockBotCommand)
-      .mock.calls.find((c) => c[0] === "gaia");
+    const gaiaCall = vi.mocked(mockBotCommand).mock.calls.find(
+      (c) => c[0] === "gaia",
+    );
     expect(gaiaCall).toBeDefined();
 
-    const gaiaHandler = gaiaCall![1] as (
-      ctx: ReturnType<typeof makeCtx>,
-    ) => Promise<void>;
+    const gaiaHandler = gaiaCall![1] as (ctx: ReturnType<typeof makeCtx>) => Promise<void>;
     const replyFn = vi.fn().mockResolvedValue({ message_id: 10 });
     const ctx = makeCtx({ match: "", replyFn });
 
@@ -961,12 +915,10 @@ describe("TelegramAdapter - /gaia command", () => {
   });
 
   it("streams when /gaia is invoked with a message", async () => {
-    const gaiaCall = vi
-      .mocked(mockBotCommand)
-      .mock.calls.find((c) => c[0] === "gaia");
-    const gaiaHandler = gaiaCall![1] as (
-      ctx: ReturnType<typeof makeCtx>,
-    ) => Promise<void>;
+    const gaiaCall = vi.mocked(mockBotCommand).mock.calls.find(
+      (c) => c[0] === "gaia",
+    );
+    const gaiaHandler = gaiaCall![1] as (ctx: ReturnType<typeof makeCtx>) => Promise<void>;
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
     const ctx = makeCtx({ match: "remind me to call dentist", replyFn });
 
@@ -1000,11 +952,9 @@ describe("TelegramAdapter - unauthenticated / unknown chat handling", () => {
       adapter as unknown as { registerEvents: () => Promise<void> }
     ).registerEvents();
 
-    const onHandler = vi
-      .mocked(mockBotOn)
-      .mock.calls.find((c) => c[0] === "message:text")?.[1] as
-      | ((ctx: unknown) => Promise<void>)
-      | undefined;
+    const onHandler = vi.mocked(mockBotOn).mock.calls.find(
+      (c) => c[0] === "message:text",
+    )?.[1] as ((ctx: unknown) => Promise<void>) | undefined;
 
     expect(onHandler).toBeDefined();
 
@@ -1032,12 +982,7 @@ describe("TelegramAdapter - unauthenticated / unknown chat handling", () => {
 
     const editMessageTextFn = vi.fn().mockResolvedValue({});
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
-    const ctx = makeCtx({
-      chatId: 500,
-      chatType: "private",
-      replyFn,
-      editMessageTextFn,
-    });
+    const ctx = makeCtx({ chatId: 500, chatType: "private", replyFn, editMessageTextFn });
 
     let capturedAuthError: ((authUrl: string) => Promise<void>) | undefined;
 
@@ -1075,12 +1020,7 @@ describe("TelegramAdapter - unauthenticated / unknown chat handling", () => {
 
     const editMessageTextFn = vi.fn().mockResolvedValue({});
     const replyFn = vi.fn().mockResolvedValue({ message_id: 42 });
-    const ctx = makeCtx({
-      chatId: 600,
-      chatType: "private",
-      replyFn,
-      editMessageTextFn,
-    });
+    const ctx = makeCtx({ chatId: 600, chatType: "private", replyFn, editMessageTextFn });
 
     let capturedGenericError: ((errMsg: string) => Promise<void>) | undefined;
 

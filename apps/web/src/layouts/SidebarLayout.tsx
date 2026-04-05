@@ -1,7 +1,7 @@
 import { Kbd } from "@heroui/kbd";
 import { SidebarLeft01Icon, SidebarRight01Icon } from "@icons";
 import type { ReactNode } from "react";
-import { SidebarHeaderButton } from "@/components/layout/headers/HeaderManager";
+import { SidebarHeaderButton } from "@/components";
 import ContactSupport from "@/components/layout/sidebar/ContactSupport";
 import SidebarTopButtons from "@/components/layout/sidebar/SidebarTopButtons";
 import UserContainer from "@/components/layout/sidebar/UserContainer";
@@ -16,7 +16,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { usePlatform } from "@/hooks/ui/usePlatform";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 interface SidebarLayoutProps {
   children: ReactNode;
@@ -27,18 +26,9 @@ export const CustomSidebarTrigger = () => {
   const { open, toggleSidebar } = useSidebar();
   const { isMac } = usePlatform();
 
-  const handleToggle = () => {
-    trackEvent(
-      open
-        ? ANALYTICS_EVENTS.UI_SIDEBAR_COLLAPSED
-        : ANALYTICS_EVENTS.UI_SIDEBAR_EXPANDED,
-    );
-    toggleSidebar();
-  };
-
   return (
     <SidebarHeaderButton
-      onClick={handleToggle}
+      onClick={toggleSidebar}
       aria-label="Toggle Sidebar"
       tooltip={
         <span className="flex items-center gap-2 text-xs">

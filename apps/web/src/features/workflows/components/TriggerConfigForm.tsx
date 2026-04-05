@@ -4,13 +4,13 @@ import { useEffect, useMemo } from "react";
 
 import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
 import { TriggerAutocomplete } from "@/features/workflows/components/TriggerAutocomplete";
-import { useTriggerSchemas } from "@/features/workflows/triggers/hooks/useTriggerSchemas";
 import {
   createDefaultTriggerConfig,
+  findTriggerSchema,
   getTriggerHandler,
-} from "@/features/workflows/triggers/registry";
-import type { TriggerConfig } from "@/features/workflows/triggers/types";
-import { findTriggerSchema } from "@/features/workflows/triggers/utils";
+  type TriggerConfig,
+  useTriggerSchemas,
+} from "@/features/workflows/triggers";
 
 interface TriggerConfigFormProps {
   selectedTrigger: string;

@@ -110,13 +110,12 @@ function ToolFavicon({
 export default async function AutomateHubPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, tCommon, allCombosRaw] = await Promise.all([
-    getTranslations({ locale, namespace: "automate" }),
-    getTranslations({ locale, namespace: "common" }),
-    getTranslatedCombos(locale),
-  ]);
+  const t = await getTranslations({ locale, namespace: "automate" });
+  const tCommon = await getTranslations({ locale, namespace: "common" });
 
-  const allCombos = allCombosRaw.filter((c) => !c.canonicalSlug);
+  const allCombos = (await getTranslatedCombos(locale)).filter(
+    (c) => !c.canonicalSlug,
+  );
 
   const webPageSchema = generateWebPageSchema(
     t("hub_title"),

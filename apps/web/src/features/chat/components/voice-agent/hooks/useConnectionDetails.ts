@@ -1,7 +1,6 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { apiService } from "@/lib/api/service";
+import { apiService } from "@/lib/api";
 
 function decodeJwtPayload(token: string) {
   if (!token) return {};
@@ -24,7 +23,6 @@ function isTokenExpired(token: string, offsetMs = 60000) {
 }
 
 const ONE_MINUTE_IN_MILLISECONDS = 60 * 1000;
-
 export type ConnectionDetails = {
   serverUrl: string;
   roomName: string;
@@ -33,41 +31,32 @@ export type ConnectionDetails = {
   participantName: string;
   agentToken: string;
 };
-
-const fetchDetails = async (
-  conversationId?: string,
-): Promise<ConnectionDetails> => {
-  return apiService.get<ConnectionDetails>(
-    conversationId ? `/token?conversationId=${conversationId}` : "/token",
-    {
-      errorMessage: "Failed to initiate livekit room",
-    },
-  );
-};
-
 export default function useConnectionDetails(
   conversationId?: string | undefined,
 ) {
-  const queryClient = useQueryClient();
-  const queryKey = ["connectionDetails", conversationId ?? "default"];
+  const [connectionDetails, setConnectionDetails] =
+    useState<ConnectionDetails | null>(null);
 
-  const { data: connectionDetails = null } = useQuery({
-    queryKey,
-    queryFn: () => fetchDetails(conversationId),
-    staleTime: 0, // Always considered stale so refresh logic works
-    gcTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: true,
-  });
+  const fetchConnectionDetails = useCallback(async () => {
+    setConnectionDetails(null);
+    try {
+      const data = await apiService.get<ConnectionDetails>(
+        conversationId ? `/token?conversationId=${conversationId}` : "/token",
+        {
+          errorMessage: "Failed to initiate livekit room",
+        },
+      );
+      setConnectionDetails(data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching connection details:", error);
+      throw new Error("Error fetching connection details!");
+    }
+  }, [conversationId]);
 
-  const refreshConnectionDetails = useCallback(async () => {
-    const result = await queryClient.fetchQuery({
-      queryKey,
-      queryFn: () => fetchDetails(conversationId),
-      staleTime: 0,
-    });
-    return result;
-  }, [queryClient, queryKey, conversationId]);
+  useEffect(() => {
+    fetchConnectionDetails();
+  }, [fetchConnectionDetails]);
 
   const isConnectionDetailsExpired = useCallback(() => {
     const token = connectionDetails?.participantToken;
@@ -79,14 +68,15 @@ export default function useConnectionDetails(
 
   const existingOrRefreshConnectionDetails = useCallback(async () => {
     if (isConnectionDetailsExpired() || !connectionDetails) {
-      return refreshConnectionDetails();
+      return fetchConnectionDetails();
+    } else {
+      return connectionDetails;
     }
-    return connectionDetails;
-  }, [connectionDetails, refreshConnectionDetails, isConnectionDetailsExpired]);
+  }, [connectionDetails, fetchConnectionDetails, isConnectionDetailsExpired]);
 
   return {
     connectionDetails,
-    refreshConnectionDetails,
+    refreshConnectionDetails: fetchConnectionDetails,
     existingOrRefreshConnectionDetails,
   };
 }

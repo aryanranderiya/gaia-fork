@@ -1,12 +1,9 @@
 "use client";
 
-import { Chip } from "@heroui/chip";
 import { Skeleton } from "@heroui/skeleton";
-import { Tooltip } from "@heroui/tooltip";
 import {
   DateTimeIcon,
   GitForkIcon,
-  Home12Icon,
   PackageOpenIcon,
   UserCircle02Icon,
 } from "@icons";
@@ -120,63 +117,40 @@ export const PublicIntegrationCard: React.FC<PublicIntegrationCardProps> = ({
         </p>
 
         <div className="mt-auto flex items-center justify-between pt-1">
-          {integration.source === "platform" ? (
-            <Tooltip
-              content="Built and maintained by GAIA"
-              size="sm"
-              placement="top"
-            >
-              <Chip
-                size="sm"
-                variant="flat"
-                color="primary"
-                startContent={
-                  <Home12Icon width={15} height={15} className="mr-1" />
-                }
-              >
-                Native
-              </Chip>
-            </Tooltip>
-          ) : (
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-full overflow-hidden p-0">
-                {integration.creator?.picture ? (
-                  <Image
-                    src={integration.creator.picture}
-                    alt={integration.creator.name ?? "Creator"}
-                    width={100}
-                    height={100}
-                    className="rounded-full object-cover"
-                  />
-                ) : (
-                  <UserCircle02Icon className="text-zinc-500" />
-                )}
-              </div>
-              <span className="text-xs text-zinc-500 truncate max-w-40">
-                {integration.creator?.name ?? "Community"}
-              </span>
+          <div className="flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full overflow-hidden p-0">
+              {integration.creator?.picture ? (
+                <Image
+                  src={integration.creator.picture}
+                  alt={integration.creator.name ?? "Creator"}
+                  width={100}
+                  height={100}
+                  className="rounded-full object-cover"
+                />
+              ) : (
+                <UserCircle02Icon className="text-zinc-500" />
+              )}
             </div>
-          )}
+            <span className="text-xs text-zinc-500 truncate max-w-40">
+              {integration.creator?.name ?? "Community"}
+            </span>
+          </div>
 
           {/* Stats */}
           <div className="flex items-center gap-4 text-xs text-zinc-500">
-            {integration.source !== "platform" && (
-              <div className="flex items-center gap-1">
-                <GitForkIcon width={18} height={18} />
-                <span>{formatCloneCount(integration.cloneCount)}</span>
-              </div>
-            )}
-            {integration.publishedAt && (
-              <div className="flex items-center gap-1">
-                <DateTimeIcon width={18} height={18} />
-                <span>
-                  {formatDistanceToNow(new Date(integration.publishedAt), {
-                    addSuffix: false,
-                  })}{" "}
-                  ago
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-1">
+              <GitForkIcon width={18} height={18} />
+              <span>{formatCloneCount(integration.cloneCount)}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <DateTimeIcon width={18} height={18} />
+              <span>
+                {formatDistanceToNow(new Date(integration.publishedAt), {
+                  addSuffix: false,
+                })}{" "}
+                ago
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -185,7 +159,7 @@ export const PublicIntegrationCard: React.FC<PublicIntegrationCardProps> = ({
 };
 
 // Skeleton component for loading state
-const PublicIntegrationCardSkeleton: React.FC = () => {
+export const PublicIntegrationCardSkeleton: React.FC = () => {
   return (
     <div className="relative flex h-full min-h-fit w-full flex-col gap-3 rounded-3xl bg-zinc-800 p-4 outline-1 outline-zinc-800/70">
       <div className="flex items-start gap-3">

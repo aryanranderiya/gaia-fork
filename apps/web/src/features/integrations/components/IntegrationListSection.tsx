@@ -9,8 +9,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CollapsibleListWrapper from "@/components/shared/CollapsibleListWrapper";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
-import { integrationsApi } from "@/features/integrations/api/integrationsApi";
-import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
+import { integrationsApi, useIntegrations } from "@/features/integrations";
 import type { SuggestedIntegration } from "@/features/integrations/types";
 import { toast } from "@/lib/toast";
 
@@ -58,10 +57,10 @@ function IntegrationListSection({
   // Separate connected and not connected integrations, sorted alphabetically
   const connectedIntegrations = integrations
     .filter((i) => i.status === "connected")
-    .toSorted((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name));
   const notConnectedIntegrations = integrations
     .filter((i) => i.status !== "connected")
-    .toSorted((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const handleConnect = async (integrationId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
@@ -324,7 +323,7 @@ function IntegrationListSection({
     <CollapsibleListWrapper
       icon={<ConnectIcon size={20} />}
       count={total_count}
-      label="Integrations"
+      label="Integration"
       isCollapsible={true}
     >
       {content}

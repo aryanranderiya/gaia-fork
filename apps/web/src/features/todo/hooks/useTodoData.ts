@@ -33,20 +33,17 @@ export function useTodoData(options: UseTodoDataOptions = {}) {
     refreshAll,
   } = useTodoStore();
 
-  // Track last loaded filters to avoid redundant fetches while still reloading on filter changes
-  const prevFiltersRef = useRef<string | null>(null);
+  // Track if initial load has happened
+  const hasLoadedRef = useRef(false);
 
-  // Load data on mount and whenever filters change — fire all three in parallel
+  // Load data on mount if autoLoad is enabled
   useEffect(() => {
-    if (autoLoad && prevFiltersRef.current !== filtersString) {
-      prevFiltersRef.current = filtersString;
+    if (autoLoad && !hasLoadedRef.current) {
+      hasLoadedRef.current = true;
       const parsedFilters = JSON.parse(filtersString) as TodoFilters;
-      const todosPromise = loadTodos(parsedFilters);
-      const projectsPromise = loadProjects();
-      const countsPromise = loadCounts();
-      Promise.all([todosPromise, projectsPromise, countsPromise]).catch(
-        console.error,
-      );
+      loadTodos(parsedFilters);
+      loadProjects(); // Load projects so todo chips can display project name/color
+      loadCounts(); // Also load counts for dashboard summary
     }
   }, [autoLoad, filtersString, loadTodos, loadCounts, loadProjects]);
 

@@ -83,50 +83,17 @@ async function getAllIntegrations() {
   }
 }
 
-async function getNativeIntegrationSlugs(): Promise<string[]> {
-  const baseUrl = getServerApiBaseUrl();
-  if (!baseUrl) return [];
-
-  try {
-    const response = await fetch(`${baseUrl}/integrations/config`, {
-      next: { revalidate: 60 },
-    });
-    if (!response.ok) return [];
-    const data = await response.json();
-    return (data.integrations as Array<{ id: string; available?: boolean }>)
-      .filter((i) => i.id && i.available !== false)
-      .map((i) => i.id);
-  } catch (error) {
-    console.error(
-      "[SSG Marketplace] Failed to fetch native integration slugs:",
-      error,
-    );
-    return [];
-  }
-}
-
 /**
- * Generate static params for all public integrations (community + native).
+ * Generate static params for all public integrations.
  * This enables search engines to crawl and index all integration pages.
  * Uses slug for SEO-friendly URLs.
  */
 export async function generateStaticParams() {
-  const [communityIntegrations, nativeSlugs] = await Promise.all([
-    getAllIntegrations(),
-    getNativeIntegrationSlugs(),
-  ]);
-
-  const communitySlugs = communityIntegrations.map(
-    (i: { slug: string }) => i.slug,
-  );
-
-  // Deduplicate by slug
-  const allSlugs = [...new Set([...communitySlugs, ...nativeSlugs])];
-
-  console.log(
-    `[SSG Marketplace] Generating ${allSlugs.length} pages (${communitySlugs.length} community + ${nativeSlugs.length} native)`,
-  );
-  return allSlugs.map((slug) => ({ slug }));
+  const integrations = await getAllIntegrations();
+  console.log(`[SSG Marketplace] Generating ${integrations.length} pages`);
+  return integrations.map((i: { slug: string }) => ({
+    slug: i.slug, // Always provided by backend
+  }));
 }
 
 export const dynamicParams = true;
@@ -192,7 +159,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!integration) {
     return {
-      title: "Integration Not Found",
+      title: "Integration Not Found | GAIA",
     };
   }
 
@@ -205,7 +172,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const seoDescription = generateIntegrationDescription(integration);
 
-  const title = generateIntegrationTitle(integrationName, integration.category);
+  const title = `${generateIntegrationTitle(integrationName, integration.category)} | GAIA`;
   const ogTitle = `${integrationName} AI Integration - Connect ${integrationName} to Your AI Assistant`;
 
   return {

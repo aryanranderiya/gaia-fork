@@ -5,7 +5,6 @@
   "sourceRoot": "apps/api/app",
   "implicitDependencies": ["docker", "shared-python"],
   "projectType": "application",
-  "tags": ["scope:python"],
   "release": {
     "docker": {
       "repositoryName": "theexperiencecompany/gaia"

@@ -8,7 +8,6 @@ from app.helpers.message_helpers import (
     format_tool_selection_message,
     format_workflow_execution_message,
     get_memory_message,
-    get_platform_context_message,
 )
 from app.models.message_models import (
     FileData,
@@ -35,7 +34,6 @@ async def construct_langchain_messages(
     reply_to_message: Optional[ReplyToMessageData] = None,
     trigger_context: Optional[dict] = None,
     agent_type: Literal["comms", "executor"] = "comms",
-    source: Optional[str] = None,
 ) -> List[AnyMessage]:
     """
     Construct LangChain messages for agent interaction.
@@ -82,13 +80,6 @@ async def construct_langchain_messages(
 
         if memory_msg:
             chain_msgs.append(memory_msg)
-
-    # Add platform context for comms agent only — executor already has
-    # PLATFORM-AWARE OUTPUT rules in its system prompt (EXECUTOR_AGENT_PROMPT).
-    if agent_type == "comms":
-        platform_msg = get_platform_context_message(source)
-        if platform_msg:
-            chain_msgs.append(platform_msg)
 
     # Extract user's latest message content
     user_content = (

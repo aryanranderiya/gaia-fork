@@ -10,7 +10,6 @@
  * DO NOT create duplicate type definitions elsewhere!
  */
 
-import type { ExecutionConfig, WorkflowMetadata } from "@shared/types";
 import type {
   TriggerConfig,
   TriggerFieldSchema,
@@ -61,8 +60,36 @@ export interface PublicWorkflowStep {
 // Re-export trigger types for convenience
 export type { TriggerConfig, TriggerFieldSchema, TriggerSchema };
 
-// Re-export shared types that are identical between web and mobile
-export type { ExecutionConfig, WorkflowMetadata };
+/**
+ * Execution configuration for workflows
+ */
+export interface ExecutionConfig {
+  method: "chat" | "background" | "hybrid";
+  timeout_seconds: number;
+  max_retries: number;
+  retry_delay_seconds: number;
+  notify_on_completion: boolean;
+  notify_on_failure: boolean;
+}
+
+/**
+ * Workflow metadata tracking
+ */
+export interface WorkflowMetadata {
+  created_from: "chat" | "modal" | "todo" | "template" | "api";
+  template_id?: string;
+  related_todo_id?: string;
+  related_conversation_id?: string;
+  tags: string[];
+  category?: string;
+  total_executions: number;
+  successful_executions: number;
+  last_execution_at?: string;
+  average_execution_time?: number;
+}
+
+// Note: TriggerSchema and TriggerFieldSchema are now defined in
+// @/features/workflows/triggers/types and re-exported above
 
 // ============================================================================
 // COMMUNITY & EXPLORE WORKFLOW TYPES
@@ -74,7 +101,6 @@ export type { ExecutionConfig, WorkflowMetadata };
  */
 export interface CommunityWorkflow {
   id: string;
-  slug?: string; // human-readable URL slug
   title: string;
   description: string;
   prompt?: string;
@@ -153,9 +179,6 @@ export interface Workflow {
   // Execution statistics
   total_executions: number;
   successful_executions: number;
-
-  // Slug for SEO-friendly URLs
-  slug?: string;
 
   // Community features
   is_public?: boolean;

@@ -5,7 +5,7 @@ import type React from "react";
 import { useCallback, useMemo, useState } from "react";
 import { useLoadingText } from "@/features/chat/hooks/useLoadingText";
 import UnifiedWorkflowCard from "@/features/workflows/components/shared/UnifiedWorkflowCard";
-import { useExploreWorkflows } from "@/features/workflows/hooks/useExploreWorkflows";
+import { useExploreWorkflows } from "@/features/workflows/hooks";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { useComposerTextActions } from "@/stores/composerStore";
 import type { CommunityWorkflow } from "@/types/features/workflowTypes";
@@ -52,6 +52,7 @@ export const ChatSuggestions: React.FC<ChatSuggestionsProps> = () => {
     trackEvent(ANALYTICS_EVENTS.CHAT_SUGGESTION_SHUFFLED, {
       current_suggestion_ids: currentSuggestions.map((w) => w.id),
     });
+
     const currentIds = new Set(currentSuggestions.map((w) => w.id));
 
     // Filter out currently displayed workflows

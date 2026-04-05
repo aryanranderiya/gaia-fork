@@ -1,5 +1,4 @@
 import { getLocale } from "next-intl/server";
-import { cache } from "react";
 import { loadFeatureTranslations } from "@/i18n/loadFeatureTranslations";
 import { getAllPersonas, getPersona, type PersonaData } from "./personasData";
 
@@ -28,17 +27,17 @@ async function loadPersonaTranslations(
   );
 }
 
-/** Wrapped with React.cache() for per-request deduplication between generateMetadata and page component */
-export const getTranslatedPersona = cache(
-  async (slug: string, locale?: string): Promise<PersonaData | undefined> => {
-    const base = getPersona(slug);
-    if (!base) return undefined;
-    const translations = await loadPersonaTranslations(locale);
-    const t = translations[slug];
-    if (!t) return base;
-    return { ...base, ...t };
-  },
-);
+export async function getTranslatedPersona(
+  slug: string,
+  locale?: string,
+): Promise<PersonaData | undefined> {
+  const base = getPersona(slug);
+  if (!base) return undefined;
+  const translations = await loadPersonaTranslations(locale);
+  const t = translations[slug];
+  if (!t) return base;
+  return { ...base, ...t };
+}
 
 export async function getAllTranslatedPersonas(
   locale?: string,

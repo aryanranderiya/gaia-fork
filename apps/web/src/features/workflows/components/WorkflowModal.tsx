@@ -6,18 +6,13 @@ import { useCallback, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useWorkflowSelection } from "@/features/chat/hooks/useWorkflowSelection";
-import WorkflowDescriptionField from "@/features/workflows/components/workflow-modal/WorkflowDescriptionField";
-import WorkflowFooter from "@/features/workflows/components/workflow-modal/WorkflowFooter";
-import WorkflowHeader from "@/features/workflows/components/workflow-modal/WorkflowHeader";
-import WorkflowLoadingState from "@/features/workflows/components/workflow-modal/WorkflowLoadingState";
-import WorkflowRightPanel from "@/features/workflows/components/workflow-modal/WorkflowRightPanel";
-import WorkflowTriggerSection from "@/features/workflows/components/workflow-modal/WorkflowTriggerSection";
-import { useWorkflowCreation } from "@/features/workflows/hooks/useWorkflowCreation";
 import { usePlatform } from "@/hooks/ui/usePlatform";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { toast } from "@/lib/toast";
 import type { WorkflowDraftData } from "@/types/features/toolDataTypes";
+
 import { type Workflow, workflowApi } from "../api/workflowApi";
+import { useWorkflowCreation } from "../hooks";
 import {
   getBrowserTimezone,
   getDefaultFormValues,
@@ -27,10 +22,20 @@ import {
 } from "../schemas/workflowFormSchema";
 import { useWorkflowModalStore } from "../stores/workflowModalStore";
 import { useWorkflowsStore } from "../stores/workflowsStore";
-import { useTriggerSchemas } from "../triggers/hooks/useTriggerSchemas";
-import { createDefaultTriggerConfig } from "../triggers/registry";
+import {
+  createDefaultTriggerConfig,
+  findTriggerSchema,
+  useTriggerSchemas,
+} from "../triggers";
 import { hasValidTriggerName, isIntegrationTrigger } from "../triggers/types";
-import { findTriggerSchema } from "../triggers/utils";
+import {
+  WorkflowDescriptionField,
+  WorkflowFooter,
+  WorkflowHeader,
+  WorkflowLoadingState,
+  WorkflowRightPanel,
+  WorkflowTriggerSection,
+} from "./workflow-modal";
 
 interface WorkflowModalProps {
   isOpen: boolean;

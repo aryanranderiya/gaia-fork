@@ -59,10 +59,9 @@ export async function generateMetadata({
 export default async function ComparisonsHubPage({ params }: PageProps) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const [t, comparisons] = await Promise.all([
-    getTranslations({ locale, namespace: "comparisons" }),
-    getTranslatedComparisons(locale),
-  ]);
+  const t = await getTranslations({ locale, namespace: "comparisons" });
+
+  const comparisons = await getTranslatedComparisons(locale);
 
   const webPageSchema = generateWebPageSchema(
     t("hub_title"),

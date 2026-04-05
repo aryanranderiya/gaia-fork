@@ -1,4 +1,3 @@
-import { getUserTimezone } from "@shared/api/timezone";
 import axios, { type InternalAxiosRequestConfig } from "axios";
 
 /**
@@ -22,6 +21,23 @@ if (!process.env.NEXT_PUBLIC_API_BASE_URL) {
  * Set to 5 minutes to handle long-running requests
  */
 axios.defaults.timeout = 300_000;
+
+/**
+ * Get the current user's timezone
+ * Safely handles both client and server environments
+ */
+function getUserTimezone(): string {
+  if (typeof window !== "undefined") {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone;
+    } catch (error) {
+      console.warn("Failed to detect timezone, using UTC as fallback:", error);
+      return "UTC";
+    }
+  }
+  // Default to UTC on server-side
+  return "UTC";
+}
 
 /**
  * Base axios instance for public API calls

@@ -7,9 +7,11 @@ import { Tab, Tabs } from "@heroui/tabs";
 import { CalendarIcon, ChartIcon, ChartIncreaseIcon } from "@icons";
 import { useState } from "react";
 import Spinner from "@/components/ui/spinner";
-import { SettingsPage } from "@/features/settings/components/ui/SettingsPage";
-import { SettingsRow } from "@/features/settings/components/ui/SettingsRow";
-import { SettingsSection } from "@/features/settings/components/ui/SettingsSection";
+import {
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+} from "@/features/settings/components/ui";
 import { usePricingModalStore } from "@/stores/pricingModalStore";
 
 import { useUsageSummary } from "../hooks/useUsage";
@@ -137,10 +139,7 @@ export default function UsageSettings() {
                     color={getProgressColor(periodData.percentage)}
                     className="flex-1"
                   />
-                  <span
-                    className="shrink-0 text-xs text-zinc-500"
-                    suppressHydrationWarning
-                  >
+                  <span className="shrink-0 text-xs text-zinc-500">
                     {periodData.used.toLocaleString()} /{" "}
                     {periodData.limit.toLocaleString()}
                   </span>

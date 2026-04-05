@@ -4,7 +4,7 @@ import { Button } from "@heroui/button";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { apiService } from "@/lib/api/service";
+import { apiService } from "@/lib/api";
 import type { PlatformLink } from "@/types/platform";
 import {
   NOTIFICATION_PLATFORM_LABELS,
@@ -14,7 +14,6 @@ import {
 const PLATFORM_ICONS: Record<string, string> = {
   telegram: "/images/icons/macos/telegram.webp",
   discord: "/images/icons/macos/discord.webp",
-  whatsapp: "/images/icons/macos/whatsapp.webp",
 };
 
 interface NotificationConnectBannerProps {
@@ -55,11 +54,15 @@ export function NotificationConnectBanner({
 
   if (unconnectedPlatforms.length === 0) return null;
 
+  const platformList = unconnectedPlatforms
+    .map((p) => NOTIFICATION_PLATFORM_LABELS[p])
+    .join(" and ");
+
   if (variant === "compact") {
     return (
       <div className="w-full px-3">
         <div className="flex items-center justify-between gap-2 rounded-xl bg-zinc-900/80 px-3 py-2 text-xs w-full">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-1">
             <div className="-space-x-2 flex">
               {unconnectedPlatforms.map((p, index) => (
                 <Image
@@ -73,7 +76,7 @@ export function NotificationConnectBanner({
               ))}
             </div>
             <span className="text-zinc-400">
-              Get notified in the apps you already use
+              Connect {platformList} for notifications!
             </span>
           </div>
           <Button
@@ -96,7 +99,7 @@ export function NotificationConnectBanner({
         Stay notified on your devices
       </p>
       <p className="mt-1 text-xs text-zinc-400">
-        Connect your platform bots to receive GAIA notifications outside the web
+        Connect {platformList} to receive GAIA notifications outside the web
         app.
       </p>
       <Button

@@ -109,11 +109,7 @@ async def get_channel_preferences(
     try:
         prefs = await fetch_channel_preferences(user_id)
         log.set(operation="get_channel_preferences", outcome="success")
-        return ChannelPreferences(
-            telegram=prefs["telegram"],
-            discord=prefs["discord"],
-            whatsapp=prefs["whatsapp"],
-        )
+        return ChannelPreferences(telegram=prefs["telegram"], discord=prefs["discord"])
     except Exception as e:
         log.error(f"Failed to get channel preferences: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -144,8 +140,6 @@ async def update_channel_preferences(
             updates["notification_channel_prefs.telegram"] = preferences.telegram
         if preferences.discord is not None:
             updates["notification_channel_prefs.discord"] = preferences.discord
-        if preferences.whatsapp is not None:
-            updates["notification_channel_prefs.whatsapp"] = preferences.whatsapp
 
         if updates:
             await users_collection.update_one(
@@ -154,11 +148,7 @@ async def update_channel_preferences(
 
         prefs = await fetch_channel_preferences(user_id)
         log.set(operation="update_channel_preferences", outcome="success")
-        return ChannelPreferences(
-            telegram=prefs["telegram"],
-            discord=prefs["discord"],
-            whatsapp=prefs["whatsapp"],
-        )
+        return ChannelPreferences(telegram=prefs["telegram"], discord=prefs["discord"])
     except Exception as e:
         log.error(f"Failed to update channel preferences: {e}")
         raise HTTPException(status_code=500, detail=str(e))

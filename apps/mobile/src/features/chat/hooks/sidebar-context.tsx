@@ -4,7 +4,6 @@ import {
   useCallback,
   useContext,
   useRef,
-  useState,
 } from "react";
 import type { DrawerLayoutMethods } from "react-native-gesture-handler/ReanimatedDrawerLayout";
 
@@ -23,27 +22,18 @@ interface SidebarProviderProps {
 
 export function SidebarProvider({ children }: SidebarProviderProps) {
   const drawerRef = useRef<DrawerLayoutMethods>(null);
-  const [isOpen, setIsOpen] = useState(false);
 
   const openSidebar = useCallback(() => {
     drawerRef.current?.openDrawer();
-    setIsOpen(true);
   }, []);
 
   const closeSidebar = useCallback(() => {
     drawerRef.current?.closeDrawer();
-    setIsOpen(false);
   }, []);
 
   const toggleSidebar = useCallback(() => {
-    if (isOpen) {
-      drawerRef.current?.closeDrawer();
-      setIsOpen(false);
-    } else {
-      drawerRef.current?.openDrawer();
-      setIsOpen(true);
-    }
-  }, [isOpen]);
+    drawerRef.current?.openDrawer();
+  }, []);
 
   return (
     <SidebarContext.Provider

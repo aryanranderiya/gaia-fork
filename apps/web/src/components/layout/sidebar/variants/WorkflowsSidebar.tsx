@@ -7,10 +7,12 @@ import { Spinner } from "@heroui/spinner";
 import { Tooltip } from "@heroui/tooltip";
 import { ZapIcon } from "@icons";
 import { useRef, useState } from "react";
-import CreateWorkflowModal from "@/features/workflows/components/CreateWorkflowModal";
+import {
+  CreateWorkflowModal,
+  WorkflowModal,
+} from "@/features/workflows/components";
 import WorkflowIcons from "@/features/workflows/components/shared/WorkflowIcons";
-import WorkflowModal from "@/features/workflows/components/WorkflowModal";
-import { useWorkflows } from "@/features/workflows/hooks/useWorkflows";
+import { useWorkflows } from "@/features/workflows/hooks";
 import type { Workflow } from "@/types/features/workflowTypes";
 
 export default function WorkflowsSidebar() {

@@ -12,7 +12,6 @@ interface ApiConversation {
   is_system_generated: boolean;
   system_purpose: string | null;
   is_unread?: boolean;
-  is_starred?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
@@ -32,7 +31,6 @@ function normalizeConversation(apiConv: ApiConversation): Conversation {
     created_at: apiConv.createdAt,
     updated_at: apiConv.updatedAt || apiConv.createdAt,
     is_unread: apiConv.is_unread,
-    is_starred: apiConv.is_starred,
   };
 }
 
@@ -92,26 +90,10 @@ export function useChatQueryClient() {
     });
   };
 
-  const updateConversationInCache = (
-    conversationId: string,
-    updates: Partial<Conversation>,
-  ) => {
-    queryClient.setQueryData<Conversation[]>(
-      chatKeys.conversations(),
-      (prev) => {
-        if (!prev) return prev;
-        return prev.map((c) =>
-          c.id === conversationId ? { ...c, ...updates } : c,
-        );
-      },
-    );
-  };
-
   return {
     setMessagesCache,
     invalidateConversations,
     invalidateMessages,
     prefetchMessages,
-    updateConversationInCache,
   };
 }

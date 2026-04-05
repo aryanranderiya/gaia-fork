@@ -9,9 +9,11 @@ import {
   convertToUSDCents,
   formatUSDFromCents,
 } from "@/features/pricing/utils/currencyConverter";
-import { SettingsPage } from "@/features/settings/components/ui/SettingsPage";
-import { SettingsRow } from "@/features/settings/components/ui/SettingsRow";
-import { SettingsSection } from "@/features/settings/components/ui/SettingsSection";
+import {
+  SettingsPage,
+  SettingsRow,
+  SettingsSection,
+} from "@/features/settings/components/ui";
 import { usePricingModalStore } from "@/stores/pricingModalStore";
 
 const formatDate = (dateString?: string): string => {

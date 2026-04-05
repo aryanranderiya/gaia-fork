@@ -4,8 +4,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import type { UploadedFilePreview } from "@/features/chat/components/files/FilePreview";
 import { stripLocalePrefix } from "@/i18n/config";
-import type { FileData } from "@/types/shared/fileTypes";
-import type { SearchMode } from "@/types/shared/searchTypes";
+import type { FileData, SearchMode } from "@/types/shared";
 
 interface ComposerState {
   // Text input state
@@ -290,5 +289,16 @@ export const useComposerUI = () =>
     useShallow((state) => ({
       isSlashCommandDropdownOpen: state.isSlashCommandDropdownOpen,
       setIsSlashCommandDropdownOpen: state.setIsSlashCommandDropdownOpen,
+    })),
+  );
+
+export const useComposerActions = () =>
+  useComposerStore(
+    useShallow((state) => ({
+      resetComposer: state.resetComposer,
+      setInputText: state.setInputText,
+      appendToInputText: state.appendToInputText,
+      clearPendingPrompt: state.clearPendingPrompt,
+      setPendingPrompt: state.setPendingPrompt,
     })),
   );

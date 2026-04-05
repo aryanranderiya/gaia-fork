@@ -61,14 +61,19 @@ function TaskRow({
   isStreaming?: boolean;
 }) {
   const StatusIcon = STATUS_ICON_MAP[todo.status];
-  const shouldSpin = todo.status === "in_progress" && isStreaming;
+  const spinClass =
+    todo.status === "in_progress" && isStreaming ? "animate-spin" : "";
   return (
     <div className="flex items-start gap-2">
-      <div className={`shrink-0 mt-0.5 ${shouldSpin ? "animate-spin" : ""}`}>
-        <StatusIcon className={`size-4 ${STATUS_COLOR[todo.status]}`} />
-      </div>
+      <StatusIcon
+        className={`size-4 shrink-0 mt-0.5 ${STATUS_COLOR[todo.status]} ${spinClass}`}
+      />
       <span
-        className={`text-xs leading-relaxed ${todo.status === "cancelled" ? "line-through text-zinc-600" : "text-zinc-300"}`}
+        className={`text-xs leading-relaxed ${
+          todo.status === "cancelled"
+            ? "line-through text-zinc-600"
+            : "text-zinc-300"
+        }`}
       >
         {todo.content}
       </span>

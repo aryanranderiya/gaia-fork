@@ -5,18 +5,11 @@ import { MessageMultiple02Icon, SearchIcon } from "@icons";
 import { Command } from "cmdk";
 import { AnimatePresence, m } from "motion/react";
 import { useRouter } from "next/navigation";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { getLinkByLabel } from "@/config/appConfig";
 import { prepareNewChat } from "@/features/chat/utils/newChatNavigation";
 import { useUserSubscriptionStatus } from "@/features/pricing/hooks/usePricing";
 import { usePlatform } from "@/hooks/ui/usePlatform";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 import { type ComprehensiveSearchResponse, searchApi } from "../api/searchApi";
 import {
@@ -50,7 +43,6 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   // Reset and focus
   useEffect(() => {
     if (open) {
-      trackEvent(ANALYTICS_EVENTS.SEARCH_GLOBAL_OPENED);
       setTimeout(() => inputRef.current?.focus(), 50);
     } else {
       setSearch("");
@@ -69,13 +61,6 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
     try {
       const response = await searchApi.search(query);
       setSearchResults(response);
-      trackEvent(ANALYTICS_EVENTS.SEARCH_PERFORMED, {
-        query_length: query.length,
-        result_count:
-          response.conversations.length +
-          response.messages.length +
-          response.notes.length,
-      });
     } catch (error) {
       console.error("Error fetching search results:", error);
       setSearchResults({ conversations: [], messages: [], notes: [] });
@@ -89,43 +74,32 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
     return () => clearTimeout(delayDebounceFn);
   }, [search, handleSearch]);
 
-  const openRef = useRef(open);
-  openRef.current = open;
-  const onOpenChangeRef = useRef(onOpenChange);
-  onOpenChangeRef.current = onOpenChange;
-  const routerRef = useRef(router);
-  routerRef.current = router;
-
-  // Keyboard shortcuts — registered once, reads latest values via refs
+  // Keyboard shortcuts
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      const isOpen = openRef.current;
-      const changeOpen = onOpenChangeRef.current;
-      const nav = routerRef.current;
-
       // Command+K to toggle
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        changeOpen(!isOpen);
+        onOpenChange(!open);
       }
 
       // ESC to close
-      if (isOpen && e.key === "Escape") {
+      if (open && e.key === "Escape") {
         e.preventDefault();
-        changeOpen(false);
+        onOpenChange(false);
       }
 
       // Command+, for settings
-      if (isOpen && e.key === "," && (e.metaKey || e.ctrlKey)) {
+      if (open && e.key === "," && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        nav.push("/settings");
-        changeOpen(false);
+        router.push("/settings");
+        onOpenChange(false);
       }
     };
 
     document.addEventListener("keydown", down);
     return () => document.removeEventListener("keydown", down);
-  }, []);
+  }, [open, onOpenChange, router]);
 
   // Action handlers
   const handleNewChat = useCallback(() => {
@@ -177,7 +151,7 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   );
 
   // Get filtered menu sections
-  const menuSections = useMemo(() => {
+  const getMenuSections = useCallback(() => {
     return MENU_SECTIONS.map((section) => ({
       ...section,
       items: section.items
@@ -195,6 +169,8 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
         .map(buildMenuItem),
     })).filter((section) => section.items.length > 0);
   }, [search, subscriptionStatus, buildMenuItem]);
+
+  const menuSections = getMenuSections();
 
   return (
     <AnimatePresence>
@@ -247,14 +223,6 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                               key={`conversation-${conversation.conversation_id}`}
                               value={conversation.description || "Conversation"}
                               onSelect={() => {
-                                trackEvent(
-                                  ANALYTICS_EVENTS.SEARCH_RESULT_CLICKED,
-                                  {
-                                    result_type: "conversation",
-                                    conversation_id:
-                                      conversation.conversation_id,
-                                  },
-                                );
                                 router.push(
                                   `/c/${conversation.conversation_id}`,
                                 );
@@ -289,14 +257,6 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                             key={`message-${message.message.message_id}`}
                             value={message.snippet}
                             onSelect={() => {
-                              trackEvent(
-                                ANALYTICS_EVENTS.SEARCH_RESULT_CLICKED,
-                                {
-                                  result_type: "message",
-                                  conversation_id: message.conversation_id,
-                                  message_id: message.message.message_id,
-                                },
-                              );
                               router.push(`/c/${message.conversation_id}`);
                               onOpenChange(false);
                             }}
@@ -311,7 +271,6 @@ export default function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
                               </div>
                               <div
                                 className={COMMAND_MENU_STYLES.resultSubtitle}
-                                suppressHydrationWarning
                               >
                                 {new Date(
                                   message.message.date,

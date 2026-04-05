@@ -132,20 +132,10 @@ class ChromaStore(BaseStore):
                     embedding_function=_NOOP_EF,
                 )
             else:
-                try:
-                    self._collection_cache = await self.client.get_collection(
-                        name=self.collection_name,
-                        embedding_function=_NOOP_EF,
-                    )
-                except ValueError:
-                    # ChromaDB 1.x rejects a new embedding function when one is
-                    # already persisted in the collection config.  Since
-                    # ChromaStore manages embeddings itself (passes them
-                    # explicitly to upsert), we can safely get the collection
-                    # without overriding the embedding function.
-                    self._collection_cache = await self.client.get_collection(
-                        name=self.collection_name,
-                    )
+                self._collection_cache = await self.client.get_collection(
+                    name=self.collection_name,
+                    embedding_function=_NOOP_EF,
+                )
 
         return self._collection_cache
 

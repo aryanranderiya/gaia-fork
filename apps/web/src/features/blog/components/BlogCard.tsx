@@ -2,12 +2,12 @@ import { Chip } from "@heroui/chip";
 import Image from "next/image";
 import Link from "next/link";
 
-import type { BlogPostMeta } from "@/lib/blog";
+import type { BlogPost } from "@/lib/blog";
 
 import { AuthorTooltip } from "./AuthorTooltip";
 
 interface BlogCardProps {
-  blog: BlogPostMeta;
+  blog: BlogPost;
   variant?: "large" | "small";
 }
 
@@ -76,7 +76,9 @@ export function BlogCard({ blog, variant = "large" }: BlogCardProps) {
             </span>
           </div>
           <h3
-            className={`font-medium text-white transition-colors ${isLarge ? "text-lg" : "line-clamp-2 text-sm"}`}
+            className={`font-medium text-white transition-colors ${
+              isLarge ? "text-lg" : "line-clamp-2 text-sm"
+            }`}
           >
             {blog.title}
           </h3>

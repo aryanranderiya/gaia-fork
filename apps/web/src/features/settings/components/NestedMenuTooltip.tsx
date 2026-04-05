@@ -29,8 +29,6 @@ export function NestedMenuTooltip({
 }: NestedMenuTooltipProps) {
   if (!itemRef) return null;
 
-  const itemRect = itemRef.getBoundingClientRect();
-
   return (
     <Tooltip
       isOpen={isOpen}
@@ -78,8 +76,8 @@ export function NestedMenuTooltip({
       <div
         style={{
           position: "fixed",
-          left: itemRect.right,
-          top: itemRect.top,
+          left: itemRef.getBoundingClientRect().right,
+          top: itemRef.getBoundingClientRect().top,
           width: 1,
           height: 1,
           pointerEvents: "none",

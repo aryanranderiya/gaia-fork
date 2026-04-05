@@ -7,9 +7,8 @@
  *
  * @module
  */
-
-import type { BotCommand, CommandExecuteParams, RichMessage } from "../types";
 import { formatBotError } from "../utils/formatters";
+import type { BotCommand, CommandExecuteParams, RichMessage } from "../types";
 
 /**
  * Converts a potentially relative URL to an absolute one using the frontend base URL.
@@ -94,6 +93,11 @@ export const settingsCommand: BotCommand = {
               `**Name:** ${settings.userName || "Not set"}`,
               `**Member since:** ${accountAge}`,
             ].join("\n"),
+          },
+          {
+            name: "🤖 AI Model",
+            value: settings.selectedModelName || "Default",
+            inline: true,
           },
           {
             name: "🔗 Connected Integrations",

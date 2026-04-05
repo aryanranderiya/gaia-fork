@@ -10,9 +10,9 @@
  * `apps/bots/__tests__/shared/adapter/rich-renderer.test.ts`.
  */
 
-import type { RichMessage } from "@gaia/shared";
-import { describe, expect, it } from "vitest";
+import { describe, it, expect } from "vitest";
 import { richMessageToEmbed } from "../../discord/src/adapter";
+import type { RichMessage } from "@gaia/shared";
 
 // ---------------------------------------------------------------------------
 // Helper
@@ -110,7 +110,9 @@ describe("richMessageToEmbed", () => {
     });
     const data = richMessageToEmbed(msg).toJSON();
 
-    const linkField = data.fields?.find((f) => f.name.includes("Useful Links"));
+    const linkField = data.fields?.find((f) =>
+      f.name.includes("Useful Links"),
+    );
     expect(linkField).toBeDefined();
     expect(linkField?.value).toContain("[Click here](https://example.com)");
   });
@@ -124,7 +126,9 @@ describe("richMessageToEmbed", () => {
     });
     const data = richMessageToEmbed(msg).toJSON();
 
-    const linkField = data.fields?.find((f) => f.name.includes("Useful Links"));
+    const linkField = data.fields?.find((f) =>
+      f.name.includes("Useful Links"),
+    );
     expect(linkField).toBeDefined();
     expect(linkField?.value).toContain("[Docs](https://docs.example.com)");
     expect(linkField?.value).toContain("[App](https://app.example.com)");
@@ -135,7 +139,9 @@ describe("richMessageToEmbed", () => {
     const msg = makeMsg({ links: [] });
     const data = richMessageToEmbed(msg).toJSON();
 
-    const linkField = data.fields?.find((f) => f.name.includes("Useful Links"));
+    const linkField = data.fields?.find((f) =>
+      f.name.includes("Useful Links"),
+    );
     expect(linkField).toBeUndefined();
   });
 

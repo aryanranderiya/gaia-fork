@@ -9,7 +9,7 @@
  * - ChatRequest / ChatResponse: chat API payloads
  * - CommandContext: user identity passed to all shared command handlers
  * - BotConfig: environment config loaded by config/index.ts
- * - Domain types: BotWorkflow, BotTodo, BotConversation (match backend API schemas)
+ * - Domain types: Workflow, Todo, Conversation (match backend API schemas)
  */
 
 /**
@@ -50,7 +50,7 @@ export interface AuthStatus {
   platformUserId: string;
 }
 
-export interface BotWorkflow {
+export interface Workflow {
   id: string;
   name: string;
   description: string;
@@ -61,22 +61,22 @@ export interface BotWorkflow {
   updated_at?: string;
 }
 
-export interface BotWorkflowListResponse {
-  workflows: BotWorkflow[];
+export interface WorkflowListResponse {
+  workflows: Workflow[];
 }
 
-export interface BotWorkflowExecutionRequest {
+export interface WorkflowExecutionRequest {
   workflow_id: string;
   inputs?: Record<string, unknown>;
 }
 
-export interface BotWorkflowExecutionResponse {
+export interface WorkflowExecutionResponse {
   execution_id: string;
   status: string;
   result?: unknown;
 }
 
-export interface BotTodo {
+export interface Todo {
   id: string;
   title: string;
   description?: string;
@@ -86,12 +86,12 @@ export interface BotTodo {
   project_id?: string;
 }
 
-export interface BotTodoListResponse {
-  todos: BotTodo[];
+export interface TodoListResponse {
+  todos: Todo[];
   total: number;
 }
 
-export interface BotCreateTodoRequest {
+export interface CreateTodoRequest {
   title: string;
   description?: string;
   completed?: boolean;
@@ -100,7 +100,7 @@ export interface BotCreateTodoRequest {
   project_id?: string;
 }
 
-export interface BotConversation {
+export interface Conversation {
   conversation_id: string;
   title?: string;
   description?: string;
@@ -109,8 +109,8 @@ export interface BotConversation {
   message_count?: number;
 }
 
-export interface BotConversationListResponse {
-  conversations: BotConversation[];
+export interface ConversationListResponse {
+  conversations: Conversation[];
   total: number;
   page: number;
 }
@@ -150,6 +150,8 @@ export interface AuthenticatedSettingsResponse {
   userName: string | null;
   accountCreatedAt: string | null;
   profileImageUrl: string | null;
+  selectedModelName: string | null;
+  selectedModelIconUrl: string | null;
   connectedIntegrations: IntegrationInfo[];
 }
 

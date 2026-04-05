@@ -44,7 +44,7 @@ def make_state(**overrides) -> State:
         "conversation_id": str(uuid4()),
     }
     defaults.update(overrides)
-    return State(**defaults)  # type: ignore[arg-type]
+    return State(**defaults)
 
 
 def make_tool_call(name: str, args: dict | None = None, id: str | None = None) -> dict:

@@ -1,7 +1,6 @@
 {
   "name": "web",
   "root": "apps/web",
-  "tags": ["scope:typescript"],
   "sourceRoot": "apps/web/src",
   "targets": {
     "sync": {
@@ -49,7 +48,7 @@
         "cwd": "{projectRoot}"
       },
       "cache": true,
-      "inputs": ["default", "{workspaceRoot}/biome.json"]
+      "inputs": ["default", "{workspaceRoot}/biome.json", "^production"]
     },
     "lint:fix": {
       "executor": "nx:run-commands",

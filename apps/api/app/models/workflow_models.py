@@ -218,10 +218,6 @@ class Workflow(BaseScheduledTask):
         default=False,
         description="Whether this workflow is published to the community marketplace",
     )
-    slug: Optional[str] = Field(
-        default=None,
-        description="Human-readable URL slug derived from title. Unique among public workflows.",
-    )
     created_by: Optional[str] = Field(
         default=None,
         description="User ID of the original creator (for public workflows)",

@@ -25,7 +25,6 @@ const intlMiddleware = createMiddleware(routing);
 const intlMiddlewareDefaultOnly = createMiddleware({
   ...routing,
   localePrefix: "never",
-  localeDetection: false,
 });
 
 export default function proxy(request: NextRequest) {

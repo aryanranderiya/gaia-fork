@@ -61,4 +61,4 @@ function ScrollBar({
   );
 }
 
-export { ScrollArea };
+export { ScrollArea, ScrollBar };

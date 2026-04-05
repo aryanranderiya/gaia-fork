@@ -11,7 +11,7 @@ import {
 import AiChiefOfStaffClient from "./AiChiefOfStaffClient";
 
 export const metadata: Metadata = generatePageMetadata({
-  title: "AI Chief of Staff — Your Proactive AI That Runs Your Day",
+  title: "AI Chief of Staff — Your Proactive AI That Runs Your Day | GAIA",
   description:
     "GAIA is your AI chief of staff: it reads your inbox, prepares briefings, schedules meetings, tracks follow-ups, and manages your day proactively — before you ask.",
   path: "/ai-chief-of-staff",

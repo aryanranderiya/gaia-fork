@@ -7,7 +7,6 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from shared.py.wide_events import log
-from app.constants.auth import LOGIN_METHOD_WORKOS
 from app.core.lazy_loader import providers
 
 
@@ -17,8 +16,6 @@ class AnalyticsEvents:
 
     # Keep only backend-relevant events (auth signup, payments, subscriptions)
     USER_SIGNED_UP = "user:signed_up"
-    USER_LOGGED_IN = "user:logged_in"
-    USER_LOGGED_OUT = "user:logged_out"
 
     # Payment events (used by payment webhook processing)
     PAYMENT_SUCCEEDED = "payment:succeeded"
@@ -56,12 +53,13 @@ def identify_user(
         return
 
     try:
-        user_properties = {**(properties or {})}
-        client.set(distinct_id=user_id, properties=user_properties)
-        client.set_once(
-            distinct_id=user_id,
-            properties={"first_seen": datetime.now(timezone.utc).isoformat()},
-        )
+        user_properties = {
+            **(properties or {}),
+            "$set_once": {
+                "first_seen": datetime.now(timezone.utc).isoformat(),
+            },
+        }
+        client.identify(user_id, user_properties)
     except Exception as e:
         log.error(f"Failed to identify user in PostHog: {e}")
 
@@ -90,11 +88,7 @@ def capture_event(
             **(properties or {}),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        client.capture(
-            event=event,
-            distinct_id=user_id,
-            properties=event_properties,
-        )
+        client.capture(user_id, event, event_properties)
     except Exception as e:
         log.error(f"Failed to capture event {event} in PostHog: {e}")
 
@@ -103,7 +97,7 @@ def track_signup(
     user_id: str,
     email: str,
     name: Optional[str] = None,
-    signup_method: str = LOGIN_METHOD_WORKOS,
+    signup_method: str = "workos",
     properties: Optional[dict[str, Any]] = None,
 ) -> None:
     """
@@ -118,9 +112,8 @@ def track_signup(
     """
     # First identify the user
     identify_user(
-        email,
+        user_id,
         {
-            "user_id": user_id,
             "email": email,
             "name": name,
             "signup_method": signup_method,
@@ -130,78 +123,12 @@ def track_signup(
 
     # Then capture the signup event
     capture_event(
-        email,
+        user_id,
         AnalyticsEvents.USER_SIGNED_UP,
         {
-            "user_id": user_id,
             "email": email,
             "name": name,
             "signup_method": signup_method,
-            **(properties or {}),
-        },
-    )
-
-
-def track_login(
-    user_id: str,
-    email: str,
-    name: Optional[str] = None,
-    login_method: str = LOGIN_METHOD_WORKOS,
-    properties: Optional[dict[str, Any]] = None,
-) -> None:
-    """
-    Track a user login event.
-
-    Args:
-        user_id: User's unique identifier
-        email: User's email address
-        name: User's display name
-        login_method: How the user logged in (workos, google, email)
-        properties: Additional properties
-    """
-    identify_user(
-        email,
-        {
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "last_login_method": login_method,
-            "last_login_at": datetime.now(timezone.utc).isoformat(),
-        },
-    )
-
-    capture_event(
-        email,
-        AnalyticsEvents.USER_LOGGED_IN,
-        {
-            "user_id": user_id,
-            "email": email,
-            "name": name,
-            "login_method": login_method,
-            **(properties or {}),
-        },
-    )
-
-
-def track_logout(
-    user_id: str,
-    email: str,
-    properties: Optional[dict[str, Any]] = None,
-) -> None:
-    """
-    Track a user logout event.
-
-    Args:
-        user_id: User's unique identifier
-        email: User's email address
-        properties: Additional properties
-    """
-    capture_event(
-        email,
-        AnalyticsEvents.USER_LOGGED_OUT,
-        {
-            "user_id": user_id,
-            "email": email,
             **(properties or {}),
         },
     )
@@ -253,9 +180,9 @@ def track_subscription_event(
         client = _get_posthog_client()
         if client:
             try:
-                client.set(
-                    distinct_id=user_id,
-                    properties={
+                client.identify(
+                    user_id,
+                    {
                         "plan": plan_name,
                         "subscription_status": "active",
                         "subscription_activated_at": datetime.now(

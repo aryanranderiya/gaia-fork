@@ -48,7 +48,7 @@ export const NotificationItem = ({
             {content.body}
           </p>
           <div className="mt-1 flex items-center gap-2 text-xs text-zinc-600">
-            <span className="capitalize" suppressHydrationWarning>
+            <span className="capitalize">
               {formatDistanceToNow(new Date(notification.created_at), {
                 addSuffix: true,
               })}
@@ -92,7 +92,9 @@ export const NotificationItem = ({
                   key={action.id}
                   variant={action.style === "primary" ? "solid" : "flat"}
                   size="sm"
-                  className={`h-7 bg-zinc-800/50 text-xs text-zinc-200 hover:bg-zinc-800/70 ${isExecuted ? "cursor-not-allowed opacity-50" : ""}`}
+                  className={`h-7 bg-zinc-800/50 text-xs text-zinc-200 hover:bg-zinc-800/70 ${
+                    isExecuted ? "cursor-not-allowed opacity-50" : ""
+                  }`}
                   disabled={isDisabled}
                   onPress={() => executeAction(notification.id, action)}
                 >

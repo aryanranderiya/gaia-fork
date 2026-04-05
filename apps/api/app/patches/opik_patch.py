@@ -10,7 +10,7 @@ T = TypeVar("T")
 
 def _patched_execute(
     evaluation_tasks: List[Callable[[], T]],
-    _workers: int,
+    workers: int,
     verbose: int,
     desc: str = "Evaluation",
 ) -> List[T]:

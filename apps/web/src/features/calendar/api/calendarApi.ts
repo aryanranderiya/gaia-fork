@@ -1,4 +1,4 @@
-import { apiService } from "@/lib/api/service";
+import { apiService } from "@/lib/api";
 import type {
   CalendarEventsResponse,
   CalendarItem,

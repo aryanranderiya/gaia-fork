@@ -12,7 +12,7 @@ import {
 import { useLoading } from "@/features/chat/hooks/useLoading";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
-import type { SearchMode } from "@/types/shared/searchTypes";
+import type { SearchMode } from "@/types/shared";
 
 interface SearchbarLeftDropdownProps {
   selectedMode: Set<SearchMode>;

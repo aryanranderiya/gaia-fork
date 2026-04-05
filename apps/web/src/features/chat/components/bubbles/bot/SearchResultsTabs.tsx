@@ -1,7 +1,7 @@
 import { Button } from "@heroui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@heroui/popover";
 import { Skeleton } from "@heroui/skeleton";
-import { CircleArrowRight02Icon, NewsIcon } from "@icons";
+import { NewsIcon } from "@icons";
 import { m } from "motion/react";
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
@@ -46,7 +46,6 @@ interface ImageResultsProps {
 function ImageResults({ images }: ImageResultsProps) {
   const { openDialog } = useImageDialog();
   const [validImages, setValidImages] = useState<string[]>([]);
-  const [startIndex, setStartIndex] = useState(0);
 
   useEffect(() => {
     const validateImages = async () => {
@@ -93,55 +92,23 @@ function ImageResults({ images }: ImageResultsProps) {
 
     if (images && images.length > 0) validateImages();
     else setValidImages([]);
-    setStartIndex(0);
   }, [images]);
 
   if (validImages.length === 0) {
     return null;
   }
 
-  const MAX_VISIBLE = 5;
-  const displayImages = validImages.slice(startIndex, startIndex + MAX_VISIBLE);
-  const remaining = validImages.length - (startIndex + MAX_VISIBLE);
-  // Always show a count — on the last page wrap around to show first batch size
-  const nextBatchCount =
-    remaining > 0
-      ? remaining
-      : Math.min(MAX_VISIBLE, validImages.length - MAX_VISIBLE);
-
-  const cycleNext = () => {
-    const nextStart = startIndex + MAX_VISIBLE;
-    setStartIndex(nextStart >= validImages.length ? 0 : nextStart);
-  };
-
   return (
-    <div className="my-4 flex items-center -space-x-14">
-      {displayImages.map((imageUrl, index) => (
+    <div className="my-4 flex w-full max-w-2xl -space-x-15 overflow-x-auto pb-2 pr-2">
+      {validImages.map((imageUrl, index) => (
         <ImageItem
           key={imageUrl}
           imageUrl={imageUrl}
           index={index}
-          totalImages={displayImages.length}
           onImageClick={() => openDialog(imageUrl)}
+          totalImages={validImages.length}
         />
       ))}
-      {validImages.length > MAX_VISIBLE && (
-        <button
-          type="button"
-          onClick={cycleNext}
-          className="relative z-10 flex h-32 w-32 shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-2xl bg-zinc-800/80 text-zinc-300 shadow-sm backdrop-blur-sm transition-colors hover:bg-zinc-700/80 hover:text-white"
-          style={{
-            rotate: displayImages.length % 2 === 0 ? "8deg" : "-8deg",
-          }}
-        >
-          <span className="text-base font-semibold">+{nextBatchCount}</span>
-          <CircleArrowRight02Icon
-            width={16}
-            height={16}
-            className="opacity-70"
-          />
-        </button>
-      )}
     </div>
   );
 }
@@ -150,29 +117,20 @@ interface ImageItemProps {
   imageUrl: string;
   index: number;
   onImageClick: () => void;
-  totalImages: number;
+  totalImages: number; // kept for potential future use
 }
 
-function ImageItem({
-  imageUrl,
-  index,
-  onImageClick,
-  totalImages,
-}: ImageItemProps) {
+function ImageItem({ imageUrl, index, onImageClick }: ImageItemProps) {
   const [isLoading, setIsLoading] = useState(true);
 
   const handleLoad = useCallback(() => {
     setIsLoading(false);
   }, []);
 
-  const rotation =
-    totalImages > 1 ? (index % 2 === 0 ? "8deg" : "-8deg") : "0deg";
-
   return (
     <m.div
       onClick={onImageClick}
-      className="relative h-32 w-32 shrink-0 cursor-pointer overflow-hidden rounded-2xl shadow-zinc-950 transition-all duration-200 hover:scale-105 hover:z-10"
-      style={{ rotate: rotation, zIndex: index }}
+      className="relative h-24 w-24 shrink-0 cursor-pointer overflow-hidden rounded-2xl shadow-zinc-950 transition-all duration-200 hover:scale-105"
       initial={{ scale: 0.6, filter: "blur(10px)" }}
       animate={{ scale: 1, filter: "blur(0px)" }}
       transition={{
@@ -189,9 +147,11 @@ function ImageItem({
       <Image
         src={imageUrl}
         alt={`Search result image ${index + 1}`}
-        width={112}
-        height={112}
-        className={`h-full w-full bg-zinc-800 object-cover transition ${isLoading ? "opacity-0" : "opacity-100"}`}
+        width={96}
+        height={96}
+        className={`h-full w-full bg-zinc-800 object-cover transition ${
+          isLoading ? "opacity-0" : "opacity-100"
+        }`}
         onLoad={handleLoad}
         priority={index < 3}
       />

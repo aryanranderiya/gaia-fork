@@ -1,7 +1,6 @@
 "use client";
 
 import { useDrag } from "@use-gesture/react";
-import nextDynamic from "next/dynamic";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import HeaderManager from "@/components/layout/headers/HeaderManager";
 import StatusBanner from "@/components/layout/StatusBanner";
@@ -12,14 +11,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useOnboardingGuard } from "@/features/auth/hooks/useOnboardingGuard";
 import { useUser } from "@/features/auth/hooks/useUser";
 import ContextGatheringLoader from "@/features/onboarding/components/ContextGatheringLoader";
+import HoloCardModal from "@/features/onboarding/components/HoloCardModal";
 import { isOnboardingPhaseUpdateMessage } from "@/features/onboarding/types/websocket";
+import { GlobalPricingModal } from "@/features/pricing/components/GlobalPricingModal";
+import CommandMenu from "@/features/search/components/CommandMenu";
 import { useIsMobile } from "@/hooks/ui/useMobile";
 import { useBackgroundSync } from "@/hooks/useBackgroundSync";
 import { usePathname } from "@/i18n/navigation";
 import ProvidersLayout from "@/layouts/ProvidersLayout";
 import SidebarLayout, { CustomSidebarTrigger } from "@/layouts/SidebarLayout";
-import { apiService } from "@/lib/api/service";
-import { wsManager } from "@/lib/websocket/WebSocketManager";
+import { apiService } from "@/lib/api";
+import { toast } from "@/lib/toast";
+import { wsManager } from "@/lib/websocket";
 import { useChatStoreSync } from "@/stores/chatStore";
 import { useHoloCardModalStore } from "@/stores/holoCardModalStore";
 import {
@@ -30,22 +33,6 @@ import { useRightSidebar } from "@/stores/rightSidebarStore";
 import { useUIStoreSidebar } from "@/stores/uiStore";
 
 export const dynamic = "force-dynamic";
-
-const HoloCardModal = nextDynamic(
-  () => import("@/features/onboarding/components/HoloCardModal"),
-  { ssr: false },
-);
-const GlobalPricingModal = nextDynamic(
-  () =>
-    import("@/features/pricing/components/GlobalPricingModal").then((m) => ({
-      default: m.GlobalPricingModal,
-    })),
-  { ssr: false },
-);
-const CommandMenu = nextDynamic(
-  () => import("@/features/search/components/CommandMenu"),
-  { ssr: false },
-);
 
 const HeaderSidebarTrigger = () => {
   return (
@@ -65,7 +52,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
     variant: rightSidebarVariant,
   } = useRightSidebar();
   const isMobile = useIsMobile();
-  const defaultOpen = !isMobile;
+  const [defaultOpen, setDefaultOpen] = useState(true);
   const dragRef = useRef<HTMLDivElement>(null);
   const [commandMenuOpen, setCommandMenuOpen] = useState(false);
   const {
@@ -142,6 +129,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isMobile && isMobileOpen) setMobileOpen(false);
   }, [isMobile, isMobileOpen, setMobileOpen]);
+
+  // Set default open state based on screen size
+  useEffect(() => {
+    if (isMobile) setDefaultOpen(false);
+    else setDefaultOpen(true);
+  }, [isMobile]);
 
   function closeOnTouch(): void {
     if (isMobile && (isMobileOpen || isOpen)) setMobileOpen(false);

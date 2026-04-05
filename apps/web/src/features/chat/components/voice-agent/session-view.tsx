@@ -10,7 +10,10 @@ import ChatRenderer from "@/features/chat/components/interface/ChatRenderer";
 import { AgentControlBar } from "@/features/chat/components/voice-agent/agent-control-bar";
 import useChatAndTranscription from "@/features/chat/components/voice-agent/hooks/useChatAndTranscription";
 import { MediaTiles } from "@/features/chat/components/voice-agent/media-tiles";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+import {
+  trackConversationCreated,
+  trackFeatureDiscovery,
+} from "@/lib/analytics";
 import { db, type IConversation } from "@/lib/db/chatDb";
 import { toast } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -148,13 +151,8 @@ export const SessionView = ({
           await db.putConversation(newConversation);
 
           // Track voice conversation creation and feature discovery
-          trackEvent(ANALYTICS_EVENTS.CHAT_CONVERSATION_CREATED, {
-            conversationId,
-            source: "voice_agent",
-          });
-          trackEvent(ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
-            feature: "voice_agent",
-          });
+          trackConversationCreated({ conversationId, source: "voice_agent" });
+          trackFeatureDiscovery("voice_agent");
         }
       } catch (error) {
         console.error("Failed to create conversation in sidebar:", error);

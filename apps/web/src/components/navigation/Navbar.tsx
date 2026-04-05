@@ -5,25 +5,20 @@ import AnimatedNumber from "animated-number-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import MobileMenu from "@/components/navigation/MobileMenu";
-import { ChevronDown, Github, StarFilledIcon } from "@/components/shared/icons";
+import { ChevronDown, StarFilledIcon } from "@/components/shared/icons";
 import { LinkButton } from "@/components/shared/LinkButton";
-import { Button } from "@/components/ui/button";
 import { appConfig } from "@/config/appConfig";
 import { useUser } from "@/features/auth/hooks/useUser";
+import { useGitHubStars } from "@/hooks";
 import useMediaQuery from "@/hooks/ui/useMediaQuery";
-import { useGitHubStars } from "@/hooks/useGitHubStars";
 import { usePathname } from "@/i18n/navigation";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+
+import { Github } from "../shared";
 import { LogoWithContextMenu } from "../shared/LogoWithContextMenu";
+import { Button } from "../ui";
 import { RaisedButton } from "../ui/raised-button";
 import { NavbarMenu } from "./NavbarMenu";
-
-const NAVBAR_ITEMS = [
-  { type: "dropdown", label: "Product", menu: "product" },
-  { type: "link", label: "Pricing", href: "/pricing" },
-  { type: "link", label: "Manifesto", href: "/manifesto" },
-  { type: "dropdown", label: "Resources", menu: "resources" },
-] as const;
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -42,9 +37,20 @@ export default function Navbar() {
       setIsScrolled(window.scrollY > scrollThreshold);
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Define navbar items - can be single links or dropdown menus
+  const navbarItems = [
+    { type: "dropdown", label: "Product", menu: "product" },
+    { type: "link", label: "Pricing", href: "/pricing" },
+    { type: "link", label: "Manifesto", href: "/manifesto" },
+    { type: "dropdown", label: "Resources", menu: "resources" },
+    // { type: "link", label: "Download", href: "/download" },
+    // { type: "dropdown", label: "Company", menu: "company" },
+    // { type: "dropdown", label: "Socials", menu: "socials" },
+  ] as const;
 
   // Function to control backdrop blur
   const toggleBackdrop = (show: boolean) => {
@@ -90,11 +96,19 @@ export default function Navbar() {
       className={`fixed top-0 left-0 z-50 w-full px-4 pt-4 transition-all duration-300`}
     >
       <div
-        className={`relative mx-auto transition-all duration-300 w-full ${isScrolled ? "sm:w-6xl" : "sm:w-full"}`}
+        className={`relative mx-auto transition-all duration-300 w-full ${
+          isScrolled ? "sm:w-6xl" : "sm:w-full"
+        }`}
         onMouseLeave={handleNavbarMouseLeave}
       >
         <div
-          className={`navbar_content flex h-14 w-full items-center justify-between px-3 transition-all duration-300 ${activeDropdown ? "rounded-t-2xl bg-zinc-900" : isScrolled ? "rounded-2xl bg-zinc-900/30 backdrop-blur-md" : "rounded-2xl border-transparent bg-transparent"}`}
+          className={`navbar_content flex h-14 w-full items-center justify-between px-3 transition-all duration-300 ${
+            activeDropdown
+              ? "rounded-t-2xl bg-zinc-900"
+              : isScrolled
+                ? "rounded-2xl bg-zinc-900/30 backdrop-blur-md"
+                : "rounded-2xl border-transparent bg-transparent"
+          }`}
         >
           <LogoWithContextMenu className="px-2" />
 
@@ -105,7 +119,11 @@ export default function Navbar() {
                 <LinkButton
                   key={href}
                   size="sm"
-                  className={`text-sm font-medium ${pathname === href ? "text-primary" : "text-zinc-300 hover:text-zinc-100"}`}
+                  className={`text-sm font-medium ${
+                    pathname === href
+                      ? "text-primary"
+                      : "text-zinc-300 hover:text-zinc-100"
+                  }`}
                   href={href}
                   startContent={icon}
                   external={external}
@@ -119,12 +137,16 @@ export default function Navbar() {
             <MobileMenu />
           ) : (
             <div className="flex items-center gap-1 rounded-lg px-1 py-1">
-              {NAVBAR_ITEMS.map((item) =>
+              {navbarItems.map((item) =>
                 item.type === "link" ? (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`relative flex h-9 cursor-pointer items-center rounded-xl px-4 py-2 text-sm transition-colors hover:bg-zinc-800/40 ${pathname === item.href ? "text-primary" : "text-zinc-300 hover:text-zinc-100"}`}
+                    className={`relative flex h-9 cursor-pointer items-center rounded-xl px-4 py-2 text-sm transition-colors hover:bg-zinc-800/40 ${
+                      pathname === item.href
+                        ? "text-primary"
+                        : "text-zinc-300 hover:text-zinc-100"
+                    }`}
                     onMouseEnter={() => {
                       setHoveredItem(item.label.toLowerCase());
                       setActiveDropdown(null);

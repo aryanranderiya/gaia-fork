@@ -40,9 +40,8 @@ export const useSlashCommands = (): UseSlashCommandsReturn => {
 
   // Create Fuse instance with optimized config for fuzzy search
   const fuse = useMemo(() => {
-    const enhancedToolMap = new Map(enhancedTools.map((et) => [et.name, et]));
     const toolsWithEnhanced = tools.map((tool) => {
-      const enhancedTool = enhancedToolMap.get(tool.name);
+      const enhancedTool = enhancedTools.find((et) => et.name === tool.name);
       return {
         tool,
         enhancedTool,
@@ -88,15 +87,19 @@ export const useSlashCommands = (): UseSlashCommandsReturn => {
 
   const getSlashCommandSuggestions = useCallback(
     (query: string): SlashCommandMatch[] => {
-      const enhancedToolMap = new Map(enhancedTools.map((et) => [et.name, et]));
       // If no query, show all tools sorted by unlock status, category and name
       if (!query.trim()) {
         return tools
-          .map((tool) => ({
-            tool,
-            enhancedTool: enhancedToolMap.get(tool.name),
-            matchedText: tool.name,
-          }))
+          .map((tool) => {
+            const enhancedTool = enhancedTools.find(
+              (et) => et.name === tool.name,
+            );
+            return {
+              tool,
+              enhancedTool,
+              matchedText: tool.name,
+            };
+          })
           .sort((a, b) => {
             // Unlocked tools first
             const aLocked = a.enhancedTool?.isLocked || false;

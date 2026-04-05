@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronRight } from "@/components/shared/icons";
+import { ChevronRight } from "@/components";
 import { RaisedButton } from "@/components/ui/raised-button";
 import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 

@@ -4,7 +4,7 @@ import { Button } from "@heroui/button";
 import { Kbd } from "@heroui/kbd";
 import { ConnectIcon, MessageFavourite02Icon } from "@icons";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { HeaderTitle } from "@/components/layout/headers/HeaderTitle";
@@ -25,6 +25,7 @@ import { useRightSidebar } from "@/stores/rightSidebarStore";
 
 export default function IntegrationsPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const router = useRouter();
   const { isMac } = usePlatform();
   const { setHeader } = useHeader();
@@ -129,11 +130,10 @@ export default function IntegrationsPage() {
 
   // Handle query params from backend redirects (status, oauth_success, etc.)
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get("status");
-    const integrationId = params.get("id");
-    const oauthSuccess = params.get("oauth_success");
-    const oauthIntegration = params.get("integration");
+    const status = searchParams.get("status");
+    const integrationId = searchParams.get("id");
+    const oauthSuccess = searchParams.get("oauth_success");
+    const oauthIntegration = searchParams.get("integration");
 
     // Handle OAuth success callback - toast is handled globally by useOAuthSuccessToast
     // Here we just handle opening the sidebar for the connected integration
@@ -151,7 +151,7 @@ export default function IntegrationsPage() {
       router.replace("/integrations", { scroll: false });
 
       if (status === "connected") {
-        const nameParam = params.get("name");
+        const nameParam = searchParams.get("name");
         if (nameParam) {
           toast.success(`Connected to ${nameParam}`);
         }
@@ -159,19 +159,18 @@ export default function IntegrationsPage() {
         queryClient.refetchQueries({ queryKey: ["tools", "available"] });
       } else if (status === "bearer_required") {
         // name should be in URL when redirected here
-        const nameParam = params.get("name");
+        const nameParam = searchParams.get("name");
         if (nameParam) {
           setBearerIntegrationId(integrationId);
           setBearerIntegrationName(nameParam);
           setBearerModalOpen(true);
         }
       } else if (status === "failed") {
-        const error = params.get("error");
+        const error = searchParams.get("error");
         toast.error(`Connection failed: ${error || "Unknown error"}`);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, integrations, router, refetch, queryClient]);
 
   const handleBearerSubmit = async (id: string, token: string) => {
     const toastId = toast.loading(`Connecting...`);
@@ -218,11 +217,10 @@ export default function IntegrationsPage() {
   // Handle standalone id param (from slash command dropdown navigation)
   // Separated from the main useEffect to avoid using handleIntegrationClick before declaration
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const status = params.get("status");
-    const integrationId = params.get("id");
-    const oauthSuccess = params.get("oauth_success");
-    const needsRefresh = params.get("refresh") === "true";
+    const status = searchParams.get("status");
+    const integrationId = searchParams.get("id");
+    const oauthSuccess = searchParams.get("oauth_success");
+    const needsRefresh = searchParams.get("refresh") === "true";
 
     // Only process if we have an id and no status/oauth params (to avoid double-processing)
     if (integrationId && !status && !oauthSuccess) {
@@ -240,8 +238,7 @@ export default function IntegrationsPage() {
         handleIntegrationClick(integrationId);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, router, handleIntegrationClick, queryClient]);
 
   // Open sidebar once pending integration data is available after refresh
   useEffect(() => {
@@ -340,7 +337,7 @@ export default function IntegrationsPage() {
 
       <ContactSupportModal
         isOpen={isSupportModalOpen}
-        onOpenChange={() => setIsSupportModalOpen((prev) => !prev)}
+        onOpenChange={() => setIsSupportModalOpen(!isSupportModalOpen)}
         initialValues={{
           type: "feature",
           title: "Integration Request",

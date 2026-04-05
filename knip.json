@@ -49,9 +49,7 @@
     ".agents/**",
     ".claude/**",
     "apps/web/content/**",
-    "apps/web/scripts/**",
-    "apps/web/src/app/styles/globals.css",
-    "scripts/ci/**"
+    "apps/web/scripts/**"
   ],
   "ignoreDependencies": ["nx", "@nx/*"],
   "ignoreBinaries": [

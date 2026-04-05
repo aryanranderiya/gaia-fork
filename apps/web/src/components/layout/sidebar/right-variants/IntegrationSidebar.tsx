@@ -14,10 +14,10 @@ import {
 } from "@icons";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import { RaisedButton } from "@/components/ui/raised-button";
-import { SidebarContent, SidebarHeader } from "@/components/ui/sidebar";
+import { RaisedButton, SidebarHeader } from "@/components/ui";
+import { SidebarContent } from "@/components/ui/sidebar";
 import { useToolsWithIntegrations } from "@/features/chat/hooks/useToolsWithIntegrations";
 import { formatToolName } from "@/features/chat/utils/chatUtils";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
@@ -52,12 +52,6 @@ export const IntegrationSidebar: React.FC<IntegrationSidebarProps> = ({
   const showRetry = integration.status === "created";
   const { tools } = useToolsWithIntegrations();
   const queryClient = useQueryClient();
-
-  // Hoist RegExp out of render loop - same pattern for all tools
-  const categoryPrefixRegex = useMemo(
-    () => (category ? new RegExp(`^${category}\\s*`, "gi") : null),
-    [category],
-  );
 
   const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -181,51 +175,44 @@ export const IntegrationSidebar: React.FC<IntegrationSidebarProps> = ({
   };
 
   const handleDisconnect = () => {
-    if (!isConnected || !onDisconnect) return;
-    setShowDisconnectDialog(true);
+    if (isConnected && onDisconnect) {
+      setShowDisconnectDialog(true);
+    }
   };
 
   const confirmDisconnect = async () => {
-    if (!onDisconnect) return;
-    setIsDisconnecting(true);
-    try {
-      await onDisconnect(integration.id);
-    } finally {
-      setIsDisconnecting(false);
-      setShowDisconnectDialog(false);
+    if (onDisconnect) {
+      setIsDisconnecting(true);
+      try {
+        await onDisconnect(integration.id);
+      } finally {
+        setIsDisconnecting(false);
+        setShowDisconnectDialog(false);
+      }
     }
   };
 
   const handleDelete = () => {
-    if (!onDelete) return;
-    setShowDeleteDialog(true);
+    if (onDelete) {
+      setShowDeleteDialog(true);
+    }
   };
 
   const confirmDelete = async () => {
-    if (!onDelete) return;
-    setIsDeleting(true);
-    try {
-      await onDelete(integration.id);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
+    if (onDelete) {
+      setIsDeleting(true);
+      try {
+        await onDelete(integration.id);
+      } finally {
+        setIsDeleting(false);
+        setShowDeleteDialog(false);
+      }
     }
   };
 
   const handlePublish = () => {
     if (isPublishing) return;
     setShowPublishDialog(true);
-  };
-
-  const handleShare = async () => {
-    try {
-      await navigator.clipboard.writeText(
-        `${window.location.origin}/marketplace/${integration.slug}`,
-      );
-      toast.success("Link copied to clipboard!");
-    } catch {
-      toast.error("Failed to copy link to clipboard");
-    }
   };
 
   const confirmPublish = async () => {
@@ -454,7 +441,16 @@ export const IntegrationSidebar: React.FC<IntegrationSidebarProps> = ({
                   isIconOnly={useIconOnly}
                   className="w-full"
                   color="default"
-                  onPress={handleShare}
+                  onPress={async () => {
+                    try {
+                      await navigator.clipboard.writeText(
+                        `${window.location.origin}/marketplace/${integration.slug}`,
+                      );
+                      toast.success("Link copied to clipboard!");
+                    } catch {
+                      toast.error("Failed to copy link to clipboard");
+                    }
+                  }}
                   aria-label="Share"
                   startContent={<Share08Icon width={18} height={18} />}
                 >
@@ -496,9 +492,9 @@ export const IntegrationSidebar: React.FC<IntegrationSidebarProps> = ({
                   radius="full"
                   className="font-light border-1 text-zinc-300"
                 >
-                  {categoryPrefixRegex
+                  {category
                     ? formatToolName(tool.name)
-                        .replace(categoryPrefixRegex, "")
+                        .replace(new RegExp(`^${category}\\s*`, "gi"), "")
                         .trim()
                     : formatToolName(tool.name)}
                 </Chip>

@@ -1,13 +1,4 @@
-import type {
-  NotificationActionStyle,
-  NotificationActionType,
-  PlatformLink,
-  PlatformLinksResponse,
-  NotificationStatus as SharedNotificationStatus,
-} from "@shared/types";
 import type { NotificationSource } from "../notifications";
-
-export type { PlatformLink, PlatformLinksResponse };
 
 export enum NotificationType {
   INFO = "info",
@@ -16,12 +7,26 @@ export enum NotificationType {
   SUCCESS = "success",
 }
 
-// Re-export shared enum as the canonical NotificationStatus for web
-export {
-  NotificationActionStyle as ActionStyle,
-  NotificationActionType as ActionType,
-  NotificationStatus,
-} from "@shared/types";
+export enum NotificationStatus {
+  PENDING = "pending",
+  DELIVERED = "delivered",
+  READ = "read",
+  SNOOZED = "snoozed",
+  ARCHIVED = "archived",
+}
+
+export enum ActionType {
+  REDIRECT = "redirect",
+  API_CALL = "api_call",
+  WORKFLOW = "workflow",
+  MODAL = "modal",
+}
+
+export enum ActionStyle {
+  PRIMARY = "primary",
+  SECONDARY = "secondary",
+  DANGER = "danger",
+}
 
 export interface RedirectConfig {
   url: string;
@@ -171,9 +176,9 @@ export interface ActionConfig {
 
 export interface NotificationAction {
   id: string;
-  type: NotificationActionType;
+  type: ActionType;
   label: string;
-  style?: NotificationActionStyle;
+  style?: ActionStyle;
   config: ActionConfig;
   requires_confirmation?: boolean;
   confirmation_message?: string;
@@ -348,7 +353,7 @@ export interface NotificationRequest {
 
 export interface ChannelDeliveryStatus {
   channel_type: string;
-  status: SharedNotificationStatus;
+  status: NotificationStatus;
   delivered_at?: string;
   error_message?: string;
   retry_count?: number;
@@ -357,7 +362,7 @@ export interface ChannelDeliveryStatus {
 export interface NotificationRecord {
   id: string;
   user_id: string;
-  status: SharedNotificationStatus;
+  status: NotificationStatus;
   type: NotificationType;
   created_at: string;
   delivered_at?: string;
@@ -414,7 +419,7 @@ export interface ActionResultData {
 
 export interface NotificationUpdate {
   // Status changes
-  status?: SharedNotificationStatus;
+  status?: NotificationStatus;
   read_at?: string;
   archived_at?: string;
   snoozed_until?: string;
@@ -531,7 +536,7 @@ export interface PaginatedNotificationsResponse {
 
 // Hook options
 export interface UseNotificationsOptions {
-  status?: SharedNotificationStatus;
+  status?: NotificationStatus;
   limit?: number;
   offset?: number;
   channel_type?: string;

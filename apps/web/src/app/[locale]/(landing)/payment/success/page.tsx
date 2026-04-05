@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { SubscriptionSuccessModal } from "@/features/pricing/components/SubscriptionSuccessModal";
 import { usePricing } from "@/features/pricing/hooks/usePricing";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+import { trackSubscription } from "@/lib/analytics";
 import { toast } from "@/lib/toast";
 
 export default function PaymentSuccessPage() {
@@ -27,7 +27,7 @@ export default function PaymentSuccessPage() {
         const result = await verifyPayment();
 
         if (result.payment_completed) {
-          trackEvent(ANALYTICS_EVENTS.SUBSCRIPTION_COMPLETED);
+          trackSubscription("completed", {});
           setShowSuccessModal(true);
           toast.success("Payment completed successfully!");
         } else {

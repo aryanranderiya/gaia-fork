@@ -5,11 +5,7 @@ Clean, simple, and maintainable.
 
 from typing import Any, Dict, List, Optional
 
-from bson import ObjectId
-from dodopayments import DodoPayments
-from fastapi import HTTPException
 from shared.py.wide_events import log
-
 from app.config.settings import settings
 from app.db.mongodb.collections import (
     plans_collection,
@@ -25,6 +21,9 @@ from app.models.payment_models import (
     UserSubscriptionStatus,
 )
 from app.utils.email_utils import send_pro_subscription_email
+from bson import ObjectId
+from dodopayments import DodoPayments
+from fastapi import HTTPException
 
 
 class DodoPaymentService:
@@ -122,11 +121,12 @@ class DodoPaymentService:
                     "email": user.get("email"),
                     "name": user.get("first_name") or user.get("name", "User"),
                 },
+                "billing_address": {
+                    "country": "IN",
+                },
                 "feature_flags": {
                     # This renders the promo/discount code input on the hosted page
                     "allow_discount_code": True,
-                    # Allow customers to change their billing address country
-                    "allow_customer_editing_country": True,
                 },
                 "return_url": f"{settings.FRONTEND_URL}/payment/success",
                 "metadata": {"user_id": user_id, "product_id": product_id},

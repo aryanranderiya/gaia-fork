@@ -1,5 +1,4 @@
 .history
-.claude/worktrees
 venv
 api/__pycache__
 */__pycache__/*
@@ -123,5 +122,3 @@ docs/plans/
 
 .coverage
 i18n.cache
-.worktrees/
-superpowers/

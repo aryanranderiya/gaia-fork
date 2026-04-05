@@ -2,7 +2,6 @@ export type {
   ApiFileData,
   ApiToolData,
   Message,
-  ReplyToMessageData,
 } from "@/features/chat/api/chat-api";
 
 import type { Message } from "@/features/chat/api/chat-api";
@@ -34,8 +33,7 @@ export interface GroupedConversations {
   today: Conversation[];
   yesterday: Conversation[];
   lastWeek: Conversation[];
-  last30Days: Conversation[];
-  older: Conversation[];
+  previousChats: Conversation[];
 }
 
 export interface Suggestion {

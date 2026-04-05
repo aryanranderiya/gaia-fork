@@ -365,9 +365,7 @@ export default function FileUpload({
               </>
             ) : isUploading ? (
               <>
-                <div className="mb-4 animate-spin">
-                  <Loading02Icon className="h-10 w-10 text-primary" />
-                </div>
+                <Loading02Icon className="mb-4 h-10 w-10 animate-spin text-primary" />
                 <p className="mb-2 text-sm font-medium text-white">
                   Uploading files...
                 </p>
@@ -410,7 +408,9 @@ export default function FileUpload({
                   {files.map((fileWithPreview, index) => (
                     <div
                       key={fileWithPreview.previewUrl}
-                      className={`relative flex items-center rounded-xl p-3 ${fileWithPreview.error ? "bg-red-500/10" : "bg-zinc-800"}`}
+                      className={`relative flex items-center rounded-xl p-3 ${
+                        fileWithPreview.error ? "bg-red-500/10" : "bg-zinc-800"
+                      }`}
                     >
                       <Button
                         isIconOnly

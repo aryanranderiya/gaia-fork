@@ -72,5 +72,5 @@
       }
     }
   },
-  "tags": ["type:app", "platform:mobile", "scope:typescript"]
+  "tags": ["type:app", "platform:mobile"]
 }

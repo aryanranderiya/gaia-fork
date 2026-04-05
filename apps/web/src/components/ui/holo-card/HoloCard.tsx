@@ -49,7 +49,7 @@ export const HoloCard = ({
 
   const handleCardClick = () => {
     if (!forceSide) {
-      setIsFlipped((prev) => !prev);
+      setIsFlipped(!isFlipped);
     }
   };
 

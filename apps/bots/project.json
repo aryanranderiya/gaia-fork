@@ -4,7 +4,6 @@
   "root": "apps/bots",
   "sourceRoot": "apps/bots",
   "projectType": "application",
-  "tags": ["scope:typescript"],
   "targets": {
     "test": {
       "executor": "nx:run-commands",

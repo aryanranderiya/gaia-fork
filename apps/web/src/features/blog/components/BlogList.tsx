@@ -2,17 +2,17 @@
 
 import { useState } from "react";
 
-import type { BlogPostMeta } from "@/lib/blog";
+import type { BlogPost } from "@/lib/blog";
 
 import { BlogCard } from "./BlogCard";
 import { BlogFilters } from "./BlogFilters";
 
 interface BlogListProps {
-  blogs: BlogPostMeta[];
+  blogs: BlogPost[];
 }
 
 export function BlogList({ blogs }: BlogListProps) {
-  const [filtered, setFilteredBlogs] = useState<BlogPostMeta[]>(blogs);
+  const [filtered, setFilteredBlogs] = useState(blogs);
 
   const featured = filtered.filter((b) => b.featured);
   const rest = filtered.filter((b) => !b.featured);

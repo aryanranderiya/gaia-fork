@@ -1,5 +1,4 @@
 import { getLocale } from "next-intl/server";
-import { cache } from "react";
 import { loadFeatureTranslations } from "@/i18n/loadFeatureTranslations";
 import { getAllCombos, getCombo, type IntegrationCombo } from "./combosData";
 
@@ -27,20 +26,17 @@ async function loadComboTranslations(
   );
 }
 
-/** Wrapped with React.cache() for per-request deduplication between generateMetadata and page component */
-export const getTranslatedCombo = cache(
-  async (
-    slug: string,
-    locale?: string,
-  ): Promise<IntegrationCombo | undefined> => {
-    const base = getCombo(slug);
-    if (!base) return undefined;
-    const translations = await loadComboTranslations(locale);
-    const t = translations[slug];
-    if (!t) return base;
-    return { ...base, ...t };
-  },
-);
+export async function getTranslatedCombo(
+  slug: string,
+  locale?: string,
+): Promise<IntegrationCombo | undefined> {
+  const base = getCombo(slug);
+  if (!base) return undefined;
+  const translations = await loadComboTranslations(locale);
+  const t = translations[slug];
+  if (!t) return base;
+  return { ...base, ...t };
+}
 
 export async function getTranslatedCombos(
   locale?: string,

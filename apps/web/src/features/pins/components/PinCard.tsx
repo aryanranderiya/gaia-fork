@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type React from "react";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+
 import { parseDate } from "@/utils/date/dateUtils";
 
 interface PinCardProps {
@@ -25,12 +25,6 @@ export const PinCard: React.FC<PinCardProps> = ({
         pathname: `/c/${conversation_id}`,
         query: { messageId: message.message_id },
       }}
-      onClick={() =>
-        trackEvent(ANALYTICS_EVENTS.PIN_VIEWED, {
-          message_id: message.message_id,
-          conversation_id,
-        })
-      }
     >
       {/* <Chip
         className="min-h-7"
@@ -48,10 +42,7 @@ export const PinCard: React.FC<PinCardProps> = ({
         {message.response.length > 350 ? "..." : ""}
       </div>
 
-      <div
-        className="mt-auto text-xs text-foreground-500"
-        suppressHydrationWarning
-      >
+      <div className="mt-auto text-xs text-foreground-500">
         {parseDate(message.date as string)}
       </div>
     </Link>

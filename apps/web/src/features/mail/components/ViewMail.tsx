@@ -25,7 +25,6 @@ import Spinner from "@/components/ui/spinner";
 import GmailBody from "@/features/mail/components/GmailBody";
 import { useEmailSummary } from "@/features/mail/hooks/useEmailAnalysis";
 import { parseEmail } from "@/features/mail/utils/mailUtils";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { toast } from "@/lib/toast";
 // import { MenuBar } from "@/features/notes/components/NotesMenuBar";
 import type {
@@ -176,12 +175,6 @@ export default function ViewEmail({
   const [replyTo, setReplyTo] = useState<EmailData | null>(null);
   const [isSending, setIsSending] = useState(false);
 
-  useEffect(() => {
-    if (mailId) {
-      trackEvent(ANALYTICS_EVENTS.EMAIL_OPENED, { mail_id: mailId });
-    }
-  }, [mailId]);
-
   // Only fetch individually if not in cache
   const {
     data: aiAnalysisData,
@@ -264,7 +257,6 @@ export default function ViewEmail({
       //   subject: `Re: ${replyTo.subject || ""}`,
       //   body: content,
       // });
-      // trackEvent(ANALYTICS_EVENTS.EMAIL_REPLIED, { mail_id: replyTo.id, thread_id: replyTo.threadId });
 
       toast.error("ArrowTurnBackwardIcon functionality is not yet implemented");
       setShowReplyEditor(false);
@@ -411,10 +403,7 @@ export default function ViewEmail({
                               description: "text-gray-400",
                             }}
                           />
-                          <div
-                            className="text-xs text-gray-400"
-                            suppressHydrationWarning
-                          >
+                          <div className="text-xs text-gray-400">
                             {new Date(message.time).toLocaleString()}
                           </div>
                         </div>

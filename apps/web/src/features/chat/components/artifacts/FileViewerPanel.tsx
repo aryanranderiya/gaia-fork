@@ -9,7 +9,13 @@ import {
   Download01Icon,
   File01Icon,
 } from "@icons";
-import { useCallback, useEffect, useState, type WheelEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type WheelEvent,
+} from "react";
 import { type VFSReadResponse, vfsApi } from "@/features/chat/api/vfsApi";
 import MarkdownRenderer from "@/features/chat/components/interface/MarkdownRenderer";
 import { useRightSidebar } from "@/stores/rightSidebarStore";
@@ -182,7 +188,9 @@ export default function FileViewerPanel({
 
   const effectiveContentType = fileData?.content_type || contentType;
 
-  const isPreviewable = PREVIEWABLE_CONTENT_TYPES.has(effectiveContentType);
+  const isPreviewable = useMemo(() => {
+    return PREVIEWABLE_CONTENT_TYPES.has(effectiveContentType);
+  }, [effectiveContentType]);
 
   const [viewMode, setViewMode] = useState<ViewMode>(
     isPreviewable ? "preview" : "source",
@@ -285,7 +293,11 @@ export default function FileViewerPanel({
             <button
               type="button"
               onClick={() => setViewMode("preview")}
-              className={`rounded-sm p-1.5 transition-colors ${viewMode === "preview" ? "bg-zinc-700 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}
+              className={`rounded-sm p-1.5 transition-colors ${
+                viewMode === "preview"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
               aria-label="Preview mode"
             >
               <File01Icon size={16} />
@@ -293,7 +305,11 @@ export default function FileViewerPanel({
             <button
               type="button"
               onClick={() => setViewMode("source")}
-              className={`rounded-sm p-1.5 transition-colors ${viewMode === "source" ? "bg-zinc-700 text-zinc-100" : "text-zinc-400 hover:text-zinc-200"}`}
+              className={`rounded-sm p-1.5 transition-colors ${
+                viewMode === "source"
+                  ? "bg-zinc-700 text-zinc-100"
+                  : "text-zinc-400 hover:text-zinc-200"
+              }`}
               aria-label="Code mode"
             >
               <CodeIcon size={16} />
@@ -344,7 +360,11 @@ export default function FileViewerPanel({
       </div>
 
       <div
-        className={`min-h-0 flex-1 ${isHtmlPreview ? "overflow-hidden" : "overflow-y-auto overscroll-contain"}`}
+        className={`min-h-0 flex-1 ${
+          isHtmlPreview
+            ? "overflow-hidden"
+            : "overflow-y-auto overscroll-contain"
+        }`}
         style={{ touchAction: "pan-x pan-y" }}
         onWheel={handleContentWheel}
       >

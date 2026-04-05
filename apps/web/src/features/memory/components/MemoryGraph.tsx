@@ -202,9 +202,7 @@ const MemoryGraph = forwardRef<MemoryGraphHandle, MemoryGraphProps>(
       const { nodes, links } = transformMemoryDataToGraph(memories, relations);
 
       // Get unique node types and sort them alphabetically
-      const nodeTypes = Array.from(
-        new Set(nodes.map((n) => n.group)),
-      ).toSorted();
+      const nodeTypes = Array.from(new Set(nodes.map((n) => n.group))).sort();
 
       // Deterministic hash function for string to number
       const stringToHash = (str: string): number => {

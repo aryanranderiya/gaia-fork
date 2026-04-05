@@ -9,7 +9,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@heroui/react";
-import { useEffect, useEffectEvent, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 interface ConfirmationDialogProps {
   isOpen: boolean;
@@ -38,18 +38,6 @@ export function ConfirmationDialog({
   // Track if confirm was just pressed to avoid triggering onCancel
   const confirmPressedRef = useRef(false);
 
-  const handleKeyDown = useEffectEvent((e: KeyboardEvent) => {
-    if (!isOpen) return;
-    if (e.key === "Enter") {
-      e.preventDefault();
-      confirmPressedRef.current = true;
-      onConfirm();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      onCancel();
-    }
-  });
-
   useEffect(() => {
     if (!isOpen) {
       // Reset the flag when dialog closes
@@ -62,12 +50,23 @@ export function ConfirmationDialog({
       confirmButtonRef.current?.focus();
     }, 100);
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        confirmPressedRef.current = true;
+        onConfirm();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        onCancel();
+      }
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => {
       clearTimeout(timer);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, onConfirm, onCancel]);
 
   const handleOpenChange = (open: boolean) => {
     if (!open && !confirmPressedRef.current) {

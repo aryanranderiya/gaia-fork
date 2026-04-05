@@ -1,9 +1,8 @@
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import { FEATURE_DISCOVERED_WORKFLOWS_KEY } from "@/features/chat/constants";
 import type { Workflow } from "@/features/workflows/api/workflowApi";
 import { usePathname } from "@/i18n/navigation";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+import { trackFeatureDiscovery } from "@/lib/analytics";
 import {
   type SelectedWorkflowData,
   useWorkflowSelectionStore,
@@ -31,25 +30,10 @@ export const useWorkflowSelection = () => {
       storeSelectWorkflow(workflow, options);
 
       // Track first workflow use as feature discovery
-      const hasTrackedFeatureDiscovered =
-        typeof globalThis.window !== "undefined" &&
-        localStorage.getItem(FEATURE_DISCOVERED_WORKFLOWS_KEY);
-
-      if (!hasTrackedFeatureDiscovered) {
-        trackEvent(ANALYTICS_EVENTS.FEATURE_DISCOVERED, {
-          feature: "workflows",
-          workflow_title: workflow.title,
-        });
-
-        if (typeof globalThis.window !== "undefined") {
-          localStorage.setItem(FEATURE_DISCOVERED_WORKFLOWS_KEY, "true");
-        }
-      }
+      trackFeatureDiscovery("workflows", { workflow_title: workflow.title });
 
       // Navigate to chat page if not already there
-      if (pathname !== "/c") {
-        router.push("/c");
-      }
+      if (pathname !== "/c") router.push("/c");
     },
     [storeSelectWorkflow, pathname, router],
   );

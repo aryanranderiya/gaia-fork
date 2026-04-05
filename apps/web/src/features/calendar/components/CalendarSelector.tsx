@@ -55,20 +55,18 @@ export default function CalendarSelector({
   selectedCalendars,
   onCalendarSelect,
 }: CalendarSelectorProps) {
-  const selectedCalendarSet = new Set(selectedCalendars);
-
   return (
     <div
       className={`relative flex flex-col justify-center gap-1 transition-all`}
     >
       {calendars && calendars.length > 0 ? (
-        calendars
-          .toSorted((a, b) => a.summary.localeCompare(b.summary))
+        [...calendars]
+          .sort((a, b) => a.summary.localeCompare(b.summary))
           .map((calendar) => (
             <CalendarChip
               key={calendar.id}
               calendar={calendar}
-              selected={selectedCalendarSet.has(calendar.id)}
+              selected={selectedCalendars.includes(calendar.id)}
               onSelect={onCalendarSelect}
             />
           ))

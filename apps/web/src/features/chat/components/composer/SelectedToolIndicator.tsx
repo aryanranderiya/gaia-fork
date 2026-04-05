@@ -1,7 +1,7 @@
 import { Cancel01Icon } from "@icons";
 import { AnimatePresence, m } from "motion/react";
 import type React from "react";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
 import { useComposerUI } from "@/stores/composerStore";
 
@@ -12,15 +12,13 @@ interface SelectedToolIndicatorProps {
   onRemove?: () => void;
 }
 
-const TOOL_SUFFIX_REGEX = / tool$/i;
-
 const formatToolName = (toolName: string): string => {
   return toolName
     .toLowerCase() // First convert to lowercase
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ")
-    .replace(TOOL_SUFFIX_REGEX, "") // Remove "Tool" suffix (case insensitive)
+    .replace(/\s+tool$/i, "") // Remove "Tool" suffix (case insensitive)
     .trim();
 };
 
@@ -32,26 +30,21 @@ const SelectedToolIndicator: React.FC<SelectedToolIndicatorProps> = ({
 }) => {
   const { isSlashCommandDropdownOpen } = useComposerUI();
 
-  const onRemoveRef = useRef(onRemove);
-  onRemoveRef.current = onRemove;
-  const isSlashCommandOpenRef = useRef(isSlashCommandDropdownOpen);
-  isSlashCommandOpenRef.current = isSlashCommandDropdownOpen;
-
   // Handle Escape key to close the indicator
   useEffect(() => {
-    if (!toolName) return;
+    if (!toolName || !onRemove) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle escape if slash command dropdown is NOT open
-      if (e.key === "Escape" && !isSlashCommandOpenRef.current) {
+      if (e.key === "Escape" && !isSlashCommandDropdownOpen) {
         e.preventDefault();
-        onRemoveRef.current?.();
+        onRemove();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [toolName]);
+  }, [toolName, onRemove, isSlashCommandDropdownOpen]);
 
   return (
     <AnimatePresence>

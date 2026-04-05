@@ -31,8 +31,6 @@ export async function generateStaticParams() {
   }));
 }
 
-export const dynamicParams = false;
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -65,10 +63,8 @@ export async function generateMetadata({
 export default async function GlossaryTermPage({ params }: PageProps) {
   const { locale, term } = await params;
   setRequestLocale(locale);
-  const [t, data] = await Promise.all([
-    getTranslations(),
-    getTranslatedGlossaryTerm(term),
-  ]);
+  const t = await getTranslations();
+  const data = await getTranslatedGlossaryTerm(term);
 
   if (!data) {
     notFound();
@@ -108,24 +104,22 @@ export default async function GlossaryTermPage({ params }: PageProps) {
     `${siteConfig.url}/learn/${term}`,
   );
 
-  // Fetch related terms and comparisons in parallel
-  const [relatedTerms, relatedComparisonData] = await Promise.all([
-    Promise.all(
+  const relatedTerms = (
+    await Promise.all(
       data.relatedTerms.map((slug) => getTranslatedGlossaryTerm(slug)),
-    ).then((results) =>
-      results.filter(
-        (glossaryTerm): glossaryTerm is NonNullable<typeof glossaryTerm> =>
-          glossaryTerm !== undefined,
-      ),
-    ),
-    Promise.all(
+    )
+  ).filter(
+    (glossaryTerm): glossaryTerm is NonNullable<typeof glossaryTerm> =>
+      glossaryTerm !== undefined,
+  );
+
+  const relatedComparisonData = (
+    await Promise.all(
       (data.relatedComparisons ?? []).map((slug) =>
         getTranslatedComparison(slug),
       ),
-    ).then((results) =>
-      results.filter((c): c is NonNullable<typeof c> => c !== undefined),
-    ),
-  ]);
+    )
+  ).filter((c): c is NonNullable<typeof c> => c !== undefined);
 
   return (
     <>

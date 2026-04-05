@@ -1,5 +1,4 @@
 import { getLocale } from "next-intl/server";
-import { cache } from "react";
 import { loadFeatureTranslations } from "@/i18n/loadFeatureTranslations";
 import {
   type GlossaryTerm,
@@ -31,17 +30,17 @@ async function loadGlossaryTranslations(
   );
 }
 
-/** Wrapped with React.cache() for per-request deduplication between generateMetadata and page component */
-export const getTranslatedGlossaryTerm = cache(
-  async (slug: string, locale?: string): Promise<GlossaryTerm | undefined> => {
-    const base = getGlossaryTerm(slug);
-    if (!base) return undefined;
-    const translations = await loadGlossaryTranslations(locale);
-    const t = translations[slug];
-    if (!t) return base;
-    return { ...base, ...t };
-  },
-);
+export async function getTranslatedGlossaryTerm(
+  slug: string,
+  locale?: string,
+): Promise<GlossaryTerm | undefined> {
+  const base = getGlossaryTerm(slug);
+  if (!base) return undefined;
+  const translations = await loadGlossaryTranslations(locale);
+  const t = translations[slug];
+  if (!t) return base;
+  return { ...base, ...t };
+}
 
 export async function getAllTranslatedGlossaryTerms(
   locale?: string,

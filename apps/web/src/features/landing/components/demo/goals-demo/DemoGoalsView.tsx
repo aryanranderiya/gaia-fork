@@ -294,7 +294,9 @@ function DemoGoalNodeSidebar({
         <div className="space-y-4">
           {/* Title */}
           <h2
-            className={`text-xl font-medium leading-tight ${node.isComplete ? "text-zinc-500 line-through" : "text-zinc-100"}`}
+            className={`text-xl font-medium leading-tight ${
+              node.isComplete ? "text-zinc-500 line-through" : "text-zinc-100"
+            }`}
           >
             {node.label}
           </h2>
@@ -313,7 +315,9 @@ function DemoGoalNodeSidebar({
           {/* Details */}
           {node.details.length > 0 && (
             <p
-              className={`text-sm leading-relaxed ${node.isComplete ? "text-zinc-600" : "text-zinc-400"}`}
+              className={`text-sm leading-relaxed ${
+                node.isComplete ? "text-zinc-600" : "text-zinc-400"
+              }`}
             >
               {node.details.join(" · ")}
             </p>

@@ -5,7 +5,7 @@ import { Input, Textarea } from "@heroui/input";
 import { Select, SelectItem } from "@heroui/select";
 import { Switch } from "@heroui/switch";
 import { Delete02Icon, RepeatIcon, UserCircleIcon } from "@icons";
-import React, { useEffectEvent } from "react";
+import React from "react";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import {
   Accordion,
@@ -77,41 +77,42 @@ export const EventSidebar: React.FC<EventSidebarProps> = ({
   const { confirm, confirmationProps } = useConfirmation();
 
   // Handle Delete key press when event is selected
-  const handleDeleteKeyDown = useEffectEvent(async (e: KeyboardEvent) => {
+  React.useEffect(() => {
     if (!selectedEvent || isCreating) return;
 
-    // Only trigger if not focused on an input element
-    const target = e.target as HTMLElement;
-    const isInputElement =
-      target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA" ||
-      target.isContentEditable;
+    const handleKeyDown = async (e: KeyboardEvent) => {
+      // Check if Delete or Backspace key is pressed
+      // Only trigger if not focused on an input element
+      const target = e.target as HTMLElement;
+      const isInputElement =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
 
-    if ((e.key === "Delete" || e.key === "Backspace") && !isInputElement) {
-      e.preventDefault();
+      if ((e.key === "Delete" || e.key === "Backspace") && !isInputElement) {
+        e.preventDefault();
 
-      const confirmed = await confirm({
-        title: "Delete Event",
-        message: `Are you sure you want to delete "${summary}"? This action cannot be undone.`,
-        confirmText: "Delete",
-        cancelText: "Cancel",
-        variant: "destructive",
-      });
+        const confirmed = await confirm({
+          title: "Delete Event",
+          message: `Are you sure you want to delete "${summary}"? This action cannot be undone.`,
+          confirmText: "Delete",
+          cancelText: "Cancel",
+          variant: "destructive",
+        });
 
-      if (confirmed) {
-        onDelete();
+        if (confirmed) {
+          onDelete();
+        }
       }
-    }
-  });
+    };
 
-  React.useEffect(() => {
     if (typeof window !== "undefined")
-      window.addEventListener("keydown", handleDeleteKeyDown);
+      window.addEventListener("keydown", handleKeyDown);
     return () => {
       if (typeof window !== "undefined")
-        window.removeEventListener("keydown", handleDeleteKeyDown);
+        window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [selectedEvent, isCreating, confirm, summary, onDelete]);
 
   // Set default calendar when calendars are loaded and creating
   React.useEffect(() => {
@@ -283,7 +284,11 @@ export const EventSidebar: React.FC<EventSidebarProps> = ({
                             : [...customRecurrenceDays, day.value];
                           onCustomRecurrenceDaysChange(newDays);
                         }}
-                        className={`flex size-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${customRecurrenceDays.includes(day.value) ? "bg-blue-600 text-white" : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700"}`}
+                        className={`flex size-9 items-center justify-center rounded-full text-sm font-medium transition-colors ${
+                          customRecurrenceDays.includes(day.value)
+                            ? "bg-blue-600 text-white"
+                            : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-700"
+                        }`}
                       >
                         {day.label}
                       </button>
@@ -371,10 +376,7 @@ export const EventSidebar: React.FC<EventSidebarProps> = ({
                     {selectedEvent.created && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-zinc-500">Created</span>
-                        <span
-                          className="text-zinc-400"
-                          suppressHydrationWarning
-                        >
+                        <span className="text-zinc-400">
                           {new Date(selectedEvent.created).toLocaleDateString()}
                         </span>
                       </div>
@@ -382,10 +384,7 @@ export const EventSidebar: React.FC<EventSidebarProps> = ({
                     {selectedEvent.updated && (
                       <div className="flex items-center justify-between text-sm">
                         <span className="text-zinc-500">Updated</span>
-                        <span
-                          className="text-zinc-400"
-                          suppressHydrationWarning
-                        >
+                        <span className="text-zinc-400">
                           {new Date(selectedEvent.updated).toLocaleDateString()}
                         </span>
                       </div>

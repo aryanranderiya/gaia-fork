@@ -1,17 +1,17 @@
-import { describe, expect, it } from "vitest";
-import type { EnvCategory, EnvVar } from "../../src/lib/env-parser.js";
+import { describe, it, expect } from "vitest";
 import {
-  applyModeDefaults,
-  applyPortOverrides,
-  getAlternativeGroups,
-  getCoreVariables,
   getDefaultValue,
-  getDeploymentDefaults,
-  getDeploymentVariables,
+  applyPortOverrides,
+  getCoreVariables,
+  applyModeDefaults,
   getInfrastructureVariables,
-  getWebInfrastructureDefaults,
+  getDeploymentVariables,
+  getDeploymentDefaults,
+  getAlternativeGroups,
   isCategorySatisfied,
+  getWebInfrastructureDefaults,
 } from "../../src/lib/env-parser.js";
+import type { EnvCategory, EnvVar } from "../../src/lib/env-parser.js";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -47,7 +47,9 @@ describe("getDefaultValue", () => {
     expect(getDefaultValue("MONGO_DB", "selfhost")).toBe(
       "mongodb://mongo:27017/gaia",
     );
-    expect(getDefaultValue("REDIS_URL", "selfhost")).toBe("redis://redis:6379");
+    expect(getDefaultValue("REDIS_URL", "selfhost")).toBe(
+      "redis://redis:6379",
+    );
     expect(getDefaultValue("CHROMADB_HOST", "selfhost")).toBe("chromadb");
   });
 
@@ -124,14 +126,8 @@ describe("applyPortOverrides", () => {
 // ---------------------------------------------------------------------------
 describe("getCoreVariables", () => {
   it("extracts vars from core category names", () => {
-    const mongoVar = makeVar({
-      name: "MONGO_DB",
-      category: "MongoDB Connection",
-    });
-    const redisVar = makeVar({
-      name: "REDIS_URL",
-      category: "Redis Connection",
-    });
+    const mongoVar = makeVar({ name: "MONGO_DB", category: "MongoDB Connection" });
+    const redisVar = makeVar({ name: "REDIS_URL", category: "Redis Connection" });
     const categories = [
       makeCategory({ name: "MongoDB Connection", variables: [mongoVar] }),
       makeCategory({ name: "Redis Connection", variables: [redisVar] }),
@@ -176,7 +172,9 @@ describe("applyModeDefaults", () => {
   it("preserves existing defaults when no mode default exists", () => {
     const categories = [
       makeCategory({
-        variables: [makeVar({ name: "UNKNOWN_VAR", defaultValue: "keep-me" })],
+        variables: [
+          makeVar({ name: "UNKNOWN_VAR", defaultValue: "keep-me" }),
+        ],
       }),
     ];
 
@@ -232,13 +230,15 @@ describe("getDeploymentDefaults", () => {
   it("returns selfhost deployment defaults", () => {
     const defaults = getDeploymentDefaults("selfhost");
     expect(defaults.SETUP_MODE).toBe("selfhost");
-    expect(defaults.GAIA_BACKEND_URL).toBe("http://gaia-backend:80"); // NOSONAR — internal Docker network URL, not a public endpoint
+    expect(defaults.GAIA_BACKEND_URL).toBe("http://gaia-backend:80");
   });
 
   it("returns developer deployment defaults", () => {
     const defaults = getDeploymentDefaults("developer");
     expect(defaults.SETUP_MODE).toBe("developer");
-    expect(defaults.GAIA_BACKEND_URL).toBe("http://host.docker.internal:8000"); // NOSONAR — internal Docker network URL, not a public endpoint
+    expect(defaults.GAIA_BACKEND_URL).toBe(
+      "http://host.docker.internal:8000",
+    );
   });
 });
 
@@ -293,7 +293,9 @@ describe("isCategorySatisfied", () => {
     const configured = new Set(["Redis Connection"]);
     const alternatives = new Map([["OpenAI", "Anthropic"]]);
 
-    expect(isCategorySatisfied("OpenAI", configured, alternatives)).toBe(false);
+    expect(isCategorySatisfied("OpenAI", configured, alternatives)).toBe(
+      false,
+    );
   });
 });
 

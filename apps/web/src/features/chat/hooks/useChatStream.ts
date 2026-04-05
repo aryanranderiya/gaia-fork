@@ -1,16 +1,19 @@
 import type { EventSourceMessage } from "@microsoft/fetch-event-source";
-import {
-  mergeToolOutputIntoToolData,
-  parseChatStreamEvent,
-  upsertTodoProgressToolData,
-} from "@shared/chat";
 import { useRef } from "react";
-import type { ToolDataEntry } from "@/config/registries/toolRegistry";
+import type {
+  MCPAppData,
+  ToolCallEntry,
+  ToolDataEntry,
+} from "@/config/registries/toolRegistry";
 import { chatApi } from "@/features/chat/api/chatApi";
 import { useConversation } from "@/features/chat/hooks/useConversation";
 import { useLoading } from "@/features/chat/hooks/useLoading";
 import { streamController } from "@/features/chat/utils/streamController";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+import {
+  ANALYTICS_EVENTS,
+  trackConversationCreated,
+  trackEvent,
+} from "@/lib/analytics";
 import { db, type IConversation, type IMessage } from "@/lib/db/chatDb";
 import { streamState } from "@/lib/streamState";
 import { toast } from "@/lib/toast";
@@ -20,7 +23,7 @@ import { useComposerStore } from "@/stores/composerStore";
 import type { MessageType } from "@/types/features/convoTypes";
 import type { TodoProgressSnapshot } from "@/types/features/todoProgressTypes";
 import type { WorkflowData } from "@/types/features/workflowTypes";
-import type { FileData } from "@/types/shared/fileTypes";
+import type { FileData } from "@/types/shared";
 import fetchDate from "@/utils/date/dateUtils";
 
 import { useLoadingText } from "./useLoadingText";
@@ -33,10 +36,6 @@ export const useChatStream = () => {
 
   // Add ref to track if a stream is already in progress
   const streamInProgressRef = useRef(false);
-
-  // Guard against double invocation of handleStreamClose — it's called from both
-  // onmessage (on [DONE]) and onclose (on connection close) in chatApi.ts.
-  const streamCloseHandledRef = useRef(false);
 
   // Unified ref storage
   const refs = useRef({
@@ -79,11 +78,6 @@ export const useChatStream = () => {
     conversationId: string,
     description: string | null,
   ) => {
-    console.log(
-      "[useChatStream] handleConversationCreation:",
-      conversationId,
-      description,
-    );
     // Check if conversation already exists in store
     const existing = useChatStore
       .getState()
@@ -107,10 +101,7 @@ export const useChatStream = () => {
         await db.putConversation(newConversation);
 
         // Track new conversation creation
-        trackEvent(ANALYTICS_EVENTS.CHAT_CONVERSATION_CREATED, {
-          conversationId,
-          source: "chat",
-        });
+        trackConversationCreated({ conversationId, source: "chat" });
       } catch (error) {
         console.error("Failed to save conversation to IndexedDB:", error);
       }
@@ -208,24 +199,73 @@ export const useChatStream = () => {
     }
   };
 
-  const handleToolOutput = (toolOutput: {
-    tool_call_id: string;
-    output: string;
-  }) => {
+  /**
+   * Helper to update tool_data entries by tool_call_id.
+   * Used by handleToolOutput to add output to existing entries.
+   */
+  const updateToolDataEntry = (
+    toolCallId: string,
+    updateFn: (
+      data: Record<string, unknown>,
+      toolName: string,
+    ) => Record<string, unknown>,
+  ) => {
     const existingToolData = refs.current.botMessage?.tool_data ?? [];
-    const updatedToolData = mergeToolOutputIntoToolData(
-      existingToolData,
-      toolOutput,
-    );
+    const updatedToolData = existingToolData.map((entry): ToolDataEntry => {
+      // Only update entries that:
+      // 1. Have tool_name === "tool_calls_data" or "mcp_app"
+      // 2. Have a valid data object with a matching tool_call_id
+      if (
+        entry.tool_name === "tool_calls_data" ||
+        entry.tool_name === "mcp_app"
+      ) {
+        const data = entry.data as Record<string, unknown>;
+        // Validate that the entry has a tool_call_id and it matches
+        if (
+          data &&
+          typeof data === "object" &&
+          "tool_call_id" in data &&
+          data.tool_call_id === toolCallId
+        ) {
+          return {
+            ...entry,
+            data: updateFn(data, entry.tool_name) as ToolDataEntry["data"],
+          };
+        }
+      }
+      return entry;
+    });
 
-    updateBotMessage({ tool_data: updatedToolData });
+    updateBotMessage({
+      tool_data: updatedToolData,
+    });
 
+    // Sync to store for persistence
     const conversationId =
       refs.current.newConversation.id ||
       useChatStore.getState().activeConversationId;
     if (refs.current.botMessage?.message_id && conversationId) {
       updateBotMessageInStore(conversationId);
     }
+  };
+
+  const handleToolOutput = (toolOutput: {
+    tool_call_id: string;
+    output: string;
+  }) => {
+    updateToolDataEntry(
+      toolOutput.tool_call_id,
+      (
+        data: Record<string, unknown>,
+        toolName: string,
+      ): Record<string, unknown> => {
+        const fieldName =
+          toolName === "mcp_app"
+            ? ("tool_result" satisfies keyof MCPAppData)
+            : ("output" satisfies keyof ToolCallEntry);
+        return { ...data, [fieldName]: toolOutput.output };
+      },
+    );
   };
 
   const handleTodoProgress = (snapshot: TodoProgressSnapshot) => {
@@ -236,11 +276,24 @@ export const useChatStream = () => {
       [snapshot.source]: snapshot,
     };
 
+    // Upsert a single tool_data entry so it renders through the tool pipeline
     const existingToolData = refs.current.botMessage?.tool_data ?? [];
-    const updatedToolData = upsertTodoProgressToolData(
-      existingToolData,
-      snapshot,
-    ) as ToolDataEntry[];
+    const progressIdx = existingToolData.findIndex(
+      (e) => e.tool_name === "todo_progress",
+    );
+    const progressEntry: ToolDataEntry = {
+      tool_name: "todo_progress",
+      tool_category: "",
+      data: accumulated as ToolDataEntry["data"],
+      timestamp: null,
+    };
+
+    const updatedToolData =
+      progressIdx >= 0
+        ? existingToolData.map((e, i) =>
+            i === progressIdx ? progressEntry : e,
+          )
+        : [progressEntry, ...existingToolData];
 
     updateBotMessage({
       todo_progress: accumulated,
@@ -333,12 +386,6 @@ export const useChatStream = () => {
       stream_id,
     } = data;
 
-    console.log(
-      "[useChatStream] handleNewConversation:",
-      conversation_id,
-      "desc:",
-      conversation_description,
-    );
     refs.current.newConversation.id = conversation_id;
     refs.current.newConversation.description = conversation_description;
 
@@ -401,25 +448,24 @@ export const useChatStream = () => {
       );
     }
 
-    // CRITICAL: Update the Zustand store SYNCHRONOUSLY first so that
-    // useConversation immediately returns messages and subsequent streaming
-    // events can render in real-time. DB writes happen in the background.
-    if (userIMessage) {
-      useChatStore.getState().addOrUpdateMessage(userIMessage);
+    // Atomically persist both messages in a single transaction
+    // Events are emitted by persistMessagePair to update the store
+    try {
+      await db.persistMessagePair(userIMessage, botIMessage);
+    } catch (error) {
+      console.error("Failed to persist message pair:", error);
+      // On persistence failure, clear optimistic UI and abort
+      useChatStore.getState().clearOptimisticMessage();
+      return;
     }
-    if (botIMessage) {
-      useChatStore.getState().addOrUpdateMessage(botIMessage);
-    }
+
+    // Clear optimistic message now that real messages are in the store via events
     useChatStore.getState().clearOptimisticMessage();
     window.history.replaceState({}, "", `/c/${conversation_id}`);
     useChatStore.getState().setActiveConversationId(conversation_id);
-    useChatStore.getState().setStreamingConversationId(conversation_id);
 
-    // Persist to IndexedDB in the background — the store already has the data
-    // so streaming can proceed while this writes.
-    db.persistMessagePair(userIMessage, botIMessage).catch((error) => {
-      console.error("Failed to persist message pair:", error);
-    });
+    // Set streaming indicator for sidebar
+    useChatStore.getState().setStreamingConversationId(conversation_id);
   };
 
   const handleExistingConversationMessages = async (data: {
@@ -542,7 +588,7 @@ export const useChatStream = () => {
       conversationId,
       content: refs.current.accumulatedResponse,
       role: "assistant",
-      status: refs.current.botMessage.loading === false ? "sent" : "sending",
+      status: "sending",
       createdAt,
       updatedAt: new Date(),
       messageId: refs.current.botMessage.message_id,
@@ -577,118 +623,52 @@ export const useChatStream = () => {
 
     try {
       if (!event.data) return; // Skip empty events (@microsoft/fetch-event-source dispatches these for SSE comments)
-      const parsedEvents = parseChatStreamEvent(event.data);
-      const streamingData: Record<string, unknown> = {};
-
-      for (const parsed of parsedEvents) {
-        if (parsed.type === "done" || parsed.type === "keepalive") {
-          continue;
-        }
-
-        if (parsed.type === "error") {
-          toast.error(parsed.error);
-          return parsed.error;
-        }
-
-        if (parsed.type === "main_response_complete") {
-          console.log("[handleStreamEvent] Received main_response_complete");
-          handleMainResponseComplete();
-          continue;
-        }
-
-        if (parsed.type === "tool_data") {
-          handleToolData(parsed.entry as ToolDataEntry);
-          continue;
-        }
-
-        if (parsed.type === "tool_output") {
-          handleToolOutput(parsed.output);
-          continue;
-        }
-
-        if (parsed.type === "todo_progress") {
-          handleTodoProgress(parsed.snapshot as TodoProgressSnapshot);
-          continue;
-        }
-
-        if (parsed.type === "progress") {
-          setLoadingText(parsed.message, {
-            toolName: parsed.tool_name,
-            toolCategory: parsed.tool_category,
-          });
-          continue;
-        }
-
-        if (parsed.type === "response") {
-          streamingData.response =
-            typeof streamingData.response === "string"
-              ? `${streamingData.response}${parsed.chunk}`
-              : parsed.chunk;
-          continue;
-        }
-
-        if (parsed.type === "follow_up_actions") {
-          streamingData.follow_up_actions = parsed.actions;
-          continue;
-        }
-
-        if (parsed.type === "conversation_initialized") {
-          console.log(
-            "[useChatStream] conversation_initialized event:",
-            parsed,
-          );
-          const data = {
-            conversation_id: parsed.conversation_id,
-            conversation_description: parsed.conversation_description ?? null,
-            bot_message_id: parsed.bot_message_id,
-            user_message_id: parsed.user_message_id,
-            stream_id: parsed.stream_id,
-          };
-
-          if (data.conversation_id) {
-            await handleNewConversation({
-              conversation_id: data.conversation_id,
-              conversation_description: data.conversation_description,
-              bot_message_id: data.bot_message_id,
-              user_message_id: data.user_message_id,
-              stream_id: data.stream_id,
-            });
-            continue;
-          }
-
-          if (
-            data.user_message_id &&
-            data.bot_message_id &&
-            !refs.current.newConversation.id
-          ) {
-            await handleExistingConversationMessages({
-              user_message_id: data.user_message_id,
-              bot_message_id: data.bot_message_id,
-              stream_id: data.stream_id,
-            });
-          }
-          continue;
-        }
-
-        if (parsed.type === "conversation_description") {
-          if (refs.current.newConversation.id) {
-            refs.current.newConversation.description = parsed.description;
-            handleConversationDescriptionUpdate(
-              refs.current.newConversation.id,
-              parsed.description,
-            );
-          }
-          continue;
-        }
-
-        if (parsed.type === "unknown") {
-          Object.assign(streamingData, parsed.payload);
-        }
+      if (event.data === "[DONE]") return;
+      const data = JSON.parse(event.data);
+      if (data.keepalive) return; // Server keepalive ping, not real data
+      if (data.error) {
+        toast.error(data.error);
+        return data.error;
       }
 
-      if (Object.keys(streamingData).length === 0) return;
-      if (handleImageGeneration(streamingData)) return;
-      await handleStreamingContent(streamingData);
+      if (data.main_response_complete) {
+        console.log("[handleStreamEvent] Received main_response_complete");
+        handleMainResponseComplete();
+        return;
+      }
+
+      // Handle tool_data events (tool calls with complete inputs)
+      if (data.tool_data) handleToolData(data.tool_data);
+
+      // Handle tool_output events (tool execution results)
+      if (data.tool_output) handleToolOutput(data.tool_output);
+
+      // Handle todo_progress events (agent task planning progress)
+      if (data.todo_progress) handleTodoProgress(data.todo_progress);
+
+      if (handleImageGeneration(data)) return;
+
+      if (data.conversation_id) {
+        await handleNewConversation(data);
+      } else if (
+        data.user_message_id &&
+        data.bot_message_id &&
+        !refs.current.newConversation.id
+      )
+        await handleExistingConversationMessages(data);
+      else if (
+        data.conversation_description &&
+        refs.current.newConversation.id
+      ) {
+        refs.current.newConversation.description =
+          data.conversation_description;
+        handleConversationDescriptionUpdate(
+          refs.current.newConversation.id,
+          data.conversation_description,
+        );
+      }
+
+      await handleStreamingContent(data);
     } catch (error) {
       console.error("[useChatStream] Error handling stream event:", {
         error,
@@ -703,13 +683,6 @@ export const useChatStream = () => {
   };
 
   const handleStreamClose = async () => {
-    console.log("[useChatStream] handleStreamClose called");
-    // Prevent double invocation — handleStreamClose is called from both
-    // onmessage (on [DONE]) and onclose (on connection close) in chatApi.ts.
-    // Only the first call should execute; the second is a no-op.
-    if (streamCloseHandledRef.current) return;
-    streamCloseHandledRef.current = true;
-
     try {
       if (!refs.current.botMessage?.message_id) {
         // No valid bot message to persist - this can happen if stream closes
@@ -790,9 +763,6 @@ export const useChatStream = () => {
 
       // CRITICAL: End stream state AFTER all persistence is done
       // This prevents sync from running and overwriting messages during persistence
-      console.debug(
-        "[handleStreamClose] All persistence done, ending stream state now",
-      );
       streamState.endStream();
 
       // Reset stream state after successful completion
@@ -811,11 +781,6 @@ export const useChatStream = () => {
   };
 
   const handleStreamError = (error: Error) => {
-    console.error(
-      "[useChatStream] handleStreamError:",
-      error.name,
-      error.message,
-    );
     // Reset stream state immediately
     resetStreamState();
 
@@ -849,13 +814,8 @@ export const useChatStream = () => {
     } | null = null,
   ) => {
     if (streamInProgressRef.current) {
-      console.warn("[useChatStream] stream already in progress, skipping");
       return;
     }
-    console.log(
-      "[useChatStream] starting stream, activeConversationId:",
-      useChatStore.getState().activeConversationId,
-    );
 
     streamInProgressRef.current = true;
 
@@ -874,7 +834,6 @@ export const useChatStream = () => {
     try {
       refs.current.accumulatedResponse = "";
       refs.current.userPrompt = inputText;
-      streamCloseHandledRef.current = false; // Reset for new stream
 
       // Set up the complete message array for this streaming session
       refs.current.currentStreamingMessages = [
@@ -961,14 +920,6 @@ export const useChatStream = () => {
         // Note: Backend also saves - streamController.abort() schedules sync after 3s
       });
 
-      console.log(
-        "[useChatStream] calling chatApi.fetchChatStream, inputText:",
-        inputText,
-        "msgs:",
-        currentMessages.length,
-        "workflow:",
-        selectedWorkflow?.id,
-      );
       await chatApi.fetchChatStream(
         inputText,
         [...refs.current.convoMessages, ...currentMessages],
@@ -985,21 +936,12 @@ export const useChatStream = () => {
         replyToMessage,
       );
     } catch (error) {
-      console.error("[useChatStream] Error initiating chat stream:", error);
-      // Only reset if handleStreamClose is NOT already handling cleanup.
-      // When the stream closes normally, handleStreamClose runs async (not awaited
-      // by the SSE library) and may still be persisting to IndexedDB. Calling
-      // resetStreamState here would clear refs it depends on and prematurely
-      // unblock the sync service.
-      if (!streamCloseHandledRef.current) {
-        resetStreamState();
-      }
+      console.error("Error initiating chat stream:", error);
+      resetStreamState(); // Reset state on any error
+    } finally {
+      streamInProgressRef.current = false;
+      streamState.endStream();
     }
-    // NOTE: Do NOT reset streamInProgressRef or call streamState.endStream() here.
-    // With the eventQueue in chatApi.ts, events are processed AFTER fetchEventSource
-    // resolves. If we reset here, handleStreamEvent sees streamInProgressRef=false
-    // and returns "Stream was aborted" for every queued event.
-    // Both are already handled by handleStreamClose (normal) and resetStreamState (error).
   };
 
   return streamFunction;

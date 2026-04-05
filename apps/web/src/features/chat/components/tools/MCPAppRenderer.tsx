@@ -2,14 +2,7 @@
 
 import { AppBridge, AppFrame, type McpUiHostContext } from "@mcp-ui/client";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import {
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MCPAppData } from "@/config/registries/toolRegistry";
 import {
   callMCPAppTool,
@@ -49,10 +42,15 @@ export function MCPAppRenderer({ data }: Props) {
   const bridgeRef = useRef<AppBridge | null>(null);
 
   const dataRef = useRef(data);
-  dataRef.current = data;
   const sendMessage = useSendMessage();
   const sendMessageRef = useRef(sendMessage);
-  sendMessageRef.current = sendMessage;
+
+  useEffect(() => {
+    dataRef.current = data;
+  });
+  useEffect(() => {
+    sendMessageRef.current = sendMessage;
+  });
 
   const sandboxUrl = useMemo(
     () => new URL("/mcp-sandbox-proxy.html", window.location.origin),
@@ -125,9 +123,8 @@ export function MCPAppRenderer({ data }: Props) {
 
     b.onmessage = async (params) => {
       const text = params.content
-        .flatMap((c) =>
-          c.type === "text" && "text" in c ? [String(c.text)] : [],
-        )
+        .filter((c) => c.type === "text" && "text" in c)
+        .map((c) => ("text" in c ? String(c.text) : ""))
         .join(" ")
         .trim();
       if (text) await sendMessageRef.current(text);
@@ -268,16 +265,14 @@ export function MCPAppRenderer({ data }: Props) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Escape to exit fullscreen
-  const handleFullscreenEscape = useEffectEvent((e: KeyboardEvent) => {
-    if (e.key === "Escape" && displayMode === "fullscreen") {
-      setDisplayMode("inline");
-    }
-  });
-
   useEffect(() => {
-    window.addEventListener("keydown", handleFullscreenEscape);
-    return () => window.removeEventListener("keydown", handleFullscreenEscape);
-  }, []);
+    if (displayMode !== "fullscreen") return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDisplayMode("inline");
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [displayMode]);
 
   // Observe the container and forward dimensions to the guest via hostContext
   const observeContainer = useCallback(

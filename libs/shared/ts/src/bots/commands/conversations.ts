@@ -9,10 +9,9 @@
  *
  * @module
  */
-
-import type { BotCommand, CommandExecuteParams } from "../types";
-import { truncateResponse } from "../utils";
 import { handleConversationList } from "../utils/commands";
+import { truncateResponse } from "../utils";
+import type { BotCommand, CommandExecuteParams } from "../types";
 
 /** `/conversations` command definition. */
 export const conversationsCommand: BotCommand = {

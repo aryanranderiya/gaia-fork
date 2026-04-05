@@ -79,20 +79,10 @@ class TestSearchIntegrations:
 
 class TestGetPublicIntegration:
     async def test_invalid_slug(self, client):
-        cursor = MagicMock()
-        cursor.to_list = AsyncMock(return_value=[])
-
-        with (
-            patch(
-                "app.api.v1.endpoints.integrations.public.integrations_collection"
-            ) as mock_coll,
-            patch(
-                "app.api.v1.endpoints.integrations.public.parse_integration_slug",
-                return_value={},
-            ),
+        with patch(
+            "app.api.v1.endpoints.integrations.public.parse_integration_slug",
+            return_value={},
         ):
-            mock_coll.aggregate = MagicMock(return_value=cursor)
-
             resp = await client.get("/api/v1/integrations/public/bad-slug")
             assert resp.status_code == 404
 

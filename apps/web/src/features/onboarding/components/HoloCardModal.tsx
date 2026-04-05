@@ -7,9 +7,11 @@ import { Rocket01Icon } from "@icons";
 import confetti from "canvas-confetti";
 import { useEffect, useRef, useState } from "react";
 import { TwitterShareButton } from "react-share";
-import { TwitterIcon } from "@/components/shared/icons";
-import { HoloCardEditor } from "@/components/ui/holo-card/HoloCardEditor";
-import type { HoloCardDisplayData } from "@/components/ui/holo-card/types";
+import { TwitterIcon } from "@/components";
+import {
+  type HoloCardDisplayData,
+  HoloCardEditor,
+} from "@/components/ui/holo-card";
 import { useUser } from "@/features/auth/hooks/useUser";
 import { SimpleChatBubbleBot } from "@/features/landing/components/demo/SimpleChatBubbles";
 import {

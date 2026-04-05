@@ -2,7 +2,7 @@ import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { AiSearch02Icon } from "@icons";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -60,15 +60,9 @@ export const AiSearchModal: React.FC<AiSearchModalProps> = ({
     }
   };
 
-  // Use Set for O(1) lookups in render loop instead of .find()
-  const selectedIds = useMemo(
-    () => new Set(selected.map((s) => s.id)),
-    [selected],
-  );
-
   const toggleSelection = (suggestion: EmailSuggestion) => {
     setSelected((prevSelected) =>
-      prevSelected.some((s) => s.id === suggestion.id)
+      prevSelected.find((s) => s.id === suggestion.id)
         ? prevSelected.filter((s) => s.id !== suggestion.id)
         : [...prevSelected, suggestion],
     );
@@ -154,7 +148,7 @@ export const AiSearchModal: React.FC<AiSearchModalProps> = ({
                 <EmailChip
                   key={suggestion.id}
                   suggestion={suggestion}
-                  selected={selectedIds.has(suggestion.id)}
+                  selected={!!selected.find((s) => s.id === suggestion.id)}
                   onToggle={toggleSelection}
                 />
               ))}

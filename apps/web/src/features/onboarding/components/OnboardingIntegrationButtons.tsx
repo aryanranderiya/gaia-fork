@@ -7,11 +7,9 @@ import type React from "react";
 import { useState } from "react";
 import { Gmail, GoogleCalendarIcon } from "@/components/shared/icons";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
+import { useFetchIntegrationStatus } from "@/features/integrations";
 import { useIntegrationSearch } from "@/features/integrations/hooks/useIntegrationSearch";
-import {
-  useFetchIntegrationStatus,
-  useIntegrations,
-} from "@/features/integrations/hooks/useIntegrations";
+import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
 import { useIntegrationsStore } from "@/stores/integrationsStore";
 
 interface OnboardingIntegrationButtonsProps {
@@ -210,3 +208,5 @@ export const OnboardingIntegrationButtons: React.FC<
     </div>
   );
 };
+
+export default OnboardingIntegrationButtons;

@@ -3,7 +3,7 @@
 // ============================================================================
 
 import * as SecureStore from "expo-secure-store";
-import { notificationsApi } from "@/features/notifications/api/notifications-api";
+import { notificationsApi } from "../api";
 
 const PUSH_TOKEN_KEY = "expo_push_token";
 

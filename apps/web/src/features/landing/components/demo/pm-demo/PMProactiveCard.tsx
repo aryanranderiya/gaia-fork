@@ -54,7 +54,11 @@ export default function PMProactiveCard() {
             </div>
             <span className="flex-1 text-zinc-300">{item.label}</span>
             <span
-              className={`text-[11px] ${item.detailVariant === "saved" ? "text-emerald-400" : "text-zinc-500"}`}
+              className={`text-[11px] ${
+                item.detailVariant === "saved"
+                  ? "text-emerald-400"
+                  : "text-zinc-500"
+              }`}
             >
               {item.detail}
             </span>

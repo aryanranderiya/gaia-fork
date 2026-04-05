@@ -27,19 +27,12 @@ export default function YouMightAlsoLike({
 
         // If categories are provided, prioritize workflows in the same category
         if (categories.length > 0) {
-          // Use Set for O(1) lookups instead of .includes() in loop
-          const categorySet = new Set(categories);
-
-          // Single loop instead of two .filter() passes
-          const sameCategoryWorkflows: CommunityWorkflow[] = [];
-          const otherWorkflows: CommunityWorkflow[] = [];
-          for (const w of workflows) {
-            if (w.categories?.some((cat) => categorySet.has(cat))) {
-              sameCategoryWorkflows.push(w);
-            } else {
-              otherWorkflows.push(w);
-            }
-          }
+          const sameCategoryWorkflows = workflows.filter((w) =>
+            w.categories?.some((cat) => categories.includes(cat)),
+          );
+          const otherWorkflows = workflows.filter(
+            (w) => !w.categories?.some((cat) => categories.includes(cat)),
+          );
 
           // Sort by popularity (total_executions)
           const sortByPopularity = (
@@ -60,9 +53,9 @@ export default function YouMightAlsoLike({
             ...otherWorkflows,
           ].slice(0, 6);
         } else {
-          // No categories - use toSorted() for immutability
+          // No categories - just sort by popularity and take top 6
           workflows = workflows
-            .toSorted((a, b) => {
+            .sort((a, b) => {
               const aExecutions = a.total_executions || 0;
               const bExecutions = b.total_executions || 0;
               return bExecutions - aExecutions;
@@ -97,7 +90,7 @@ export default function YouMightAlsoLike({
               variant="community"
               showCreator={true}
               onCardClick={() => {
-                router.push(`/use-cases/${workflow.slug ?? workflow.id}`);
+                router.push(`/use-cases/${workflow.id}`);
               }}
             />
           ))}

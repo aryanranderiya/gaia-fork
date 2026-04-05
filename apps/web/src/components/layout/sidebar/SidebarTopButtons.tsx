@@ -3,16 +3,16 @@
 import { Button } from "@heroui/button";
 import { Tooltip } from "@heroui/tooltip";
 import {
-  // Calendar03Icon, // Temporarily disabled
+  Calendar03Icon,
   CheckListIcon,
   ConnectIcon,
-  Home11Icon,
+  DashboardSquare02Icon,
   MessageMultiple02Icon,
-  // Target02Icon, // Temporarily disabled
+  Target02Icon,
   ZapIcon,
 } from "@icons";
 import Link from "next/link";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   getNavigationShortcut,
   ShortcutKeysDisplay,
@@ -32,6 +32,7 @@ export default function SidebarTopButtons() {
   const pathname = usePathname();
   const { data: subscriptionStatus } = useUserSubscriptionStatus();
   const { plans } = usePricing();
+  const [unreadCount, setUnreadCount] = useState(0);
   const openPricingModal = usePricingModalStore((s) => s.openModal);
   const { notifications } = useNotifications({
     status: NotificationStatus.DELIVERED,
@@ -43,9 +44,11 @@ export default function SidebarTopButtons() {
   );
   const price = monthlyPlan ? monthlyPlan.amount / 100 : 15;
 
-  const unreadCount = notifications.filter(
-    (n) => n.status !== NotificationStatus.READ,
-  ).length;
+  useEffect(() => {
+    setUnreadCount(
+      notifications.filter((n) => n.status !== NotificationStatus.READ).length,
+    );
+  }, [notifications]);
 
   const isRouteActive = (route: string) => {
     if (route === "/c") {
@@ -57,24 +60,23 @@ export default function SidebarTopButtons() {
   const buttonData = [
     {
       route: "/dashboard",
-      icon: <Home11Icon />,
-      label: "Home",
+      icon: <DashboardSquare02Icon />,
+      label: "Dashboard",
     },
-    // Temporarily disabled — Calendar and Goals features are not yet ready.
-    // {
-    //   route: "/calendar",
-    //   icon: <Calendar03Icon />,
-    //   label: "Calendar",
-    // },
-    // {
-    //   route: "/goals",
-    //   icon: <Target02Icon />,
-    //   label: "Goals",
-    // },
+    {
+      route: "/calendar",
+      icon: <Calendar03Icon />,
+      label: "Calendar",
+    },
+    {
+      route: "/goals",
+      icon: <Target02Icon />,
+      label: "Goals",
+    },
     {
       route: "/todos",
       icon: <CheckListIcon />,
-      label: "Tasks",
+      label: "Todos",
     },
     {
       route: "/integrations",
@@ -140,7 +142,11 @@ export default function SidebarTopButtons() {
                   variant={isRouteActive(route) ? "flat" : "light"}
                   // color={isRouteActive(route) ? "primary" : "default"}
                   color={"default"}
-                  className={`group-topbtns focus-visible:outline-none w-full justify-start text-sm ${isRouteActive(route) ? "text-zinc-300" : "text-zinc-400 hover:text-zinc-300"}`}
+                  className={`group-topbtns focus-visible:outline-none w-full justify-start text-sm ${
+                    isRouteActive(route)
+                      ? "text-zinc-300"
+                      : "text-zinc-400 hover:text-zinc-300"
+                  }`}
                   as={Link}
                   href={route}
                   onPress={() => {

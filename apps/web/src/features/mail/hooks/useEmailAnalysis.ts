@@ -43,7 +43,7 @@ export function useEmailSummary(emailId: string, enabled: boolean = true) {
  * @param enabled - Whether the query should be enabled
  * @returns Query result with email summaries data
  */
-function useEmailSummaries(
+export function useEmailSummaries(
   limit: number = 50,
   importantOnly: boolean = false,
   enabled: boolean = true,
@@ -67,7 +67,10 @@ function useEmailSummaries(
  * @param enabled - Whether the query should be enabled
  * @returns Query result with bulk email summaries data
  */
-function useBulkEmailSummaries(messageIds: string[], enabled: boolean = true) {
+export function useBulkEmailSummaries(
+  messageIds: string[],
+  enabled: boolean = true,
+) {
   return useQuery({
     queryKey: ["bulk-email-summaries", messageIds],
     queryFn: async () => {
@@ -97,7 +100,10 @@ function useBulkEmailSummaries(messageIds: string[], enabled: boolean = true) {
  * @param enabled - Whether the query should be enabled
  * @returns Query result with analysis status for each email
  */
-function useEmailAnalysisStatus(emailIds: string[], enabled: boolean = true) {
+export function useEmailAnalysisStatus(
+  emailIds: string[],
+  enabled: boolean = true,
+) {
   const bulkQuery = useBulkEmailSummaries(emailIds, enabled);
 
   return {
@@ -139,7 +145,7 @@ export function useEmailAnalysisIndicators(
  * Hook to prefetch email analysis for better UX
  * @param emailId - The email message ID to prefetch
  */
-function usePrefetchEmailAnalysis() {
+export function usePrefetchEmailAnalysis() {
   const queryClient = useQueryClient();
 
   return (emailId: string) => {
@@ -158,7 +164,7 @@ function usePrefetchEmailAnalysis() {
 /**
  * Hook to invalidate email analysis cache
  */
-function useInvalidateEmailAnalysis() {
+export function useInvalidateEmailAnalysis() {
   const queryClient = useQueryClient();
 
   return {

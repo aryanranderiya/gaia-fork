@@ -48,13 +48,12 @@ export function useAudioVolume(audioTrack?: TrackReference) {
 
       // Calculate RMS (Root Mean Square) for volume
       let sum = 0;
-      const len = frequencyData.length;
-      for (let i = 0; i < len; i++) {
+      for (let i = 0; i < frequencyData.length; i++) {
         const value = frequencyData[i] / 255;
         sum += value * value;
       }
 
-      const rms = Math.sqrt(sum / len);
+      const rms = Math.sqrt(sum / frequencyData.length);
       const normalizedVolume = Math.min(1, Math.max(0, rms * 2)); // Amplify and clamp
 
       // For simplicity, we'll use the same volume for both input and output

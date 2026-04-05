@@ -1,4 +1,4 @@
-import { apiService } from "@/lib/api/service";
+import { apiService } from "@/lib/api";
 
 export interface ToolInfo {
   name: string;
@@ -12,6 +12,10 @@ export interface ToolsListResponse {
   tools: ToolInfo[];
   total_count: number;
   categories: string[];
+}
+
+export interface ToolsCategoryResponse {
+  [category: string]: number;
 }
 
 export const fetchAvailableTools = async (): Promise<ToolsListResponse> => {

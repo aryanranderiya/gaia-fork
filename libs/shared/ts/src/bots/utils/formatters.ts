@@ -10,12 +10,12 @@
  * falls back to axios-style errors, then generic Error messages.
  */
 import { GaiaApiError } from "../api";
-import type { BotConversation, BotTodo, BotWorkflow } from "../types";
+import type { Conversation, Todo, Workflow } from "../types";
 
 /**
  * Formats a workflow for display in a bot message.
  */
-export function formatWorkflow(workflow: BotWorkflow): string {
+export function formatWorkflow(workflow: Workflow): string {
   const status =
     workflow.status === "active"
       ? "✅"
@@ -28,7 +28,7 @@ export function formatWorkflow(workflow: BotWorkflow): string {
 /**
  * Formats a list of workflows for display.
  */
-export function formatWorkflowList(workflows: BotWorkflow[]): string {
+export function formatWorkflowList(workflows: Workflow[]): string {
   if (workflows.length === 0) {
     return "No workflows found. Create one with `/workflow create`";
   }
@@ -39,7 +39,7 @@ export function formatWorkflowList(workflows: BotWorkflow[]): string {
 /**
  * Formats a todo for display in a bot message.
  */
-export function formatTodo(todo: BotTodo): string {
+export function formatTodo(todo: Todo): string {
   const checkbox = todo.completed ? "☑️" : "⬜";
   const priority = todo.priority ? ` [${todo.priority.toUpperCase()}]` : "";
   const dueDate = todo.due_date
@@ -52,7 +52,7 @@ export function formatTodo(todo: BotTodo): string {
 /**
  * Formats a list of todos for display.
  */
-export function formatTodoList(todos: BotTodo[]): string {
+export function formatTodoList(todos: Todo[]): string {
   if (todos.length === 0) {
     return "No todos found. Create one with `/todo add`";
   }
@@ -64,7 +64,7 @@ export function formatTodoList(todos: BotTodo[]): string {
  * Formats a conversation for display.
  */
 export function formatConversation(
-  conversation: BotConversation,
+  conversation: Conversation,
   baseUrl: string,
 ): string {
   const title = conversation.title || "Untitled Conversation";
@@ -80,7 +80,7 @@ export function formatConversation(
  * Formats a list of conversations for display.
  */
 export function formatConversationList(
-  conversations: BotConversation[],
+  conversations: Conversation[],
   baseUrl: string,
 ): string {
   if (conversations.length === 0) {
@@ -157,30 +157,6 @@ export function convertToSlackMrkdwn(text: string): string {
         .replace(/^#{1,6}\s+(.+)$/gm, "*$1*") // # Heading → *Heading*
         .replace(/^>\s*/gm, "") // > quote → strip prefix
         .replace(/^[-_]{3,}$/gm, ""), // --- / ___ → remove
-  );
-}
-
-/**
- * Converts standard CommonMark Markdown to WhatsApp-compatible formatting.
- *
- * WhatsApp supports: `*bold*`, `_italic_`, `~strikethrough~`, `` `code` ``,
- * ` ```code``` `. Links are shown as bare URLs (WhatsApp auto-links them).
- *
- * Converts `**bold**` → `*bold*`, `[label](url)` → `label (url)`,
- * strips `# headers` to bold, strips blockquote `>` prefixes and horizontal rules.
- * Code blocks are preserved unchanged.
- */
-export function convertToWhatsAppMarkdown(text: string): string {
-  return applyOutsideCodeBlocks(
-    text,
-    (segment) =>
-      segment
-        .replaceAll(/\*\*\*([^*]+)\*\*\*/g, "*$1*") // ***bold italic*** → *bold*
-        .replaceAll(/\*\*([^*]+)\*\*/g, "*$1*") // **bold** → *bold*
-        .replaceAll(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)") // [label](url) → label (url)
-        .replaceAll(/^#{1,6}\s+(.+)$/gm, "*$1*") // # Heading → *Heading*
-        .replaceAll(/^>\s*/gm, "") // > quote → strip prefix
-        .replaceAll(/^[-_]{3,}$/gm, ""), // --- / ___ → remove
   );
 }
 
@@ -288,10 +264,6 @@ export function formatBotError(error: unknown): string {
     message.includes("AI is processing your request")
   ) {
     return "⏳ Your request is taking longer than usual. Try a simpler question or wait a moment and try again.";
-  }
-
-  if (message.includes("ECONNREFUSED") || message.includes("ETIMEDOUT")) {
-    return "🔌 The GAIA backend is unavailable. Please try again in a moment.";
   }
 
   if (

@@ -1,4 +1,4 @@
-import { apiService } from "@/lib/api/service";
+import { apiService } from "@/lib/api";
 import type { PinCardProps } from "@/types/features/pinTypes";
 
 export interface PinsResponse {

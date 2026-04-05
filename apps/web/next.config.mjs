@@ -44,11 +44,6 @@ const nextConfig = {
       "cytoscape",
       "@theexperiencecompany/gaia-icons/solid-rounded",
       // "@heroui/*",
-      "lucide-react",
-      "@radix-ui/react-icons",
-      "date-fns",
-      "lodash",
-      "motion/react",
     ],
   },
   webpack: (config) => {
@@ -117,7 +112,7 @@ const nextConfig = {
     return [
       {
         source: "/sitemap.xml",
-        destination: "/api/sitemap-xml",
+        destination: "/sitemap-index",
       },
       {
         source: "/ingest/static/:path*",

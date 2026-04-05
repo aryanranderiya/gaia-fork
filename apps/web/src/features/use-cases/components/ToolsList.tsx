@@ -21,7 +21,7 @@ export default function ToolsList({ tools }: ToolsListProps) {
   if (!tools || tools.length === 0) return null;
 
   const toggleExpanded = () => {
-    setIsExpanded((prev) => !prev);
+    setIsExpanded(!isExpanded);
   };
 
   const uniqueTools = Array.from(

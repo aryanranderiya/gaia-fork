@@ -8,9 +8,11 @@
 
 import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
 
-import { TriggerConnectionPrompt } from "../components/TriggerConnectionPrompt";
-import { TriggerSelectToggle } from "../components/TriggerSelectToggle";
-import type { OptionItem } from "../components/types";
+import {
+  type OptionItem,
+  TriggerConnectionPrompt,
+  TriggerSelectToggle,
+} from "../components";
 import { useTriggerOptions } from "../hooks/useTriggerOptions";
 import type { RegisteredHandler, TriggerSettingsProps } from "../registry";
 import type { TriggerConfig } from "../types";

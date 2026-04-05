@@ -10,14 +10,13 @@
  *
  * @module
  */
-
-import type { BotCommand, CommandExecuteParams } from "../types";
-import { parseTextArgs, truncateResponse } from "../utils";
 import {
   dispatchTodoSubcommand,
   handleTodoCreate,
   handleTodoList,
 } from "../utils/commands";
+import { truncateResponse, parseTextArgs } from "../utils";
+import type { BotCommand, CommandExecuteParams } from "../types";
 
 /** `/todo` command definition with subcommands. */
 export const todoCommand: BotCommand = {
@@ -41,7 +40,7 @@ export const todoCommand: BotCommand = {
       options: [
         {
           name: "title",
-          description: "BotTodo title",
+          description: "Todo title",
           required: true,
           type: "string",
         },
@@ -57,7 +56,7 @@ export const todoCommand: BotCommand = {
         },
         {
           name: "description",
-          description: "BotTodo description",
+          description: "Todo description",
           type: "string",
         },
       ],
@@ -68,7 +67,7 @@ export const todoCommand: BotCommand = {
       options: [
         {
           name: "id",
-          description: "BotTodo ID",
+          description: "Todo ID",
           required: true,
           type: "string",
         },
@@ -80,7 +79,7 @@ export const todoCommand: BotCommand = {
       options: [
         {
           name: "id",
-          description: "BotTodo ID",
+          description: "Todo ID",
           required: true,
           type: "string",
         },

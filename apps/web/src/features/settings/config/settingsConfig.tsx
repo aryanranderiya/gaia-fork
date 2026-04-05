@@ -95,3 +95,12 @@ export const socialMediaItems: SettingsMenuItem[] = [
     external: true,
   },
 ];
+
+export const resourceItems: SettingsMenuItem[] = [
+  {
+    key: "documentation",
+    label: "Documentation",
+    icon: BookOpen01Icon,
+    external: true,
+  },
+];

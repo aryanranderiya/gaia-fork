@@ -15,7 +15,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { ChevronDown, ChevronRight } from "@/components/shared/icons";
 import ProgressiveImage from "@/components/ui/ProgressiveImage";
-import { appConfig } from "@/config/appConfig";
 import GetStartedButton from "@/features/landing/components/shared/GetStartedButton";
 import {
   GITHUB_RELEASES_BASE,
@@ -64,7 +63,9 @@ function DownloadSectionLayout({
       <div className="grid grid-cols-1 items-center gap-8 md:grid-cols-2">
         {/* Image */}
         <div
-          className={`relative aspect-video w-full overflow-hidden rounded-4xl bg-zinc-900 ${imagePosition === "right" ? "md:order-2" : ""}`}
+          className={`relative aspect-video w-full overflow-hidden rounded-4xl bg-zinc-900 ${
+            imagePosition === "right" ? "md:order-2" : ""
+          }`}
         >
           <ProgressiveImage
             webpSrc={webpSrc}
@@ -360,15 +361,6 @@ function DesktopSection() {
             All releases
             <ArrowRight02Icon className="h-4 w-4" />
           </Link>
-          <Link
-            href="https://docs.heygaia.io/release-notes"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 transition hover:text-zinc-300"
-          >
-            Release Notes
-            <ArrowRight02Icon className="h-4 w-4" />
-          </Link>
         </div>
       }
     />
@@ -395,7 +387,7 @@ function MobileSection() {
         <div className="flex flex-col gap-3">
           <Button
             as={Link}
-            href={appConfig.site.mobileWaitlist}
+            href="https://heygaia.app"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -437,19 +429,6 @@ function MobileSection() {
           </div>
         </div>
       }
-      extraContent={
-        <div className="flex items-center gap-4 text-sm text-zinc-500">
-          <Link
-            href="https://docs.heygaia.io/release-notes"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 transition hover:text-zinc-300"
-          >
-            Release Notes
-            <ArrowRight02Icon className="h-4 w-4" />
-          </Link>
-        </div>
-      }
     />
   );
 }
@@ -466,19 +445,6 @@ function WebSection() {
       title="Get Started on the Web"
       description="No download required. Access GAIA directly from your browser."
       actions={<GetStartedButton />}
-      extraContent={
-        <div className="flex items-center gap-4 text-sm text-zinc-500">
-          <Link
-            href="https://docs.heygaia.io/release-notes"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 transition hover:text-zinc-300"
-          >
-            Release Notes
-            <ArrowRight02Icon className="h-4 w-4" />
-          </Link>
-        </div>
-      }
     />
   );
 }
@@ -681,7 +647,7 @@ export function LandingDownloadSection() {
               </Button>
               <Button
                 as={Link}
-                href={appConfig.site.mobileWaitlist}
+                href="https://heygaia.app"
                 target="_blank"
                 fullWidth
                 rel="noopener noreferrer"

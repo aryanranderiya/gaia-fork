@@ -7,7 +7,7 @@ import { Tab, Tabs } from "@heroui/tabs";
 import { NotificationIcon } from "@icons";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { SidebarHeaderButton } from "@/components/layout/headers/HeaderManager";
+import { SidebarHeaderButton } from "@/components/";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useNotifications } from "@/features/notification/hooks/useNotifications";
 import { NotificationStatus } from "../../../types/features/notificationTypes";
@@ -22,7 +22,6 @@ export function NotificationCenter({
   className = "",
 }: NotificationCenterProps) {
   const [activeTab, setActiveTab] = useState<"unread" | "all">("unread");
-  const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
   const router = useRouter();
 
   const notificationOptions = useMemo(
@@ -48,12 +47,9 @@ export function NotificationCenter({
     const unreadIds = notifications
       .filter((n) => n.status === NotificationStatus.DELIVERED)
       .map((n) => n.id);
-    if (unreadIds.length === 0) return;
-    setIsMarkingAllRead(true);
-    try {
+
+    if (unreadIds.length > 0) {
       await bulkMarkAsRead(unreadIds);
-    } finally {
-      setIsMarkingAllRead(false);
     }
   };
 
@@ -150,13 +146,7 @@ export function NotificationCenter({
           {/* Footer */}
           <div className="flex w-full items-center justify-evenly gap-3 p-3">
             {unreadCount > 0 && (
-              <Button
-                size="sm"
-                fullWidth
-                onPress={handleMarkAllAsRead}
-                isLoading={isMarkingAllRead}
-                isDisabled={isMarkingAllRead}
-              >
+              <Button size="sm" fullWidth onPress={handleMarkAllAsRead}>
                 Mark all as read
               </Button>
             )}

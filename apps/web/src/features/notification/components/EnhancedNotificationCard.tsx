@@ -11,9 +11,7 @@ import {
 } from "@icons";
 import { useState } from "react";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
-import { Button } from "@/components/ui/button";
 import { useNotificationActions } from "@/hooks/useNotificationActions";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import {
   type ActionType,
   type ModalConfig,
@@ -21,6 +19,8 @@ import {
   NotificationStatus,
 } from "@/types/features/notificationTypes";
 import { parseDate } from "@/utils/date/dateUtils";
+
+import { Button } from "../../../components/ui";
 
 interface EnhancedNotificationCardProps {
   notification: NotificationRecord;
@@ -54,12 +54,6 @@ export const EnhancedNotificationCard = ({
     const action = notification.content.actions?.find((a) => a.id === actionId);
     if (!action) return;
 
-    trackEvent(ANALYTICS_EVENTS.NOTIFICATION_CLICKED, {
-      notification_id: notification.id,
-      action_id: actionId,
-      action_type: action.type,
-    });
-
     setExecutingActionId(notification.id);
     try {
       await executeAction(notification.id, action);
@@ -69,9 +63,6 @@ export const EnhancedNotificationCard = ({
   };
 
   const handleMarkAsRead = async () => {
-    trackEvent(ANALYTICS_EVENTS.NOTIFICATION_DISMISSED, {
-      notification_id: notification.id,
-    });
     if (onMarkAsRead) {
       await onMarkAsRead(notification.id);
     }
@@ -97,7 +88,9 @@ export const EnhancedNotificationCard = ({
 
   return (
     <div
-      className={`group relative w-full rounded-2xl transition-all ${isUnread ? "bg-zinc-800/70" : "bg-zinc-800/30"}`}
+      className={`group relative w-full rounded-2xl transition-all ${
+        isUnread ? "bg-zinc-800/70" : "bg-zinc-800/30"
+      }`}
     >
       <div className="px-4 py-3.5">
         <div className="flex items-start justify-between gap-3">
@@ -166,7 +159,9 @@ export const EnhancedNotificationCard = ({
                           : action.style === "danger"
                             ? "bg-red-500/10 text-red-500 hover:bg-red-500/20"
                             : "bg-zinc-800/50 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-300"
-                      } ${showLoading ? "opacity-50" : ""} ${isExecuted ? "cursor-not-allowed opacity-60" : ""}`}
+                      } ${showLoading ? "opacity-50" : ""} ${
+                        isExecuted ? "cursor-not-allowed opacity-60" : ""
+                      }`}
                     >
                       {showLoading ? (
                         <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -189,10 +184,7 @@ export const EnhancedNotificationCard = ({
               </div>
             )}
 
-          <span
-            className="inline-block text-[11px] text-zinc-600"
-            suppressHydrationWarning
-          >
+          <span className="inline-block text-[11px] text-zinc-600">
             {formattedDate}
           </span>
         </div>

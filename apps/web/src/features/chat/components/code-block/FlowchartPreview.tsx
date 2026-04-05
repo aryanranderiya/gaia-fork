@@ -19,39 +19,37 @@ const FlowchartPreview: React.FC<FlowchartPreviewProps> = ({ children }) => {
   const [scale, setScale] = useState(1.5);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const isDraggingRef = useRef(false);
-  const startPositionRef = useRef({ x: 0, y: 0 });
+  const [startPosition, setStartPosition] = useState({ x: 0, y: 0 });
 
   const handleZoomIn = () => setScale((prev) => Math.min(prev + 0.1, 10));
   const handleZoomOut = () => setScale((prev) => Math.max(prev - 0.1, 0.5));
   const resetZoom = () => setScale(1.5);
   const resetPan = () => setPosition({ x: 0, y: 0 });
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    isDraggingRef.current = true;
-    setIsDragging(true);
-    setPosition((prev) => {
-      startPositionRef.current = {
-        x: e.clientX - prev.x,
-        y: e.clientY - prev.y,
-      };
-      return prev;
-    });
-  }, []);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (isDraggingRef.current) {
-      setPosition({
-        x: e.clientX - startPositionRef.current.x,
-        y: e.clientY - startPositionRef.current.y,
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      setIsDragging(true);
+      setStartPosition({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
       });
-    }
-  }, []);
+    },
+    [position],
+  );
 
-  const handleMouseUp = useCallback(() => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-  }, []);
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isDragging) {
+        setPosition({
+          x: e.clientX - startPosition.x,
+          y: e.clientY - startPosition.y,
+        });
+      }
+    },
+    [isDragging, startPosition],
+  );
+
+  const handleMouseUp = () => setIsDragging(false);
 
   const handleDownload = () => {
     if (!mermaidRef.current) return;
@@ -93,7 +91,9 @@ const FlowchartPreview: React.FC<FlowchartPreviewProps> = ({ children }) => {
   return (
     <div className="relative h-[50vh] overflow-hidden bg-white p-4">
       <div
-        className={`absolute top-0 left-0 h-full w-full ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+        className={`absolute top-0 left-0 h-full w-full ${
+          isDragging ? "cursor-grabbing" : "cursor-grab"
+        }`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}

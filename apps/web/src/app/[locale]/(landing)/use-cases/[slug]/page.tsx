@@ -1,27 +1,17 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
+import { notFound } from "next/navigation";
 import UseCaseDetailClient from "@/app/[locale]/(landing)/use-cases/[slug]/client";
 import JsonLd from "@/components/seo/JsonLd";
+import type { UseCase } from "@/features/use-cases/types";
 import {
   type Workflow,
   workflowApi,
 } from "@/features/workflows/api/workflowApi";
 import { generateBreadcrumbSchema, siteConfig } from "@/lib/seo";
-import type { UseCase } from "@/types/features/workflowTypes";
 import {
   generateUseCaseMetadata,
   generateUseCaseStructuredData,
 } from "@/utils/seoUtils";
-
-/**
- * Cached explore workflows fetch for per-request deduplication.
- * Called by both generateMetadata and the page component — without
- * React.cache() the axios-based fetch would run twice per request.
- */
-const getExploreWorkflowsCached = cache((limit: number, offset: number) =>
-  workflowApi.getExploreWorkflows(limit, offset),
-);
 
 interface PageProps {
   params: Promise<{ readonly slug: string }>;
@@ -38,14 +28,12 @@ export async function generateStaticParams() {
       console.log(
         `[SSG Use Cases] Generating ${resp.workflows.length} pages (dev mode)`,
       );
-      return resp.workflows.map((w) => ({ slug: w.slug ?? w.id }));
+      return resp.workflows.map((w) => ({ slug: w.id }));
     }
 
     const exploreLimit = 1000;
     const exploreResp = await workflowApi.getExploreWorkflows(exploreLimit, 0);
-    const exploreParams = exploreResp.workflows.map((w) => ({
-      slug: w.slug ?? w.id,
-    }));
+    const exploreParams = exploreResp.workflows.map((w) => ({ slug: w.id }));
 
     const { fetchAllPaginated } = await import("@/lib/fetchAll");
     const communityWorkflows = await fetchAllPaginated(
@@ -59,11 +47,13 @@ export async function generateStaticParams() {
       },
       100,
     );
-    const communityParams = communityWorkflows.map((w) => ({
-      slug: w.slug ?? w.id,
-    }));
+    const communityParams = communityWorkflows.map((w) => ({ slug: w.id }));
 
     const allParams = [...exploreParams, ...communityParams];
+    console.log(
+      `[SSG Use Cases] Generating ${allParams.length} pages (${exploreParams.length} explore + ${communityParams.length} community)`,
+    );
+
     return allParams;
   } catch (error) {
     console.error("Error generating static params for use-cases:", error);
@@ -80,14 +70,14 @@ export async function generateMetadata({
 
   // First, attempt to find the use-case in explore workflows (API)
   try {
-    const resp = await getExploreWorkflowsCached(200, 0);
-    const found = resp.workflows.find((w) => w.id === slug || w.slug === slug);
+    const resp = await workflowApi.getExploreWorkflows(200, 0);
+    const found = resp.workflows.find((w) => w.id === slug);
     if (found) {
       const workflowAsUseCase: UseCase = {
         title: found.title,
         description: found.description || "",
         detailed_description: found.description,
-        slug: found.slug ?? found.id,
+        slug: found.id,
         action_type: "workflow",
         integrations: found.steps?.map((s) => s.category) || [],
         categories: found.categories || ["featured"],
@@ -107,19 +97,21 @@ export async function generateMetadata({
     const response = await workflowApi.getPublicWorkflow(slug);
     const workflow = response.workflow;
 
+    // Convert workflow to use case format for metadata generation
     const workflowAsUseCase: UseCase = {
       title: workflow.title,
       description: workflow.description || "",
       detailed_description: workflow.description,
-      slug: workflow.slug ?? workflow.id,
+      slug: workflow.id,
       action_type: "workflow",
       integrations: workflow.steps?.map((s) => s.category) || [],
-      categories: ["featured"],
+      categories: ["Community"],
       published_id: workflow.id,
       creator: workflow.creator,
     };
 
-    return generateUseCaseMetadata(workflowAsUseCase);
+    const meta = generateUseCaseMetadata(workflowAsUseCase);
+    return meta;
   } catch {
     return {
       title: "Use Case Not Found",
@@ -128,20 +120,25 @@ export async function generateMetadata({
   }
 }
 
+/**
+ * Use Case Detail Page
+ *
+ * This page handles both static use cases and dynamic community workflows:
+ * 1. First attempts to find the slug in static useCasesData
+ * 2. If not found, attempts to fetch from API as a community workflow
+ * 3. Displays appropriate content based on the data source
+ */
 export default async function UseCaseDetailPage({ params }: PageProps) {
   const { slug } = await params;
 
   let useCase: UseCase | null = null;
   let communityWorkflow: Workflow | null = null;
 
+  // First, try to find the use-case in explore workflows
   try {
-    const resp = await getExploreWorkflowsCached(200, 0);
-    const found = resp.workflows.find((w) => w.id === slug || w.slug === slug);
+    const resp = await workflowApi.getExploreWorkflows(200, 0);
+    const found = resp.workflows.find((w) => w.id === slug);
     if (found) {
-      // If the URL uses the old ID but the workflow has a real slug, redirect
-      if (slug.startsWith("wf_") && found.slug && found.slug !== slug) {
-        redirect(`/use-cases/${found.slug}`);
-      }
       useCase = {
         title: found.title,
         description: found.description || "",
@@ -149,7 +146,7 @@ export default async function UseCaseDetailPage({ params }: PageProps) {
         integrations: found.steps?.map((s) => s.category) || [],
         categories: found.categories || ["featured"],
         published_id: found.id,
-        slug: found.slug ?? found.id,
+        slug: found.id,
         steps: found.steps,
         creator: found.creator,
       } as UseCase;
@@ -163,11 +160,6 @@ export default async function UseCaseDetailPage({ params }: PageProps) {
     try {
       const response = await workflowApi.getPublicWorkflow(slug);
       const workflow = response.workflow;
-
-      // If the URL uses the old ID but the workflow has a real slug, redirect
-      if (slug.startsWith("wf_") && workflow.slug && workflow.slug !== slug) {
-        redirect(`/use-cases/${workflow.slug}`);
-      }
 
       // If it's a public workflow, try to get it from community endpoint to get creator info
       if (workflow.is_public) {
@@ -207,43 +199,35 @@ export default async function UseCaseDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const displayTitle = useCase?.title ?? communityWorkflow?.title ?? "";
-  const displayDescription =
-    useCase?.description ?? communityWorkflow?.description ?? "";
-  const displayIntegrations =
-    useCase?.integrations ??
-    communityWorkflow?.steps?.map((s) => s.category) ??
-    [];
-  const displayCategories = useCase?.categories ?? ["featured"];
-  const displayPublishedId =
-    useCase?.published_id ?? communityWorkflow?.id ?? "";
-  const displayCreator = useCase?.creator ?? communityWorkflow?.creator;
-  const displaySteps = useCase?.steps ?? communityWorkflow?.steps;
-
-  const structuredData = generateUseCaseStructuredData({
-    title: displayTitle,
-    description: displayDescription,
-    slug,
-    action_type: "workflow",
-    integrations: displayIntegrations,
-    categories: displayCategories,
-    published_id: displayPublishedId,
-    creator: displayCreator,
-    steps: displaySteps,
-  });
+  const structuredData = useCase
+    ? generateUseCaseStructuredData(useCase)
+    : communityWorkflow
+      ? generateUseCaseStructuredData({
+          title: communityWorkflow.title,
+          description: communityWorkflow.description || "",
+          slug: communityWorkflow.id,
+          action_type: "workflow",
+          integrations: communityWorkflow.steps?.map((s) => s.category) || [],
+          categories: ["Community"],
+          published_id: communityWorkflow.id,
+          creator: communityWorkflow.creator,
+          steps: communityWorkflow.steps,
+        })
+      : null;
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: siteConfig.url },
     { name: "Use Cases", url: `${siteConfig.url}/use-cases` },
     {
-      name: displayTitle,
+      name: useCase?.title || communityWorkflow?.title || "",
       url: `${siteConfig.url}/use-cases/${slug}`,
     },
   ]);
 
   return (
     <>
-      <JsonLd data={[structuredData, breadcrumbSchema]} />
+      {structuredData && <JsonLd data={[structuredData, breadcrumbSchema]} />}
+      {!structuredData && <JsonLd data={breadcrumbSchema} />}
       <UseCaseDetailClient
         useCase={useCase}
         communityWorkflow={communityWorkflow}

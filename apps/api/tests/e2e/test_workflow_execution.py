@@ -292,9 +292,7 @@ class TestWorkflowExecution:
             responses=[AIMessage(content="Comms agent response.")]
         )
 
-        async def _noop_follow_up(  # NOSONAR — async required for LangGraph hook interface
-            state, config, store
-        ):
+        async def _noop_follow_up(state, config, store):  # NOSONAR — async required for LangGraph hook interface
             return state
 
         # Patch at the build_graph module namespace (where names are imported)

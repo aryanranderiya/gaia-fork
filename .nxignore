@@ -24,7 +24,3 @@ apps/desktop/out
 # CLI cloned repos (from gaia init testing)
 packages/cli/gaia
 
-# Claude Code worktrees (contain duplicate project definitions)
-.claude/worktrees
-.conductor
-

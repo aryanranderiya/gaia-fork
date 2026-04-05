@@ -65,15 +65,14 @@ export async function generateMetadata({
 export default async function AutomateComboPage({ params }: PageProps) {
   const { locale, combo } = await params;
   setRequestLocale(locale);
-  const [t, data, allCombos] = await Promise.all([
-    getTranslations(),
-    getTranslatedCombo(combo),
-    getTranslatedCombos(),
-  ]);
+  const t = await getTranslations();
+  const data = await getTranslatedCombo(combo);
 
   if (!data) {
     notFound();
   }
+
+  const allCombos = await getTranslatedCombos();
   const relatedCombos = allCombos
     .filter(
       (c) =>

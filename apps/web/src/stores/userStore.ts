@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { devtools, persist } from "zustand/middleware";
+import { useShallow } from "zustand/react/shallow";
 
 export interface OnboardingData {
   completed: boolean;
@@ -68,3 +69,17 @@ export const useUserStore = create<UserStore>()(
     { name: "user-store" },
   ),
 );
+
+// Selectors
+export const useUserProfile = () =>
+  useUserStore(
+    useShallow((state) => ({
+      profilePicture: state.profilePicture,
+      name: state.name,
+      email: state.email,
+    })),
+  );
+
+export const useUserOnboarding = () =>
+  useUserStore((state) => state.onboarding);
+export const useUserTimezone = () => useUserStore((state) => state.timezone);

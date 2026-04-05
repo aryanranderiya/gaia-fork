@@ -2,7 +2,7 @@
 
 import { ArrowLeft01Icon, Home01Icon } from "@icons";
 import React from "react";
-import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
+import { trackError } from "@/lib/analytics";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -32,10 +32,7 @@ class ErrorBoundary extends React.Component<
     console.error("Error caught in Error Boundary:", error, errorInfo);
 
     // Track error in PostHog
-    trackEvent(ANALYTICS_EVENTS.ERROR_OCCURRED, {
-      error_type: "react_error_boundary",
-      error_message: error.message,
-      error_stack: error.stack,
+    trackError("react_error_boundary", error, {
       component_stack: errorInfo.componentStack,
     });
   }

@@ -3,8 +3,7 @@
  * Provides functions to interact with the workflow backend API.
  */
 
-import { buildQueryString } from "@shared/api";
-import { apiService } from "@/lib/api/service";
+import { apiService } from "@/lib/api";
 import type {
   CommunityWorkflow,
   CommunityWorkflowsResponse,
@@ -39,9 +38,17 @@ export const workflowApi = {
     limit?: number;
     skip?: number;
   }): Promise<WorkflowListResponse> => {
-    return apiService.get<WorkflowListResponse>(
-      `/workflows${buildQueryString(params)}`,
-    );
+    const searchParams = new URLSearchParams();
+    if (params?.activated !== undefined)
+      searchParams.append("activated", params.activated.toString());
+    if (params?.source) searchParams.append("source", params.source);
+    if (params?.limit) searchParams.append("limit", params.limit.toString());
+    if (params?.skip) searchParams.append("skip", params.skip.toString());
+
+    const queryString = searchParams.toString();
+    const url = queryString ? `/workflows?${queryString}` : "/workflows";
+
+    return apiService.get<WorkflowListResponse>(url);
   },
 
   // Get a specific workflow

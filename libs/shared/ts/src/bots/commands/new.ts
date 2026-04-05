@@ -6,9 +6,8 @@
  *
  * @module
  */
-
-import type { BotCommand, CommandExecuteParams } from "../types";
 import { handleNewConversation } from "../utils/commands";
+import type { BotCommand, CommandExecuteParams } from "../types";
 
 /** `/new` command definition. */
 export const newCommand: BotCommand = {

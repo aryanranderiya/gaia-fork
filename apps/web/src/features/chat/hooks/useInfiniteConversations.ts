@@ -74,7 +74,6 @@ export const useInfiniteConversations = () => {
       setState((prev) => ({
         ...prev,
         isLoadingMore: false,
-        hasMore: false,
         error: "Failed to load more conversations",
       }));
     } finally {

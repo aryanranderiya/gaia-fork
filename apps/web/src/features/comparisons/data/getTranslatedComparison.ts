@@ -1,5 +1,4 @@
 import { getLocale } from "next-intl/server";
-import { cache } from "react";
 import { loadFeatureTranslations } from "@/i18n/loadFeatureTranslations";
 import {
   type ComparisonData,
@@ -35,20 +34,17 @@ async function loadComparisonTranslations(
   );
 }
 
-/** Wrapped with React.cache() for per-request deduplication between generateMetadata and page component */
-export const getTranslatedComparison = cache(
-  async (
-    slug: string,
-    locale?: string,
-  ): Promise<ComparisonData | undefined> => {
-    const base = getComparison(slug);
-    if (!base) return undefined;
-    const translations = await loadComparisonTranslations(locale);
-    const t = translations[slug];
-    if (!t) return base;
-    return { ...base, ...t };
-  },
-);
+export async function getTranslatedComparison(
+  slug: string,
+  locale?: string,
+): Promise<ComparisonData | undefined> {
+  const base = getComparison(slug);
+  if (!base) return undefined;
+  const translations = await loadComparisonTranslations(locale);
+  const t = translations[slug];
+  if (!t) return base;
+  return { ...base, ...t };
+}
 
 export async function getTranslatedComparisons(
   locale?: string,
