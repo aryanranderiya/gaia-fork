@@ -1,13 +1,12 @@
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { authApi } from "@/features/auth/api/authApi";
 import { useUser, useUserActions } from "@/features/auth/hooks/useUser";
-import { useFetchIntegrationStatus } from "@/features/integrations";
+import { useFetchIntegrationStatus } from "@/features/integrations/hooks/useIntegrations";
 import {
   ANALYTICS_EVENTS,
+  setUserProperties,
   trackEvent,
-  trackOnboardingComplete,
-  trackOnboardingStep,
 } from "@/lib/analytics";
 import { toast } from "@/lib/toast";
 import { batchSyncConversations } from "@/services/syncService";
@@ -19,7 +18,6 @@ const ONBOARDING_STORAGE_KEY = "gaia-onboarding-state";
 
 export const useOnboarding = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const user = useUser();
   const { setUser } = useUserActions();
   const [isInitialized, setIsInitialized] = useState(false);
@@ -95,10 +93,12 @@ export const useOnboarding = () => {
     }
   }, [onboardingState]);
 
-  // Handle OAuth success/error from URL parameters
+  // Handle OAuth success/error from URL parameters — read on mount only;
+  // avoids subscribing to all searchParam changes.
   useEffect(() => {
-    const oauthSuccess = searchParams.get("oauth_success");
-    const oauthError = searchParams.get("oauth_error");
+    const params = new URLSearchParams(window.location.search);
+    const oauthSuccess = params.get("oauth_success");
+    const oauthError = params.get("oauth_error");
 
     if (oauthSuccess === "true") {
       toast.success("Integration connected successfully!");
@@ -125,7 +125,8 @@ export const useOnboarding = () => {
       url.searchParams.delete("oauth_error");
       window.history.replaceState({}, "", url.toString());
     }
-  }, [searchParams, refetchIntegrationStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -171,14 +172,11 @@ export const useOnboarding = () => {
       const currentQuestion = questions[onboardingState.currentQuestionIndex];
 
       // Track step completion
-      trackOnboardingStep(
-        onboardingState.currentQuestionIndex + 1,
-        currentQuestion.fieldName,
-        {
-          response_value: rawValue ?? responseText,
-          question_id: currentQuestion.id,
-        },
-      );
+      trackEvent(ANALYTICS_EVENTS.ONBOARDING_STEP_COMPLETED, {
+        step_number: onboardingState.currentQuestionIndex + 1,
+        step_name: currentQuestion.fieldName,
+        question_id: currentQuestion.id,
+      });
 
       // First, add user message and update state
       setOnboardingState((prev) => {
@@ -422,9 +420,13 @@ export const useOnboarding = () => {
 
       if (response?.success) {
         // Track onboarding completion
-        trackOnboardingComplete({
+        trackEvent(ANALYTICS_EVENTS.ONBOARDING_COMPLETED, {
           profession: onboardingState.userResponses.profession,
           totalSteps: questions.length + 1, // questions + connections step
+        });
+        setUserProperties({
+          onboarding_completed: true,
+          profession: onboardingState.userResponses.profession,
         });
 
         // Clear saved onboarding state since we're done

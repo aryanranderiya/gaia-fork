@@ -35,6 +35,8 @@ export async function generateStaticParams() {
   return getAllComparisonSlugs().map((slug) => ({ slug }));
 }
 
+export const dynamicParams = false;
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -64,18 +66,21 @@ export async function generateMetadata({
 export default async function ComparisonPage({ params }: PageProps) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const t = await getTranslations();
-  const data = await getTranslatedComparison(slug);
+  const [t, data, alternativeData, allComparisons] = await Promise.all([
+    getTranslations(),
+    getTranslatedComparison(slug),
+    getTranslatedAlternative(slug),
+    getTranslatedComparisons(),
+  ]);
 
   if (!data) {
     notFound();
   }
 
-  const hasAlternativePage =
-    (await getTranslatedAlternative(slug)) !== undefined;
+  const hasAlternativePage = alternativeData !== undefined;
 
   const currentCategory = COMPARISON_CATEGORIES[slug] ?? "Other";
-  const relatedComparisons = (await getTranslatedComparisons())
+  const relatedComparisons = allComparisons
     .filter(
       (c) =>
         c.slug !== slug && COMPARISON_CATEGORIES[c.slug] === currentCategory,

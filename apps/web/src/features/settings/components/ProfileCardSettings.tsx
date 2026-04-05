@@ -5,16 +5,15 @@ import { Skeleton } from "@heroui/skeleton";
 import { Tooltip } from "@heroui/tooltip";
 import { Copy01Icon, LinkSquare02Icon } from "@icons";
 import { useEffect, useState } from "react";
-import {
-  type HoloCardDisplayData,
-  HoloCardEditor,
-} from "@/components/ui/holo-card";
+import { HoloCardEditor } from "@/components/ui/holo-card/HoloCardEditor";
+import type { HoloCardDisplayData } from "@/components/ui/holo-card/types";
 import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
 import {
   type HoloCardData,
   holoCardApi,
 } from "@/features/onboarding/api/holoCardApi";
-import { SettingsPage } from "@/features/settings/components/ui";
+import { SettingsPage } from "@/features/settings/components/ui/SettingsPage";
+import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 import { toast } from "@/lib/toast";
 
 export default function ProfileCardSettings() {
@@ -41,6 +40,9 @@ export default function ProfileCardSettings() {
     if (!holoCardData?.holo_card_id && typeof window !== "undefined") return;
     const url = `${window.location.origin}/profile/${holoCardData?.holo_card_id}`;
     navigator.clipboard.writeText(url);
+    trackEvent(ANALYTICS_EVENTS.PROFILE_LINK_COPIED, {
+      holo_card_id: holoCardData?.holo_card_id,
+    });
     toast.success("Profile link copied to clipboard!");
   };
 

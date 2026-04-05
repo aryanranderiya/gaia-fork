@@ -36,13 +36,13 @@ interface VirtualizedItemProps {
   item: VirtualItemType;
   selectedIndex: number;
   selectedCategory: string;
-  openedViaButton: boolean;
-  searchQuery: string;
   onSelect: (match: SlashCommandMatch) => void;
   onClose: () => void;
   measureElement: (element: HTMLElement | null) => void;
   categoryDisplayMap: Record<string, { displayName: string; iconUrl?: string }>;
   onIntegrationClick?: (integrationId: string) => void;
+  openedViaButton?: boolean;
+  searchQuery?: string;
 }
 
 const VirtualizedItem: React.FC<VirtualizedItemProps> = ({
@@ -50,13 +50,13 @@ const VirtualizedItem: React.FC<VirtualizedItemProps> = ({
   item,
   selectedIndex,
   selectedCategory,
-  openedViaButton,
-  searchQuery,
   onSelect,
   onClose,
   measureElement,
   categoryDisplayMap,
   onIntegrationClick,
+  openedViaButton,
+  searchQuery,
 }) => {
   const baseStyle = {
     transform: `translateY(${virtualRow.start}px)`,
@@ -93,9 +93,7 @@ const VirtualizedItem: React.FC<VirtualizedItemProps> = ({
         style={baseStyle}
       >
         <div
-          className={`relative mx-2 mb-1 cursor-pointer rounded-xl border-none transition-all duration-150 ${
-            isSelected ? "bg-zinc-700/40" : "hover:bg-white/5"
-          }`}
+          className={`relative mx-2 mb-1 cursor-pointer rounded-xl border-none transition-all duration-150 ${isSelected ? "bg-zinc-700/40" : "hover:bg-white/5"}`}
           onClick={() => {
             trackEvent(ANALYTICS_EVENTS.CHAT_SLASH_COMMAND_SELECTED, {
               tool_name: match.tool.name,
@@ -254,7 +252,6 @@ const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = ({
       category,
       previous_category: selectedCategory,
     });
-
     if (onCategoryChange) {
       onCategoryChange(category);
     } else {
@@ -351,7 +348,7 @@ const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = ({
     const uniqueCategories = Array.from(
       new Set(matches.map((match) => match.tool.category)),
     );
-    return ["all", ...uniqueCategories.sort()];
+    return ["all", ...uniqueCategories.toSorted()];
   }, [matches, externalCategories]);
 
   // Build a map of category ID -> { displayName, iconUrl } for efficient lookup
@@ -602,11 +599,7 @@ const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = ({
                       e.stopPropagation();
                       handleCategoryChange(category);
                     }}
-                    className={`flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${
-                      selectedCategory === category
-                        ? "bg-zinc-700/40 text-white"
-                        : "text-zinc-400 hover:bg-white/10 hover:text-zinc-300"
-                    }`}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all ${selectedCategory === category ? "bg-zinc-700/40 text-white" : "text-zinc-400 hover:bg-white/10 hover:text-zinc-300"}`}
                   >
                     {category === "all" ? (
                       <GridIcon
@@ -661,13 +654,13 @@ const SlashCommandDropdown: React.FC<SlashCommandDropdownProps> = ({
                       item={item}
                       selectedIndex={selectedIndex}
                       selectedCategory={selectedCategory}
-                      openedViaButton={openedViaButton}
-                      searchQuery={searchQuery}
                       onSelect={onSelect}
                       onClose={onClose}
                       measureElement={rowVirtualizer.measureElement}
                       categoryDisplayMap={categoryDisplayMap}
                       onIntegrationClick={onIntegrationClick}
+                      openedViaButton={openedViaButton}
+                      searchQuery={searchQuery}
                     />
                   );
                 })}

@@ -15,7 +15,7 @@ import { Comment01Icon, HelpCircleIcon, PencilEdit01Icon } from "@icons";
 import type React from "react";
 import { useState } from "react";
 import { z } from "zod";
-import { Separator } from "@/components";
+import { Separator } from "@/components/ui/separator";
 import { supportApi } from "@/features/support/api/supportApi";
 import { toast } from "@/lib/toast";
 import type { SupportTicketData } from "@/types/features/supportTypes";
@@ -23,7 +23,7 @@ import type { SupportTicketData } from "@/types/features/supportTypes";
 // Support ticket validation schema
 const supportTicketSchema = z.object({
   type: z.enum(["support", "feature"], {
-    required_error: "Support type is required",
+    error: "Support type is required",
   }),
   title: z
     .string()
@@ -155,7 +155,7 @@ export default function SupportTicketCard({
     } catch (error) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.errors.forEach((err) => {
+        error.issues.forEach((err) => {
           if (err.path[0]) {
             newErrors[err.path[0] as string] = err.message;
           }
