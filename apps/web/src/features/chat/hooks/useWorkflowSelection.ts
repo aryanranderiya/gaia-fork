@@ -46,7 +46,7 @@ export const useWorkflowSelection = () => {
 
       // Track first workflow use as feature discovery
       const hasTrackedFeatureDiscovered =
-        typeof window !== "undefined" &&
+        typeof globalThis.window !== "undefined" &&
         localStorage.getItem(FEATURE_DISCOVERED_WORKFLOWS_KEY);
 
       if (!hasTrackedFeatureDiscovered) {
@@ -55,7 +55,7 @@ export const useWorkflowSelection = () => {
           workflow_title: workflow.title,
         });
 
-        if (typeof window !== "undefined") {
+        if (typeof globalThis.window !== "undefined") {
           localStorage.setItem(FEATURE_DISCOVERED_WORKFLOWS_KEY, "true");
         }
       }

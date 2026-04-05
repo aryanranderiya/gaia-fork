@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { authApi } from "@/features/auth/api/authApi";
-import { SESSION_RESUMED_KEY } from "@/features/auth/constants";
+import { PUBLIC_PAGES, SESSION_RESUMED_KEY } from "@/features/auth/constants";
 import { useUserActions } from "@/features/auth/hooks/useUser";
 import { usePathname } from "@/i18n/navigation";
 import {
@@ -13,9 +13,6 @@ import {
   resetUser,
   trackEvent,
 } from "@/lib/analytics";
-
-export const authPages = ["/login", "/signup"];
-export const publicPages = [...authPages, "/terms", "/privacy", "/contact"];
 
 const useFetchUser = () => {
   const { setUser, clearUser } = useUserActions();
@@ -77,7 +74,7 @@ const useFetchUser = () => {
         router.push("/onboarding");
       } else if (
         !needsOnboarding &&
-        (currentPath === "/onboarding" || publicPages.includes(currentPath))
+        (currentPath === "/onboarding" || PUBLIC_PAGES.includes(currentPath))
       ) {
         router.push("/c");
       }
