@@ -264,11 +264,7 @@ export default function ViewEmail({
       //   subject: `Re: ${replyTo.subject || ""}`,
       //   body: content,
       // });
-
-      trackEvent(ANALYTICS_EVENTS.EMAIL_REPLIED, {
-        mail_id: replyTo.id,
-        thread_id: replyTo.threadId,
-      });
+      // trackEvent(ANALYTICS_EVENTS.EMAIL_REPLIED, { mail_id: replyTo.id, thread_id: replyTo.threadId });
 
       toast.error("ArrowTurnBackwardIcon functionality is not yet implemented");
       setShowReplyEditor(false);

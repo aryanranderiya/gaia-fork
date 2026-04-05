@@ -157,8 +157,9 @@ def track_login(
         properties: Additional properties
     """
     identify_user(
-        user_id,
+        email,
         {
+            "user_id": user_id,
             "email": email,
             "name": name,
             "last_login_method": login_method,
@@ -167,9 +168,10 @@ def track_login(
     )
 
     capture_event(
-        user_id,
+        email,
         AnalyticsEvents.USER_LOGGED_IN,
         {
+            "user_id": user_id,
             "email": email,
             "name": name,
             "login_method": login_method,
@@ -192,9 +194,10 @@ def track_logout(
         properties: Additional properties
     """
     capture_event(
-        user_id,
+        email,
         AnalyticsEvents.USER_LOGGED_OUT,
         {
+            "user_id": user_id,
             "email": email,
             **(properties or {}),
         },
