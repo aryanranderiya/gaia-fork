@@ -12,21 +12,6 @@
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "type": "dashboard"
-      },
-      {
-        "datasource": {
-          "type": "loki",
-          "uid": "loki"
-        },
-        "enable": true,
-        "iconColor": "rgba(255, 96, 96, 1)",
-        "name": "Deploys",
-        "target": {
-          "expr": "{event=\"deploy\"}",
-          "refId": "Anno"
-        },
-        "titleFormat": "Deploy ({{service}})",
-        "textFormat": "{{sha}} by {{actor}}"
       }
     ]
   },
@@ -35,22 +20,7 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [
-        "gaia"
-      ],
-      "targetBlank": false,
-      "title": "GAIA Dashboards",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
-    }
-  ],
+  "links": [],
   "panels": [
     {
       "collapsed": false,
@@ -67,7 +37,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -115,7 +85,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_connections",
           "instant": true,
@@ -128,7 +98,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -176,7 +146,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_channels",
           "instant": true,
@@ -189,7 +159,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -237,7 +207,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_queues",
           "instant": true,
@@ -250,7 +220,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -305,7 +275,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rabbitmq_queue_messages_ready)",
           "instant": true,
@@ -330,7 +300,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -409,7 +379,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rabbitmq_queue_messages)",
           "legendFormat": "Total",
@@ -418,7 +388,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rabbitmq_queue_messages_ready)",
           "legendFormat": "Ready",
@@ -427,7 +397,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "sum(rabbitmq_queue_messages_unacked)",
           "legendFormat": "Unacked",
@@ -440,7 +410,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -489,7 +459,7 @@
               }
             ]
           },
-          "unit": "cps"
+          "unit": "short"
         },
         "overrides": []
       },
@@ -519,7 +489,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rate(rabbitmq_global_messages_received_total[2m])",
           "legendFormat": "Published/s",
@@ -528,7 +498,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rate(rabbitmq_global_messages_delivered_total[2m])",
           "legendFormat": "Delivered/s",
@@ -537,7 +507,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rate(rabbitmq_global_messages_acknowledged_total[2m])",
           "legendFormat": "Acked/s",
@@ -562,7 +532,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -641,7 +611,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_queue_messages{queue!=\"\"}",
           "legendFormat": "{{queue}}",
@@ -666,7 +636,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -745,7 +715,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_connections",
           "legendFormat": "Connections",
@@ -758,7 +728,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -837,7 +807,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_channels",
           "legendFormat": "Channels",
@@ -862,7 +832,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -941,7 +911,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_process_resident_memory_bytes",
           "legendFormat": "Resident",
@@ -954,7 +924,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -1033,7 +1003,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_process_open_fds",
           "legendFormat": "Open FDs",
@@ -1042,7 +1012,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "prometheus"
+            "uid": "${datasource}"
           },
           "expr": "rabbitmq_process_max_fds",
           "legendFormat": "Max FDs",
@@ -1057,14 +1027,28 @@
   "schemaVersion": 39,
   "tags": [
     "gaia",
-    "infra",
-    "queue"
+    "rabbitmq",
+    "prometheus"
   ],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "prometheus",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      }
+    ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},

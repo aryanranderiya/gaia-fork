@@ -12,21 +12,6 @@
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
         "type": "dashboard"
-      },
-      {
-        "datasource": {
-          "type": "loki",
-          "uid": "loki"
-        },
-        "enable": true,
-        "iconColor": "rgba(255, 96, 96, 1)",
-        "name": "Deploys",
-        "target": {
-          "expr": "{event=\"deploy\"}",
-          "refId": "Anno"
-        },
-        "titleFormat": "Deploy ({{service}})",
-        "textFormat": "{{sha}} by {{actor}}"
       }
     ]
   },
@@ -35,27 +20,12 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
   "id": null,
-  "links": [
-    {
-      "asDropdown": true,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [
-        "gaia"
-      ],
-      "targetBlank": false,
-      "title": "GAIA Dashboards",
-      "tooltip": "",
-      "type": "dashboards",
-      "url": ""
-    }
-  ],
+  "links": [],
   "panels": [
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -102,7 +72,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "sum(count_over_time({service=~\"$service\"} | json | message = \"http_request\" [$__range]))",
           "instant": true,
@@ -116,7 +86,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -171,7 +141,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "sum(count_over_time({service=~\"$service\"} | json | message = \"http_request\" | status_code >= 500 [$__range]))",
           "instant": true,
@@ -185,7 +155,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -240,7 +210,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "quantile_over_time(0.95, {service=~\"$service\"} | json | message = \"http_request\" | unwrap duration_ms [$__range])",
           "instant": true,
@@ -254,7 +224,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -309,7 +279,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "sum(count_over_time({service=~\"$service\", level=\"ERROR\"} [$__range]))",
           "instant": true,
@@ -323,7 +293,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -402,7 +372,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "sum by (status_code) (rate({service=~\"$service\"} | json | message = \"http_request\" [$__auto]))",
           "interval": "5m",
@@ -416,7 +386,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -555,7 +525,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "sum by (level) (count_over_time({service=~\"$service\"} [$__interval]))",
           "interval": "5m",
@@ -569,7 +539,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -648,7 +618,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "quantile_over_time(0.50, {service=~\"$service\"} | json | message = \"http_request\" | unwrap duration_ms [5m])",
           "interval": "5m",
@@ -658,7 +628,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "quantile_over_time(0.95, {service=~\"$service\"} | json | message = \"http_request\" | unwrap duration_ms [5m])",
           "interval": "5m",
@@ -668,7 +638,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "quantile_over_time(0.99, {service=~\"$service\"} | json | message = \"http_request\" | unwrap duration_ms [5m])",
           "interval": "5m",
@@ -682,7 +652,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 8,
@@ -705,7 +675,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "{service=~\"$service\", level=~\"ERROR|WARNING\"} | json",
           "legendFormat": "",
@@ -718,7 +688,7 @@
     {
       "datasource": {
         "type": "loki",
-        "uid": "loki"
+        "uid": "${datasource}"
       },
       "gridPos": {
         "h": 10,
@@ -741,7 +711,7 @@
         {
           "datasource": {
             "type": "loki",
-            "uid": "loki"
+            "uid": "${datasource}"
           },
           "expr": "{service=~\"$service\"} | json",
           "legendFormat": "",
@@ -756,15 +726,28 @@
   "schemaVersion": 39,
   "tags": [
     "gaia",
-    "api",
-    "logs"
+    "logs",
+    "loki"
   ],
   "templating": {
     "list": [
       {
+        "current": {},
+        "hide": 0,
+        "includeAll": false,
+        "label": "Datasource",
+        "multi": false,
+        "name": "datasource",
+        "options": [],
+        "query": "loki",
+        "refresh": 1,
+        "regex": "",
+        "type": "datasource"
+      },
+      {
         "datasource": {
           "type": "loki",
-          "uid": "loki"
+          "uid": "${datasource}"
         },
         "definition": "label_values(service)",
         "hide": 0,
@@ -778,7 +761,7 @@
           "stream": "{}",
           "type": 1
         },
-        "refresh": 1,
+        "refresh": 2,
         "sort": 1,
         "type": "query"
       }
