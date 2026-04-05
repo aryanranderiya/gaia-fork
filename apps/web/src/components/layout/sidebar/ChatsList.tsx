@@ -13,8 +13,8 @@ import Spinner from "@/components/ui/spinner";
 import { useConversationList } from "@/features/chat/hooks/useConversationList";
 import { useInfiniteConversations } from "@/features/chat/hooks/useInfiniteConversations";
 import { useSyncStatus } from "@/hooks/useBackgroundSync";
-import { cn } from "@/lib";
 import type { IConversation } from "@/lib/db/chatDb";
+import { cn } from "@/lib/utils";
 import { ChatTab } from "./ChatTab";
 import { accordionItemStyles } from "./constants";
 
@@ -100,7 +100,7 @@ export default function ChatsList() {
         {} as Record<string, IConversation[]>,
       );
 
-      const sorted = Object.entries(grouped).sort(
+      const sorted = Object.entries(grouped).toSorted(
         ([timeFrameA], [timeFrameB]) =>
           timeFramePriority(timeFrameA) - timeFramePriority(timeFrameB),
       );
@@ -195,13 +195,7 @@ export default function ChatsList() {
     return () => {
       scrollContainer?.removeEventListener("scroll", handleScroll);
     };
-  }, [
-    isLoading,
-    hasMore,
-    isLoadingMore,
-    loadMoreConversations,
-    conversations.length,
-  ]);
+  }, [isLoading, hasMore, isLoadingMore, loadMoreConversations]);
 
   return (
     <>
@@ -234,7 +228,7 @@ export default function ChatsList() {
                 <AccordionContent className={accordionItemStyles.content}>
                   <div className={accordionItemStyles.chatContainer}>
                     {systemConversations
-                      .sort(
+                      .toSorted(
                         (a: IConversation, b: IConversation) =>
                           b.createdAt.getTime() - a.createdAt.getTime(),
                       )
@@ -306,7 +300,7 @@ export default function ChatsList() {
                 <AccordionContent className={accordionItemStyles.content}>
                   <div className={accordionItemStyles.chatContainer}>
                     {conversationsGroup
-                      .sort(
+                      .toSorted(
                         (a: IConversation, b: IConversation) =>
                           b.createdAt.getTime() - a.createdAt.getTime(),
                       )

@@ -41,11 +41,7 @@ export default function DemoWorkflowCard({
             damping: 25,
           }}
           style={{ willChange: "transform, opacity" }}
-          className={`max-w-sm rounded-3xl p-4 ${
-            light
-              ? "bg-white/70 backdrop-blur-lg outline outline-1 outline-zinc-200/60"
-              : "bg-zinc-800"
-          }`}
+          className={`max-w-sm rounded-3xl p-4 ${light ? "bg-white/70 backdrop-blur-lg outline outline-1 outline-zinc-200/60" : "bg-zinc-800"}`}
         >
           {/* Icons row */}
           <div className="mb-2 flex items-center justify-between">
@@ -64,11 +60,7 @@ export default function DemoWorkflowCard({
               ))}
               {DEMO_WORKFLOW.categories.length > 3 && (
                 <div
-                  className={`flex h-6 w-6 items-center justify-center rounded-lg text-[9px] ${
-                    light
-                      ? "bg-zinc-200/60 text-zinc-500"
-                      : "bg-zinc-700/60 text-zinc-400"
-                  }`}
+                  className={`flex h-6 w-6 items-center justify-center rounded-lg text-[9px] ${light ? "bg-zinc-200/60 text-zinc-500" : "bg-zinc-700/60 text-zinc-400"}`}
                 >
                   +{DEMO_WORKFLOW.categories.length - 3}
                 </div>
@@ -85,11 +77,13 @@ export default function DemoWorkflowCard({
                   exit={{ opacity: 0, scale: 0.8 }}
                   className="flex items-center gap-1 rounded-full bg-primary/15 px-2 py-0.5"
                 >
-                  <Loading03Icon
-                    width={10}
-                    height={10}
-                    className="animate-spin text-primary"
-                  />
+                  <div className="animate-spin">
+                    <Loading03Icon
+                      width={10}
+                      height={10}
+                      className="text-primary"
+                    />
+                  </div>
                   <span className="text-[9px] font-medium text-primary">
                     Running
                   </span>

@@ -35,7 +35,7 @@ import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";
 import { Github } from "@/components/shared/icons";
 import { getLinkByLabel } from "@/config/appConfig";
 import { useUserSubscriptionStatus } from "@/features/pricing/hooks/usePricing";
-import { ContactSupportModal } from "@/features/support";
+import ContactSupportModal from "@/features/support/components/ContactSupportModal";
 import {
   type PlatformInfo,
   usePlatformDetection,
@@ -103,14 +103,11 @@ export default function SettingsMenu({
       action: () => window.open(docsLink?.href, "_blank"),
     },
     {
-      key: "changelog",
-      label: "Changelog",
+      key: "release-notes",
+      label: "Release Notes",
       icon: Layers01Icon,
       action: () =>
-        window.open(
-          "https://github.com/theexperiencecompany/gaia/releases",
-          "_blank",
-        ),
+        window.open("https://docs.heygaia.io/release-notes", "_blank"),
     },
     {
       key: "blog",
