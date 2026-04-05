@@ -117,8 +117,9 @@ def track_signup(
     """
     # First identify the user
     identify_user(
-        user_id,
+        email,
         {
+            "user_id": user_id,
             "email": email,
             "name": name,
             "signup_method": signup_method,
@@ -128,9 +129,10 @@ def track_signup(
 
     # Then capture the signup event
     capture_event(
-        user_id,
+        email,
         AnalyticsEvents.USER_SIGNED_UP,
         {
+            "user_id": user_id,
             "email": email,
             "name": name,
             "signup_method": signup_method,

@@ -313,6 +313,7 @@ async def update_holo_card_colors(
 @router.post("/logout")
 async def logout(
     request: Request,
+    user: dict = Depends(get_current_user),
 ):
     """
     Logout user and return logout URL for frontend redirection.
@@ -333,20 +334,12 @@ async def logout(
         if not session:
             raise HTTPException(status_code=401, detail="Invalid session")
 
-        user_email: Optional[str] = None
-        try:
-            auth_response = session.authenticate()
-            if auth_response and getattr(auth_response, "authenticated", False):
-                workos_user = getattr(auth_response, "user", None)
-                user_email = getattr(workos_user, "email", None)
-        except Exception as auth_error:
-            log.warning(
-                f"Failed to resolve user from WorkOS session during logout: {auth_error}"
-            )
+        user_email: Optional[str] = user.get("email")
+        user_id: Optional[str] = user.get("user_id")
 
         if user_email:
             try:
-                track_logout(user_id=user_email, email=user_email)
+                track_logout(user_id=user_id or user_email, email=user_email)
             except Exception as analytics_error:
                 log.warning(
                     f"Failed to track logout analytics for {user_email}: {analytics_error}"
