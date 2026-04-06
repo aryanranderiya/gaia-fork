@@ -10,6 +10,7 @@ contactPoints:
         type: slack
         settings:
           url: $SLACK_ALERT_WEBHOOK_URL
+          recipient: "${SLACK_ALERT_CHANNEL:-#alerts}"
           title: "{{ template \"slack.default.title\" . }}"
           text: "{{ template \"slack.default.text\" . }}"
         disableResolveMessage: false

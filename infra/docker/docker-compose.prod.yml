@@ -161,6 +161,7 @@ services:
       - PYTHONPATH=/app/apps/api
       - LOG_FORMAT=json
       - LOG_COLORIZE=false
+      - ARQ_METRICS_PORT=9100
     command: ["python", "-m", "arq", "app.worker.WorkerSettings"]
     restart: always
     depends_on:
@@ -295,7 +296,7 @@ services:
 
   # Container metrics (CPU, memory, network, disk I/O per container)
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    image: gcr.io/cadvisor/cadvisor:v0.54.1
     container_name: cadvisor
     privileged: true
     volumes:
@@ -428,6 +429,8 @@ services:
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       # Set GRAFANA_ROOT_URL if Grafana is behind a reverse proxy (e.g. https://grafana.example.com)
       GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:4000}
+      # Slack webhook for alert notifications (leave empty to disable)
+      SLACK_ALERT_WEBHOOK_URL: ${SLACK_ALERT_WEBHOOK_URL:-}
     restart: unless-stopped
     depends_on:
       loki:
