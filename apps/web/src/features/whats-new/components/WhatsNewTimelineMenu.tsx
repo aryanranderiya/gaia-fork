@@ -41,7 +41,7 @@ export function WhatsNewTimelineMenu({ onClose }: WhatsNewTimelineMenuProps) {
 
   return (
     <div style={{ width: "260px" }} className="py-2">
-      <p className="mb-1.5 px-3 text-[10px] font-semibold text-zinc-600">
+      <p className="mb-1.5 px-3 text-[11px] font-semibold text-zinc-600">
         Recent updates
       </p>
 
@@ -89,7 +89,7 @@ export function WhatsNewTimelineMenu({ onClose }: WhatsNewTimelineMenuProps) {
       </ul>
 
       {/* Footer */}
-      <div className="mt-1 px-3 pt-1">
+      <div className="px-3">
         <Button
           variant="light"
           size="sm"
