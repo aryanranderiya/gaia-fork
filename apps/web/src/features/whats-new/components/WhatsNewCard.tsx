@@ -19,8 +19,7 @@ export function WhatsNewCard() {
   const dismissCard = useWhatsNewStore((s) => s.dismissCard);
   const openModal = useWhatsNewStore((s) => s.openModal);
 
-  const isDismissed =
-    !!latest && dismissedUntilReleaseId === latest.id && unseen.length === 0;
+  const isDismissed = !!latest && dismissedUntilReleaseId === latest.id;
 
   useEffect(() => {
     if (!isLoading && releases.length > 0) {
@@ -76,6 +75,7 @@ export function WhatsNewCard() {
           onPress={handleDismiss}
           aria-label="Dismiss what's new"
           className="absolute top-2 right-2 h-6 w-6 min-w-6 bg-zinc-900/60 text-zinc-400 hover:bg-zinc-900 hover:text-white opacity-0 group-hover:opacity-100"
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           <Cancel01Icon className="h-3 w-3" />

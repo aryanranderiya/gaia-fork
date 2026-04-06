@@ -57,7 +57,7 @@ export function WhatsNewModal() {
     if (!isModalOpen || hasMarkedSeenRef.current) return;
     if (!latest) return;
     hasMarkedSeenRef.current = true;
-    markAllSeen(latest.id);
+    markAllSeen(latest.id, latest.date);
     trackEvent(ANALYTICS_EVENTS.WHATS_NEW_MODAL_OPENED, { source: "modal" });
   }, [isModalOpen, latest, markAllSeen]);
 

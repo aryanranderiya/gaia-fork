@@ -5,12 +5,13 @@ import { useShallow } from "zustand/react/shallow";
 interface WhatsNewState {
   // Persistence
   lastSeenReleaseId: string | null;
+  lastSeenReleaseDate: string | null;
   dismissedUntilReleaseId: string | null;
   // Modal UI (not persisted)
   isModalOpen: boolean;
   modalInitialIndex: number;
   // Actions
-  markAllSeen: (latestId: string) => void;
+  markAllSeen: (latestId: string, latestDate: string) => void;
   dismissCard: (latestId: string) => void;
   openModal: (initialIndex?: number) => void;
   closeModal: () => void;
@@ -21,12 +22,17 @@ export const useWhatsNewStore = create<WhatsNewState>()(
     persist(
       (set) => ({
         lastSeenReleaseId: null,
+        lastSeenReleaseDate: null,
         dismissedUntilReleaseId: null,
         isModalOpen: false,
         modalInitialIndex: 0,
 
-        markAllSeen: (latestId) =>
-          set({ lastSeenReleaseId: latestId }, false, "whatsNew/markAllSeen"),
+        markAllSeen: (latestId, latestDate) =>
+          set(
+            { lastSeenReleaseId: latestId, lastSeenReleaseDate: latestDate },
+            false,
+            "whatsNew/markAllSeen",
+          ),
 
         dismissCard: (latestId) =>
           set(
@@ -49,6 +55,7 @@ export const useWhatsNewStore = create<WhatsNewState>()(
         name: "gaia-whats-new",
         partialize: (state) => ({
           lastSeenReleaseId: state.lastSeenReleaseId,
+          lastSeenReleaseDate: state.lastSeenReleaseDate,
           dismissedUntilReleaseId: state.dismissedUntilReleaseId,
         }),
       },

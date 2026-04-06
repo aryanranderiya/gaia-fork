@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useWhatsNewStore } from "@/stores/whatsNewStore";
 import type { Release, ReleasesResponse } from "../types";
 
-const REVALIDATE_MS = 30 * 60 * 1000; // 30 minutes
+const REVALIDATE_MS = 2 * 60 * 1000; // 2 minutes
 
 let cachedData: ReleasesResponse | null = null;
 let cachedAt = 0;
@@ -23,6 +23,7 @@ export function useReleases(): {
   const [error, setError] = useState<Error | null>(null);
 
   const lastSeenReleaseId = useWhatsNewStore((s) => s.lastSeenReleaseId);
+  const lastSeenReleaseDate = useWhatsNewStore((s) => s.lastSeenReleaseDate);
   const markAllSeen = useWhatsNewStore((s) => s.markAllSeen);
   const hasSeededRef = useRef(false);
 
@@ -64,22 +65,26 @@ export function useReleases(): {
   // First-run seeding: treat all but the latest release as already seen
   useEffect(() => {
     if (hasSeededRef.current) return;
-    if (releases.length < 2) return;
+    if (releases.length === 0) return;
     if (lastSeenReleaseId !== null) return;
 
-    // Seed to second-most-recent so only 1 "New" badge shows on first load
     hasSeededRef.current = true;
-    markAllSeen(releases[1].id);
+
+    if (releases.length === 1) {
+      // Only one release exists — seed to it so the card still shows it as new
+      // (unseen fallback handles this, but seeding ensures consistency)
+      return;
+    }
+
+    // Seed to second-most-recent so only 1 "New" badge shows on first load
+    markAllSeen(releases[1].id, releases[1].date);
   }, [releases, lastSeenReleaseId, markAllSeen]);
 
   const latest = releases[0] ?? null;
 
-  const unseenDate = lastSeenReleaseId
-    ? (releases.find((r) => r.id === lastSeenReleaseId)?.date ?? null)
-    : null;
-
-  const unseen = unseenDate
-    ? releases.filter((r) => new Date(r.date) > new Date(unseenDate))
+  // Use stored date directly — doesn't break if the release was removed from RSS
+  const unseen = lastSeenReleaseDate
+    ? releases.filter((r) => new Date(r.date) > new Date(lastSeenReleaseDate))
     : releases.slice(0, 1);
 
   return { releases, latest, unseen, isLoading, error };

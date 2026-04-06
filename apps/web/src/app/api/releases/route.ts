@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import type { Release, ReleasesResponse } from "@/features/whats-new/types";
 
-export const revalidate = 3600;
+export const revalidate = 60;
 
 const RSS_URL = "https://docs.heygaia.io/release-notes/rss.xml";
 
@@ -109,7 +109,7 @@ function parseRss(xml: string): Release[] {
 export async function GET() {
   const response = await fetch(RSS_URL, {
     headers: { Accept: "application/rss+xml, application/xml, text/xml" },
-    next: { revalidate: 3600 },
+    next: { revalidate: 60 },
   });
 
   if (!response.ok) {

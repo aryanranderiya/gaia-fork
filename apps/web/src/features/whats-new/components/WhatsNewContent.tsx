@@ -1,5 +1,6 @@
 "use client";
 
+import DOMPurify from "dompurify";
 import { useMemo } from "react";
 
 interface WhatsNewContentProps {
@@ -98,7 +99,13 @@ function injectClasses(html: string): string {
 }
 
 export function WhatsNewContent({ html }: WhatsNewContentProps) {
-  const processed = useMemo(() => injectClasses(html), [html]);
+  const processed = useMemo(() => {
+    const sanitized = DOMPurify.sanitize(html, {
+      ADD_TAGS: ["img"],
+      ADD_ATTR: ["target", "rel"],
+    });
+    return injectClasses(sanitized);
+  }, [html]);
 
   return (
     <div className="text-sm" dangerouslySetInnerHTML={{ __html: processed }} />
