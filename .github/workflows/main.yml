@@ -21,7 +21,7 @@ env:
 jobs:
   # --- Detect affected projects -------------------------------------------
   detect:
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     permissions:
       contents: read
@@ -93,7 +93,7 @@ jobs:
   static-python:
     needs: [detect]
     if: needs.detect.outputs.has_python == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -118,7 +118,7 @@ jobs:
   static-typescript:
     needs: [detect]
     if: needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -139,7 +139,7 @@ jobs:
   build:
     needs: [detect]
     if: needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -160,7 +160,7 @@ jobs:
   test-python:
     needs: [detect]
     if: needs.detect.outputs.has_python == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -181,7 +181,7 @@ jobs:
   test-typescript:
     needs: [detect]
     if: needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -202,7 +202,7 @@ jobs:
   dead-code:
     needs: [detect]
     if: needs.detect.outputs.has_python == 'true' || needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -224,7 +224,7 @@ jobs:
   # --- Release validation (runner-native, always) -------------------------
   release-validation:
     needs: [detect]
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -257,7 +257,7 @@ jobs:
   coverage:
     needs: [detect]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.detect.outputs.has_python == 'true'
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 30
     continue-on-error: true
     steps:
@@ -286,7 +286,7 @@ jobs:
       - release-validation
       # trivy-scan deliberately excluded (non-blocking)
       # coverage deliberately excluded (master-only, non-blocking)
-    runs-on: blacksmith-8vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - name: Evaluate results

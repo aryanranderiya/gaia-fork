@@ -47,6 +47,14 @@ const CommandMenu = nextDynamic(
   { ssr: false },
 );
 
+const WhatsNewModal = nextDynamic(
+  () =>
+    import("@/features/whats-new/components/WhatsNewModal").then((m) => ({
+      default: m.WhatsNewModal,
+    })),
+  { ssr: false },
+);
+
 const HeaderSidebarTrigger = () => {
   return (
     <div className="">
@@ -223,6 +231,9 @@ export default function MainLayout({ children }: { children: ReactNode }) {
 
           {/* Global Pricing Modal */}
           <GlobalPricingModal />
+
+          {/* What's New Modal */}
+          <WhatsNewModal />
 
           {/* Global Command Menu */}
           <CommandMenu
