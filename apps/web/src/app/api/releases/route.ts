@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
+import sanitizeHtml from "sanitize-html";
 import type { Release, ReleasesResponse } from "@/features/whats-new/types";
 
 export const revalidate = 60;
@@ -106,12 +107,26 @@ function parseRssItem(itemXml: string): Release | null {
     h2Texts.some((text) => text.toLowerCase().startsWith(app.toLowerCase())),
   );
 
+  const safeHtml = sanitizeHtml(body, {
+    allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+      "img",
+      "h1",
+      "h2",
+      "h3",
+    ]),
+    allowedAttributes: {
+      ...sanitizeHtml.defaults.allowedAttributes,
+      img: ["src", "alt", "width", "height"],
+    },
+    allowedSchemes: ["https"],
+  });
+
   return {
     id,
     title,
     date,
     summary,
-    html: body,
+    html: safeHtml,
     imageUrl,
     appsTouched,
     docsUrl: link || "https://docs.heygaia.io/release-notes",
@@ -125,27 +140,40 @@ function parseRss(xml: string): Release[] {
     .filter((r): r is Release => r !== null);
 }
 
+const FETCH_TIMEOUT_MS = 8_000;
+
 export async function GET() {
-  const response = await fetch(RSS_URL, {
-    headers: { Accept: "application/rss+xml, application/xml, text/xml" },
-    next: { revalidate: 60 },
-  });
-
-  if (!response.ok) {
-    return NextResponse.json(
-      {
-        releases: [],
-        fetchedAt: new Date().toISOString(),
-      } satisfies ReleasesResponse,
-      { status: 502 },
-    );
-  }
-
-  const xml = await response.text();
-  const releases = parseRss(xml);
-
-  return NextResponse.json({
-    releases,
+  const fallback = {
+    releases: [],
     fetchedAt: new Date().toISOString(),
-  } satisfies ReleasesResponse);
+  } satisfies ReleasesResponse;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+    const response = await fetch(RSS_URL, {
+      headers: {
+        Accept: "application/rss+xml, application/xml, text/xml",
+      },
+      signal: controller.signal,
+      next: { revalidate: 60 },
+    });
+
+    clearTimeout(timeout);
+
+    if (!response.ok) {
+      return NextResponse.json(fallback, { status: 502 });
+    }
+
+    const xml = await response.text();
+    const releases = parseRss(xml);
+
+    return NextResponse.json({
+      releases,
+      fetchedAt: new Date().toISOString(),
+    } satisfies ReleasesResponse);
+  } catch {
+    return NextResponse.json(fallback, { status: 502 });
+  }
 }

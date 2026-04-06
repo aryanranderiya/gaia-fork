@@ -6,7 +6,7 @@ language js(typescript, jsx)
 //
 // GritQL limitation: metavariables don't match inside `export { }` specifier lists.
 // For imports, positional $_ patterns handle up to 4 co-imported names alongside
-// ChevronDown. Add more positions if needed.
+// ChevronDown. Alias forms (ChevronDown as $_) are also covered. Add more positions if needed.
 or {
   `import { ChevronDown } from "@icons"`,
   `import { ChevronDown, $_ } from "@icons"`,
@@ -17,7 +17,17 @@ or {
   `import { ChevronDown, $_, $_, $_ } from "@icons"`,
   `import { $_, ChevronDown, $_, $_ } from "@icons"`,
   `import { $_, $_, ChevronDown, $_ } from "@icons"`,
-  `import { $_, $_, $_, ChevronDown } from "@icons"`
+  `import { $_, $_, $_, ChevronDown } from "@icons"`,
+  `import { ChevronDown as $_ } from "@icons"`,
+  `import { ChevronDown as $_, $_ } from "@icons"`,
+  `import { $_, ChevronDown as $_ } from "@icons"`,
+  `import { ChevronDown as $_, $_, $_ } from "@icons"`,
+  `import { $_, ChevronDown as $_, $_ } from "@icons"`,
+  `import { $_, $_, ChevronDown as $_ } from "@icons"`,
+  `import { ChevronDown as $_, $_, $_, $_ } from "@icons"`,
+  `import { $_, ChevronDown as $_, $_, $_ } from "@icons"`,
+  `import { $_, $_, ChevronDown as $_, $_ } from "@icons"`,
+  `import { $_, $_, $_, ChevronDown as $_ } from "@icons"`
 } as $node where {
   register_diagnostic(
     span = $node,

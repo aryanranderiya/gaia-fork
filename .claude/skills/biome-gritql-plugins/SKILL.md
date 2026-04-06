@@ -11,7 +11,7 @@ Biome 2.x supports custom lint rules via GritQL `.grit` files. Rules use pattern
 
 ## File Structure
 
-```
+```text
 rules/
   no-barrel-reexport.grit
   no-direct-gaia-icons-import.grit
@@ -134,7 +134,7 @@ Named export specifier lists (`export { $_ }`) do not match with metavariables i
 
 **Plugins only fire from the config Biome stops at when walking up from the file.**
 
-```
+```text
 workspace-root/
   biome.json          ← has plugins: ["./rules/foo.grit"]
   apps/web/

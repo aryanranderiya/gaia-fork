@@ -10,7 +10,8 @@ language js(typescript, jsx)
 or {
   `import { $_ } from $source`,
   `import * as $_ from $source`,
-  `import $_ from $source`
+  `import $_ from $source`,
+  `import $source`
 } as $node where {
   $source <: or {
     `"@theexperiencecompany/gaia-icons"`,
