@@ -21,7 +21,7 @@ env:
 jobs:
   # --- Detect affected projects -------------------------------------------
   detect:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
@@ -93,7 +93,7 @@ jobs:
   static-python:
     needs: [detect]
     if: needs.detect.outputs.has_python == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -118,7 +118,7 @@ jobs:
   static-typescript:
     needs: [detect]
     if: needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -139,7 +139,7 @@ jobs:
   build:
     needs: [detect]
     if: needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -160,15 +160,13 @@ jobs:
   test-python:
     needs: [detect]
     if: needs.detect.outputs.has_python == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      # Blacksmith NVMe layer cache persists the Dagger engine image (~1GB) and
-      # the gaia-ci-base image across runs. After first run, both pull near-instantly.
-      - uses: useblacksmith/setup-docker-builder@v1
+      - uses: docker/setup-buildx-action@v3
       - name: Run Python tests
         uses: dagger/dagger-for-github@v8.4.1
         with:
@@ -181,7 +179,7 @@ jobs:
   test-typescript:
     needs: [detect]
     if: needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -202,7 +200,7 @@ jobs:
   dead-code:
     needs: [detect]
     if: needs.detect.outputs.has_python == 'true' || needs.detect.outputs.has_typescript == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -224,7 +222,7 @@ jobs:
   # --- Release validation (runner-native, always) -------------------------
   release-validation:
     needs: [detect]
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
@@ -237,6 +235,56 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile
       - run: node scripts/ci/validate-release-manifest.mjs
+
+  # --- Changelog sync check (always) --------------------------------------
+  changelog-sync:
+    needs: [detect]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.15.1"
+      - name: Regenerate changelog sub-pages
+        run: node docs/scripts/generate-changelog-pages.js
+      - name: Open fix PR if generated files are out of date
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REF: ${{ github.head_ref || github.ref_name }}
+        run: |
+          if [ -z "$(git status --porcelain --untracked-files=all docs/release-notes/)" ]; then
+            echo "Changelog sub-pages are up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          TARGET="$TARGET_REF"
+          FIX_BRANCH="fix/changelog-sync-${TARGET//\//-}"
+
+          git checkout -B "$FIX_BRANCH"
+          git add docs/release-notes/
+          git commit -m "chore(docs): regenerate changelog sub-pages"
+          git push --force origin "$FIX_BRANCH"
+
+          EXISTING_PR=$(gh pr list --head "$FIX_BRANCH" --base "$TARGET" --json url --jq '.[0].url')
+          if [ -z "$EXISTING_PR" ]; then
+            gh pr create \
+              --base "$TARGET" \
+              --head "$FIX_BRANCH" \
+              --title "chore(docs): regenerate changelog sub-pages" \
+              --body "$(printf 'Changelog sub-pages were out of date on \`%s\`.\n\nThis PR was created automatically by the \`changelog-sync\` CI job. Merge it to fix the failing check.' "$TARGET")"
+          else
+            echo "Fix PR already open: $EXISTING_PR"
+          fi
+
+          echo "::error::Changelog sub-pages were out of date. A fix PR has been opened automatically — merge it to unblock CI."
+          exit 1
 
   # --- Trivy scan (non-blocking) ------------------------------------------
   trivy-scan:
@@ -257,14 +305,14 @@ jobs:
   coverage:
     needs: [detect]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master' && needs.detect.outputs.has_python == 'true'
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: useblacksmith/setup-docker-builder@v1
+      - uses: docker/setup-buildx-action@v3
       - name: Run coverage
         uses: dagger/dagger-for-github@v8.4.1
         with:
@@ -284,9 +332,10 @@ jobs:
       - test-typescript
       - dead-code
       - release-validation
+      - changelog-sync
       # trivy-scan deliberately excluded (non-blocking)
       # coverage deliberately excluded (master-only, non-blocking)
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - name: Evaluate results
@@ -299,6 +348,7 @@ jobs:
           echo "  test-typescript:    ${{ needs.test-typescript.result }}"
           echo "  dead-code:          ${{ needs.dead-code.result }}"
           echo "  release-validation: ${{ needs.release-validation.result }}"
+          echo "  changelog-sync:     ${{ needs.changelog-sync.result }}"
 
           for r in \
             "${{ needs.static-python.result }}" \
@@ -307,7 +357,8 @@ jobs:
             "${{ needs.test-python.result }}" \
             "${{ needs.test-typescript.result }}" \
             "${{ needs.dead-code.result }}" \
-            "${{ needs.release-validation.result }}"; do
+            "${{ needs.release-validation.result }}" \
+            "${{ needs.changelog-sync.result }}"; do
             if [[ "$r" == "failure" || "$r" == "cancelled" ]]; then
               echo "::error::Required job result: $r"
               exit 1
