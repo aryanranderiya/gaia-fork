@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { Skeleton } from "@heroui/skeleton";
 import { Cancel01Icon } from "@icons";
 import Image from "next/image";
 import { useEffect } from "react";
@@ -31,19 +30,7 @@ export function WhatsNewCard() {
     }
   }, [isLoading, releases.length, unseen.length]);
 
-  if (isLoading) {
-    return (
-      <div className="mb-1 overflow-hidden rounded-2xl bg-zinc-800/50">
-        <Skeleton className="h-28 w-full" />
-        <div className="space-y-2 p-3">
-          <Skeleton className="h-4 w-28 rounded-lg" />
-          <Skeleton className="h-3 w-40 rounded-lg" />
-        </div>
-      </div>
-    );
-  }
-
-  if (releases.length === 0 || isDismissed) return null;
+  if (isLoading || releases.length === 0 || isDismissed) return null;
 
   const handleOpen = () => {
     trackEvent(ANALYTICS_EVENTS.WHATS_NEW_CARD_CLICKED, {

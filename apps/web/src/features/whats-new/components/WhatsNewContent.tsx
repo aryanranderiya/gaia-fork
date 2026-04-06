@@ -40,7 +40,7 @@ function injectClasses(html: string): string {
       // ── h3 category labels: Features / Bug Fixes / Improvements ──
       .replace(
         /<h3([^>]*)>/g,
-        '<h3 class="mt-4 mb-2 font-normal text-zinc-500">',
+        '<h3 class="mt-4 mb-2 font-semibold text-zinc-400">',
       )
 
       // ── Lists — restore bullet points (Tailwind preflight removes them) ──
