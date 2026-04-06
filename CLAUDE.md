@@ -299,6 +299,7 @@ When creating implementation plans, store them in `.agents/plans/` directory. Th
 
 - **Never add Claude as a co-author in commits.** Do not include `Co-Authored-By: Claude` or any similar line in commit messages.
 - **`develop` is the base branch, not `master`.** All feature branches are created from and merged into `develop`. When comparing branches, analyzing diffs, or creating PRs, always use `develop` as the base — not `master` or `main`.
+- **NEVER merge pull requests.** Do not run `gh pr merge`, do not call any GitHub API merge endpoint, and do not take any action that merges a PR into any branch. PRs are merged by the team — not by Claude. This is an absolute rule with no exceptions.
 - Work is **not complete until `git push` succeeds.** Always push before ending a session.
 - Session close sequence (mandatory when code changed):
   ```bash
