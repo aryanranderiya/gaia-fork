@@ -54,10 +54,10 @@ Automation should solve this, but it does not. Most tools are rigid and built fo
 
 ## Features
 
-<img src="apps/web/public/images/screenshots/dashboard.png" alt="GAIA Dashboard" style="width:100%; border-radius:12px;">
+<!-- <img src="apps/web/public/images/screenshots/dashboard.png" alt="GAIA Dashboard" style="width:100%; border-radius:12px;"> -->
 
-<br />
-<br />
+<!-- <br /> -->
+<!-- <br /> -->
 
 - **Truly Proactive AI**: Acts before you ask — deadlines, emails, tasks handled
 - **Automated Workflows**: Eliminate repetitive work with multi-step automation
@@ -134,7 +134,7 @@ Use GAIA directly inside the tools you're already in!
 | <img src="/apps/web/public/images/icons/macos/discord.webp" alt="Discord" width="50" height="50"/>| **Discord** | [Add the bot](https://heygaia.io/discord-bot) or [join the server](https://discord.heygaia.io) — use `/gaia` or `@mention` GAIA in any channel |
 | <img src="/apps/web/public/images/icons/macos/slack.webp"  alt="Slack" width="50" height="50" /> | **Slack** | Install the Slack app in your workspace and use `/gaia` and other slash commands |
 |<img src="/apps/web/public/images/icons/macos/telegram.webp" alt="Telegram" width="50" height="50" />|  **Telegram** | [Message @heygaia_bot](https://t.me/heygaia_bot) and send messages or use `/gaia` commands |
-<!-- |<img src="/apps/web/public/images/icons/macos/whatsapp.webp" alt="WhatsApp" width="50" height="50" />|  **WhatsApp** | Start a chat with the GAIA bot and send messages or use `/gaia` commands | -->
+|<img src="/apps/web/public/images/icons/macos/whatsapp.webp" alt="WhatsApp" width="50" height="50" />|  **WhatsApp** | [Message GAIA](https://wa.me/12762088737) and send messages or use `/gaia` commands |
 
 See the [Bot Integrations Guide](https://docs.heygaia.io/bots/overview) for setup and usage details.
 
