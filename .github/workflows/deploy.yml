@@ -91,7 +91,7 @@ jobs:
               # non-fatal since images are only pushed when bot code changes.
               # Docker Compose v2 --ignore-pull-failures still exits non-zero
               # for missing registry refs, so we pull bots one-by-one instead.
-              BOT_SERVICES='discord-bot slack-bot telegram-bot'
+              BOT_SERVICES='discord-bot slack-bot telegram-bot whatsapp-bot'
               for bot in \$BOT_SERVICES; do
                 compose_cmd pull \"\$bot\" || echo \"⚠️  \$bot pull failed (see error above)\"
               done
