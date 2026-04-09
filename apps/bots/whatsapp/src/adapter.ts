@@ -20,7 +20,9 @@ import {
   BaseBotAdapter,
   type BotCommand,
   convertToWhatsAppMarkdown,
+  createBotLogger,
   handleStreamingChat,
+  hashLogIdentifier,
   type PlatformName,
   parseTextArgs,
   type RichMessage,
@@ -28,6 +30,7 @@ import {
   richMessageToMarkdown,
   type SentMessage,
   STREAMING_DEFAULTS,
+  sanitizeErrorForLog,
 } from "@gaia/shared";
 import { serve } from "@hono/node-server";
 import { WhatsAppClient } from "@kapso/whatsapp-cloud-api";
@@ -73,6 +76,7 @@ export class WhatsAppAdapter extends BaseBotAdapter {
 
   /** Tracks users who have already received a welcome message this process. */
   private readonly welcomeSent = new Set<string>();
+  private readonly adapterLogger = createBotLogger("whatsapp", "adapter");
 
   private get whatsAppClient(): WhatsAppClient {
     if (!this.waClient) {
@@ -99,12 +103,15 @@ export class WhatsAppAdapter extends BaseBotAdapter {
       baseUrl: "https://api.kapso.ai/meta/whatsapp",
       kapsoApiKey: this.waConfig.kapsoApiKey,
     });
-    console.log("WhatsApp client initialized via Kapso");
+    this.adapterLogger.info("client_initialized", {
+      webhook_port: this.waConfig.webhookPort,
+      phone_number_id: this.waConfig.kapsoPhoneNumberId,
+    });
   }
 
   /** WhatsApp has no platform-level command registration step. */
   protected async registerCommands(_commands: BotCommand[]): Promise<void> {
-    console.log("WhatsApp commands registered (text-based matching)");
+    this.adapterLogger.info("commands_registered");
   }
 
   /**
@@ -135,6 +142,9 @@ export class WhatsAppAdapter extends BaseBotAdapter {
       // Event type is in the header for Kapso webhooks, not in the body
       const eventType = c.req.header("x-webhook-event") ?? null;
       if (eventType !== "whatsapp.message.received") {
+        this.adapterLogger.debug("webhook_event_ignored", {
+          event_type: eventType,
+        });
         return c.json({ status: "ignored" });
       }
 
@@ -153,16 +163,31 @@ export class WhatsAppAdapter extends BaseBotAdapter {
 
       for (const event of events) {
         const waId = extractWaId(event);
+        const waIdHash = hashLogIdentifier(waId);
         const text = extractTextBody(event);
+        this.adapterLogger.info("webhook_message_received", {
+          wa_hash: waIdHash,
+          message_type: event.message.type,
+          has_text: Boolean(text),
+        });
         if (text) {
           // Fire-and-forget — do not await so webhook returns 200 quickly
           this.handleIncomingMessage(waId, text, event.message.id).catch(
-            (err) => console.error("Error handling WhatsApp message:", err),
+            (err) =>
+              this.adapterLogger.error("incoming_message_processing_failed", {
+                wa_hash: waIdHash,
+                message_id: event.message.id,
+                ...sanitizeErrorForLog(err),
+              }),
           );
         } else if (event.message.type !== "text") {
           // Non-text message (image, audio, video, document, etc.)
           this.handleUnsupportedMedia(waId, event.message.type).catch((err) =>
-            console.error("Error handling unsupported media:", err),
+            this.adapterLogger.error("unsupported_media_handling_failed", {
+              wa_hash: waIdHash,
+              message_type: event.message.type,
+              ...sanitizeErrorForLog(err),
+            }),
           );
         }
       }
@@ -174,21 +199,21 @@ export class WhatsAppAdapter extends BaseBotAdapter {
       this.httpServer = serve(
         { fetch: app.fetch, port: this.whatsAppConfig.webhookPort },
         () => {
-          console.log(
-            `WhatsApp webhook server listening on port ${this.whatsAppConfig.webhookPort}`,
-          );
+          this.adapterLogger.info("webhook_server_started", {
+            port: this.whatsAppConfig.webhookPort,
+          });
           resolve();
         },
       ) as Server;
       this.httpServer.on("error", (err) => {
-        console.error("WhatsApp webhook server error:", err);
+        this.adapterLogger.error("webhook_server_error", undefined, err);
       });
     });
   }
 
   /** Nothing additional to start — HTTP server is already up after registerEvents. */
   protected async start(): Promise<void> {
-    console.log("WhatsApp bot started and listening for messages");
+    this.adapterLogger.info("bot_started");
   }
 
   /** Closes the HTTP server gracefully. */
@@ -223,6 +248,14 @@ export class WhatsAppAdapter extends BaseBotAdapter {
     text: string,
     messageId: string,
   ): Promise<void> {
+    const waIdHash = hashLogIdentifier(waId);
+    this.adapterLogger.info("incoming_message_started", {
+      wa_hash: waIdHash,
+      message_id: messageId,
+      text_length: text.length,
+      is_command: text.startsWith("/"),
+    });
+
     // Show typing indicator — mark message as read and display "typing..." bubble.
     // WhatsApp auto-dismisses after ~25s, so we refresh every 20s to keep it alive
     // for long-running responses. The interval is cleared when a reply is sent.
@@ -233,8 +266,12 @@ export class WhatsAppAdapter extends BaseBotAdapter {
           messageId,
           typingIndicator: { type: "text" },
         })
-        .catch((err) =>
-          console.error("WhatsApp: failed to show typing indicator:", err),
+        .catch((err: unknown) =>
+          this.adapterLogger.error("typing_indicator_failed", {
+            wa_hash: waIdHash,
+            message_id: messageId,
+            ...sanitizeErrorForLog(err),
+          }),
         );
 
     showTyping();
@@ -361,14 +398,20 @@ export class WhatsAppAdapter extends BaseBotAdapter {
         this.analytics,
       );
     } catch (err) {
-      console.error("WhatsApp streaming error:", err);
+      this.adapterLogger.error("streaming_failed", {
+        wa_hash: hashLogIdentifier(waId),
+        ...sanitizeErrorForLog(err),
+      });
       try {
         await this.sendWhatsAppText(
           waId,
           "An error occurred. Please try again.",
         );
       } catch (sendErr) {
-        console.error("WhatsApp send error:", sendErr);
+        this.adapterLogger.error("streaming_error_message_send_failed", {
+          wa_hash: hashLogIdentifier(waId),
+          ...sanitizeErrorForLog(sendErr),
+        });
       }
     }
   }
