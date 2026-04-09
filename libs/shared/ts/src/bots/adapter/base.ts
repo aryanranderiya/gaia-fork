@@ -50,6 +50,7 @@ import {
   hashLogIdentifier,
   sanitizeErrorForLog,
 } from "../utils/logger";
+import { BotServer } from "./base-server";
 
 /**
  * Abstract base class that all platform bot adapters extend.
@@ -78,6 +79,12 @@ export abstract class BaseBotAdapter {
    */
   abstract readonly platform: PlatformName;
 
+  /**
+   * Default HTTP server port for this bot.
+   * Override in each subclass. Overrideable at runtime via `BOT_SERVER_PORT`.
+   */
+  protected abstract readonly defaultServerPort: number;
+
   /** GAIA API client shared across all command handlers. */
   protected gaia!: GaiaClient;
 
@@ -92,6 +99,27 @@ export abstract class BaseBotAdapter {
 
   /** Shared structured logger for adapter lifecycle and command execution. */
   protected logger: BotLogger = createBotLogger("shared", "base-adapter");
+
+  private _botServer: BotServer | null = null;
+
+  /**
+   * Shared HTTP server for this bot process.
+   *
+   * Always available during lifecycle methods ({@link initialize},
+   * {@link registerCommands}, {@link registerEvents}, {@link start},
+   * {@link stop}). Created in {@link boot} using a per-platform default port
+   * (discord: 3200, slack: 3201, telegram: 3202, whatsapp: 3203). Override
+   * with `BOT_SERVER_PORT`. Includes `GET /health` by default. Subclasses
+   * can mount additional routes (e.g. webhook endpoints) via
+   * `this.botServer.app` in their {@link registerEvents} implementation,
+   * before the server starts.
+   */
+  protected get botServer(): BotServer {
+    if (!this._botServer) {
+      throw new Error("botServer accessed before boot() — call boot() first");
+    }
+    return this._botServer;
+  }
 
   // ---------------------------------------------------------------------------
   // Lifecycle — template method pattern
@@ -125,10 +153,19 @@ export abstract class BaseBotAdapter {
     for (const cmd of commands) {
       this.commands.set(cmd.name, cmd);
     }
+    // Create the shared HTTP server before registerEvents() so subclasses
+    // can mount custom routes (e.g. WhatsApp /webhook) on this.botServer.app.
+    const serverPort =
+      Number(process.env.BOT_SERVER_PORT) || this.defaultServerPort;
+    this._botServer = new BotServer(this.platform, serverPort);
+
     await this.initialize();
     await this.registerCommands(commands);
     await this.registerEvents();
     await this.start();
+
+    // Start the server after registerEvents() so all routes are mounted.
+    await this._botServer.start();
 
     this.logger.info("boot_completed", { gaia_api_configured: true });
   }
@@ -142,6 +179,10 @@ export abstract class BaseBotAdapter {
   async shutdown(): Promise<void> {
     this.logger.info("shutdown_started");
     await this.stop();
+    if (this._botServer) {
+      await this._botServer.stop();
+      this._botServer = null;
+    }
     await this.analytics.shutdown();
     this.logger.info("shutdown_completed");
   }

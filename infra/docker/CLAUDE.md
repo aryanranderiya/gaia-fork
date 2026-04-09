@@ -27,7 +27,10 @@ Docker Compose configuration for all GAIA environments.
 | Grafana | 4000 | 3000 | `GRAFANA_HOST_PORT` |
 | Loki | 3100 | 3100 | `LOKI_HOST_PORT` |
 | Web (selfhost only) | 3000 | 3000 | `WEB_HOST_PORT` |
-| WhatsApp webhook | 3001 | 3001 | `WHATSAPP_WEBHOOK_PORT` |
+| Discord bot server | 3200 | 3200 | `DISCORD_BOT_PORT` |
+| Slack bot server | 3201 | 3201 | `SLACK_BOT_PORT` |
+| Telegram bot server | 3202 | 3202 | `TELEGRAM_BOT_PORT` |
+| WhatsApp bot server | 3203 | 3203 | `WHATSAPP_BOT_PORT` |
 
 ## Key Commands
 
