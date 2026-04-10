@@ -520,7 +520,7 @@ For webhook-based bots (WhatsApp), also add an nginx location block to route ext
 
 If the platform uses webhooks (like WhatsApp), configure a reverse proxy on the server to route the public HTTPS webhook URL to the bot container on the internal Docker network. TLS is terminated at the proxy; the bot receives plain HTTP.
 
-```
+```text
 [External Service] → POST https://api.heygaia.io/api/v1/webhook/{platform}
                            ↓ (reverse proxy, internal Docker network)
                      [{platform}-bot:32XX/webhook]

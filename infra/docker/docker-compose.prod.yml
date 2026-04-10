@@ -194,8 +194,10 @@ services:
       - ../../apps/bots/.env
     environment:
       - BOT_SERVER_PORT=3200
+      - LOG_FORMAT=json
+      - LOG_COLORIZE=false
     ports:
-      - "${DISCORD_BOT_PORT:-3200}:3200"
+      - "127.0.0.1:${DISCORD_BOT_PORT:-3200}:3200"
     restart: always
     depends_on:
       gaia-backend:
@@ -212,8 +214,10 @@ services:
       - ../../apps/bots/.env
     environment:
       - BOT_SERVER_PORT=3201
+      - LOG_FORMAT=json
+      - LOG_COLORIZE=false
     ports:
-      - "${SLACK_BOT_PORT:-3201}:3201"
+      - "127.0.0.1:${SLACK_BOT_PORT:-3201}:3201"
     restart: always
     depends_on:
       gaia-backend:
@@ -230,8 +234,10 @@ services:
       - ../../apps/bots/.env
     environment:
       - BOT_SERVER_PORT=3202
+      - LOG_FORMAT=json
+      - LOG_COLORIZE=false
     ports:
-      - "${TELEGRAM_BOT_PORT:-3202}:3202"
+      - "127.0.0.1:${TELEGRAM_BOT_PORT:-3202}:3202"
     restart: always
     depends_on:
       gaia-backend:
@@ -249,8 +255,10 @@ services:
       - ../../apps/bots/.env
     environment:
       - BOT_SERVER_PORT=3203
+      - LOG_FORMAT=json
+      - LOG_COLORIZE=false
     ports:
-      - "${WHATSAPP_BOT_PORT:-3203}:3203"
+      - "127.0.0.1:${WHATSAPP_BOT_PORT:-3203}:3203"
     restart: always
     depends_on:
       gaia-backend:

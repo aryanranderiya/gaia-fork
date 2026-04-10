@@ -159,13 +159,24 @@ export abstract class BaseBotAdapter {
       Number(process.env.BOT_SERVER_PORT) || this.defaultServerPort;
     this._botServer = new BotServer(this.platform, serverPort);
 
-    await this.initialize();
-    await this.registerCommands(commands);
-    await this.registerEvents();
-    await this.start();
+    let platformStarted = false;
+    try {
+      await this.initialize();
+      await this.registerCommands(commands);
+      await this.registerEvents();
+      await this.start();
+      platformStarted = true;
 
-    // Start the server after registerEvents() so all routes are mounted.
-    await this._botServer.start();
+      // Start the server after registerEvents() so all routes are mounted.
+      await this._botServer.start();
+    } catch (error) {
+      if (platformStarted) {
+        await this.stop().catch(() => undefined);
+      }
+      await this._botServer?.stop().catch(() => undefined);
+      this._botServer = null;
+      throw error;
+    }
 
     this.logger.info("boot_completed", { gaia_api_configured: true });
   }
