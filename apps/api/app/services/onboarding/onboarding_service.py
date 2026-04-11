@@ -106,7 +106,11 @@ async def complete_onboarding(
                 raise HTTPException(status_code=404, detail="User not found")
             elif existing_user.get("onboarding", {}).get("completed", False):
                 raise HTTPException(
-                    status_code=409, detail="Onboarding already completed"
+                    status_code=409,
+                    detail={
+                        "code": "ONBOARDING_ALREADY_COMPLETED",
+                        "message": "Onboarding already completed",
+                    },
                 )
             else:
                 raise HTTPException(status_code=500, detail="Failed to update user")
