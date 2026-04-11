@@ -479,17 +479,15 @@ export const useOnboarding = () => {
         response?: {
           status?: number;
           data?: {
-            detail?: {
-              code?: string;
-              message?: string;
-            };
+            code?: string;
+            message?: string;
           };
         };
         message?: string;
         code?: string;
       };
 
-      const conflictCode = errorObj.response?.data?.detail?.code;
+      const conflictCode = errorObj.response?.data?.code;
 
       if (
         errorObj?.response?.status === 409 &&
@@ -509,7 +507,7 @@ export const useOnboarding = () => {
           queryClient.setQueryData(["current-user"], latestUser);
         } catch (fetchError) {
           console.error("Failed to refresh user state after 409:", fetchError);
-          setUser({
+          const fallbackUser = {
             userId: user.userId,
             name: user.name,
             email: user.email,
@@ -520,12 +518,14 @@ export const useOnboarding = () => {
               completed: true,
             },
             selected_model: user.selected_model,
-          });
+          };
+          setUser(fallbackUser);
+          queryClient.setQueryData(["current-user"], fallbackUser);
         }
         router.replace("/c");
       } else if (errorObj?.response?.status === 409) {
         toast.error(
-          errorObj.response?.data?.detail?.message ||
+          errorObj.response?.data?.message ||
             "Onboarding state conflict. Please refresh and try again.",
         );
       } else if (errorObj?.response?.status === 422) {
