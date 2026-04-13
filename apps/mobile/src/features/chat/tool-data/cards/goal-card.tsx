@@ -1,14 +1,39 @@
-import type {
-  GoalDataMessageType as GoalData,
-  GoalItem,
-  GoalRoadmap,
-  GoalRoadmapNode,
-} from "@gaia/shared";
 import { Button, Card, Chip } from "heroui-native";
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 
-export type { GoalData, GoalItem, GoalRoadmap, GoalRoadmapNode };
+export type GoalAction = "create" | "update" | "list" | "delete";
+
+export interface GoalRoadmapNode {
+  id: string;
+  data: {
+    id?: string;
+    title?: string;
+    label?: string;
+    isComplete?: boolean;
+    type?: string;
+  };
+}
+
+export interface GoalRoadmap {
+  nodes?: GoalRoadmapNode[];
+}
+
+export interface GoalItem {
+  id: string;
+  title: string;
+  description?: string;
+  progress?: number;
+  created_at?: string;
+  todo_project_id?: string;
+  roadmap?: GoalRoadmap;
+}
+
+export interface GoalData {
+  goals?: GoalItem[];
+  action?: GoalAction;
+  message?: string;
+}
 
 function getProgressBarColor(pct: number): string {
   if (pct >= 90) return "bg-emerald-500";

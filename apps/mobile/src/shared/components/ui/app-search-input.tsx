@@ -1,14 +1,14 @@
-import { Input, PressableFeedback, TextField } from "heroui-native";
+import { PressableFeedback, TextField } from "heroui-native";
 import type { ReactNode } from "react";
 import { View } from "react-native";
 import { AppIcon, Cancel01Icon, Search01Icon } from "@/components/icons";
 import { cn } from "@/lib/utils";
 
 type TextFieldRootProps = React.ComponentProps<typeof TextField>;
-type InputProps = React.ComponentProps<typeof Input>;
+type TextFieldInputProps = React.ComponentProps<typeof TextField.Input>;
 
 export interface AppSearchInputProps
-  extends Omit<InputProps, "children" | "className"> {
+  extends Omit<TextFieldInputProps, "children" | "className"> {
   className?: string;
   inputClassName?: string;
   label?: ReactNode;
@@ -55,13 +55,18 @@ export function AppSearchInput({
       onClear();
       return;
     }
+
     onChangeText?.("");
   };
 
   const resolvedEndContent =
     endContent ??
     (showClearButton && hasValue && !isDisabled ? (
-      <PressableFeedback onPress={handleClear} className="rounded-full">
+      <PressableFeedback
+        onPress={handleClear}
+        feedbackPosition="behind"
+        className="rounded-full"
+      >
         <View className="h-6 w-6 items-center justify-center rounded-full">
           <AppIcon icon={Cancel01Icon} size={16} color="#6b6b6e" />
         </View>
@@ -74,33 +79,32 @@ export function AppSearchInput({
       isDisabled={isDisabled}
       isInvalid={isInvalid}
     >
-      {label ? <View>{typeof label === "string" ? null : label}</View> : null}
+      {label ? <TextField.Label>{label}</TextField.Label> : null}
 
-      <View className="flex-row items-center">
+      <TextField.Input
+        {...inputProps}
+        value={value}
+        placeholder={placeholder}
+        onChangeText={onChangeText}
+        className={cn("min-h-12 rounded-2xl", inputClassName)}
+      >
         {resolvedStartContent ? (
-          <View className="absolute left-3 z-10">{resolvedStartContent}</View>
+          <TextField.InputStartContent>
+            {resolvedStartContent}
+          </TextField.InputStartContent>
         ) : null}
-        <Input
-          {...inputProps}
-          value={value}
-          placeholder={placeholder}
-          onChangeText={onChangeText}
-          className={cn(
-            "min-h-12 rounded-2xl",
-            resolvedStartContent ? "pl-9" : "",
-            resolvedEndContent ? "pr-9" : "",
-            inputClassName,
-          )}
-        />
+
         {resolvedEndContent ? (
-          <View className="absolute right-3 z-10">{resolvedEndContent}</View>
+          <TextField.InputEndContent>
+            {resolvedEndContent}
+          </TextField.InputEndContent>
         ) : null}
-      </View>
+      </TextField.Input>
 
       {errorMessage ? (
-        <View>{typeof errorMessage === "string" ? null : errorMessage}</View>
+        <TextField.ErrorMessage>{errorMessage}</TextField.ErrorMessage>
       ) : description ? (
-        <View>{typeof description === "string" ? null : description}</View>
+        <TextField.Description>{description}</TextField.Description>
       ) : null}
     </TextField>
   );

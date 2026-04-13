@@ -1,4 +1,3 @@
-import type { NewsResult, SearchResults, WebResult } from "@gaia/shared";
 import { Card, Chip, PressableFeedback } from "heroui-native";
 import { useEffect, useState } from "react";
 import { Image, Linking, View } from "react-native";
@@ -16,6 +15,35 @@ import {
   Search01Icon,
 } from "@/components/icons";
 import { Text } from "@/components/ui/text";
+
+export interface WebResult {
+  title?: string;
+  url?: string;
+  content?: string;
+  snippet?: string;
+  score?: number;
+}
+
+export interface NewsResult {
+  title?: string;
+  url?: string;
+  content?: string;
+  score?: number;
+}
+
+export interface SearchResults {
+  /** Streaming status — present only during live updates */
+  status?: "running" | "complete" | "error";
+  progress?: string;
+
+  web?: WebResult[];
+  images?: string[];
+  news?: NewsResult[];
+  answer?: string;
+  query?: string;
+  response_time?: number;
+  request_id?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Helpers

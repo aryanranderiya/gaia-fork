@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { Popover, PressableFeedback, TextField } from "heroui-native";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { type TextInput, View } from "react-native";
 import {
   BubbleChatAddIcon,
   Cancel01Icon,
@@ -43,6 +44,7 @@ export function ChatHeader({
 
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -59,6 +61,7 @@ export function ChatHeader({
     if (!activeConversation) return;
     impactHaptic("light");
     setEditTitle(activeConversation.title);
+    setIsMenuOpen(false);
     setIsEditing(true);
   }, [activeConversation]);
 
@@ -131,44 +134,46 @@ export function ChatHeader({
       }}
     >
       {isEditing ? (
-        <Pressable onPress={cancelEditing}>
+        <PressableFeedback onPress={cancelEditing}>
           <View style={{ padding: moderateScale(4, 0.5) }}>
             <Cancel01Icon size={iconSize.lg} color="#8e8e93" />
           </View>
-        </Pressable>
+        </PressableFeedback>
       ) : (
-        <Pressable onPress={onMenuPress}>
+        <PressableFeedback onPress={onMenuPress}>
           <View style={{ padding: moderateScale(4, 0.5) }}>
             <Menu01Icon size={iconSize.lg} color="#ffffff" />
           </View>
-        </Pressable>
+        </PressableFeedback>
       )}
 
       <View
         style={{ flex: 1, alignItems: "center", paddingHorizontal: spacing.sm }}
       >
         {isEditing ? (
-          <TextInput
-            ref={inputRef}
-            value={editTitle}
-            onChangeText={(text) => {
-              if (text.length <= TITLE_MAX_LENGTH) setEditTitle(text);
-            }}
-            onSubmitEditing={commitRename}
-            returnKeyType="done"
-            selectTextOnFocus
-            style={{
-              width: "100%",
-              color: "#ffffff",
-              fontSize: fontSize.md,
-              fontWeight: "600",
-              textAlign: "center",
-              borderBottomWidth: 1,
-              borderBottomColor: "#16c1ff",
-            }}
-          />
+          <TextField className="w-full">
+            <TextField.Input
+              ref={inputRef}
+              value={editTitle}
+              onChangeText={(text) => {
+                if (text.length <= TITLE_MAX_LENGTH) setEditTitle(text);
+              }}
+              onSubmitEditing={commitRename}
+              returnKeyType="done"
+              selectTextOnFocus
+              className="w-full"
+              style={{
+                color: "#ffffff",
+                fontSize: fontSize.md,
+                fontWeight: "600",
+                textAlign: "center",
+                borderBottomWidth: 1,
+                borderBottomColor: "#16c1ff",
+              }}
+            />
+          </TextField>
         ) : activeConversation ? (
-          <Pressable onPress={startEditing}>
+          <PressableFeedback onPress={startEditing}>
             <Text
               numberOfLines={1}
               style={{
@@ -180,38 +185,62 @@ export function ChatHeader({
             >
               {activeConversation.title}
             </Text>
-          </Pressable>
+          </PressableFeedback>
         ) : null}
       </View>
 
       <View style={{ flexDirection: "row", gap: spacing.sm }}>
         {isEditing ? (
-          <Pressable onPress={commitRename}>
+          <PressableFeedback onPress={commitRename}>
             <View style={{ padding: moderateScale(4, 0.5) }}>
               <Tick01Icon size={iconSize.md - 2} color="#16c1ff" />
             </View>
-          </Pressable>
+          </PressableFeedback>
         ) : (
           <>
             {onSearchPress && (
-              <Pressable onPress={onSearchPress}>
+              <PressableFeedback onPress={onSearchPress}>
                 <View style={{ padding: moderateScale(4, 0.5) }}>
                   <Search01Icon size={iconSize.md - 2} color="#bbbbbb" />
                 </View>
-              </Pressable>
+              </PressableFeedback>
             )}
             {activeConversation && (
-              <Pressable onPress={startEditing}>
-                <View style={{ padding: moderateScale(4, 0.5) }}>
-                  <MoreVerticalIcon size={iconSize.md - 2} color="#bbbbbb" />
-                </View>
-              </Pressable>
+              <Popover isOpen={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                <Popover.Trigger>
+                  <View style={{ padding: moderateScale(4, 0.5) }}>
+                    <MoreVerticalIcon size={iconSize.md - 2} color="#bbbbbb" />
+                  </View>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Overlay onPress={() => setIsMenuOpen(false)} />
+                  <Popover.Content placement="bottom" align="end">
+                    <PressableFeedback onPress={startEditing}>
+                      <View
+                        style={{
+                          paddingHorizontal: spacing.lg,
+                          paddingVertical: spacing.md,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#ffffff",
+                            fontSize: fontSize.sm,
+                          }}
+                        >
+                          Rename
+                        </Text>
+                      </View>
+                    </PressableFeedback>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover>
             )}
-            <Pressable onPress={onNewChatPress}>
+            <PressableFeedback onPress={onNewChatPress}>
               <View style={{ padding: moderateScale(4, 0.5) }}>
                 <BubbleChatAddIcon size={iconSize.md - 2} color="#bbbbbb" />
               </View>
-            </Pressable>
+            </PressableFeedback>
           </>
         )}
       </View>

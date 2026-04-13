@@ -1,7 +1,25 @@
-import type { TodoProgressData, TodoProgressSnapshot } from "@gaia/shared";
 import { Card, Checkbox, Chip } from "heroui-native";
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
+
+export type TodoProgressStatus =
+  | "pending"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
+
+export interface TodoProgressItem {
+  id: string;
+  content: string;
+  status: TodoProgressStatus;
+}
+
+export interface TodoProgressSnapshot {
+  todos: TodoProgressItem[];
+  source?: string;
+}
+
+export type TodoProgressData = Record<string, TodoProgressSnapshot>;
 
 function toTitleCase(str: string): string {
   return str
@@ -30,7 +48,7 @@ function SourceSection({
   snapshot: TodoProgressSnapshot;
   isStreaming?: boolean;
 }) {
-  const todos = snapshot.todos ?? [];
+  const todos = snapshot.todos;
   const completedCount = todos.filter((t) => t.status === "completed").length;
   const pct = todos.length > 0 ? (completedCount / todos.length) * 100 : 0;
 
@@ -97,9 +115,7 @@ export function TodoProgressCard({
 
   if (activeSources.length === 0) return null;
 
-  const allTodos = activeSources.flatMap(
-    ([, snapshot]) => snapshot.todos ?? [],
-  );
+  const allTodos = activeSources.flatMap(([, snapshot]) => snapshot.todos);
   const totalCompleted = allTodos.filter(
     (t) => t.status === "completed",
   ).length;

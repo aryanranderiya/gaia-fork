@@ -3,8 +3,8 @@ import { useRouter } from "expo-router";
 import {
   Button,
   Card,
+  Divider,
   PressableFeedback,
-  Separator,
   SkeletonGroup,
 } from "heroui-native";
 import { useCallback, useRef, useState } from "react";
@@ -458,7 +458,7 @@ function Section({
 
   return (
     <View style={{ marginBottom: 2 }}>
-      <Separator className="mx-3 mb-1" />
+      <Divider className="mx-3 mb-1" />
       <PressableFeedback
         onPress={onToggle}
         style={{

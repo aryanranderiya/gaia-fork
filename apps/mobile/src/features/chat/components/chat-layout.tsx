@@ -54,7 +54,7 @@ export function ChatLayout({ children, background }: ChatLayoutProps) {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#111111" }}>
+    <View style={{ flex: 1 }}>
       <DrawerLayout
         ref={drawerRef}
         drawerWidth={sidebarWidth}

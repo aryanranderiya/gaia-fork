@@ -1,10 +1,3 @@
-import type {
-  CodeData,
-  RedditData,
-  SearchResults,
-  TodoProgressData,
-  WeatherData,
-} from "@gaia/shared";
 import { Card } from "heroui-native";
 import React from "react";
 import { View } from "react-native";
@@ -21,6 +14,7 @@ import {
   type CalendarFetchItem,
   type CalendarOption,
   CalendarOptionsCard,
+  type CodeData,
   CodeExecutionCard,
   type ContactData,
   ContactListCard,
@@ -44,13 +38,17 @@ import {
   PeopleSearchCard,
   type PeopleSearchData,
   RedditCard,
+  type RedditData,
+  type SearchResults,
   SearchResultsCard,
   SupportTicketCard,
   type SupportTicketData,
   TodoCard,
   type TodoData,
   TodoProgressCard,
+  type TodoProgressData,
   WeatherCard,
+  type WeatherData,
 } from "./tool-cards";
 
 function UnsupportedToolCard({

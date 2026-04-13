@@ -3,7 +3,7 @@ import {
   Accordion,
   Card,
   Chip,
-  Separator,
+  Divider,
   Spinner,
   Surface,
 } from "heroui-native";
@@ -293,14 +293,14 @@ function ToolCallItem({
           </View>
           <StatusIndicator status={call.status} />
         </View>
-        {!isLast && <Separator />}
+        {!isLast && <Divider />}
       </>
     );
   }
 
   return (
     <>
-      <Accordion selectionMode="single">
+      <Accordion selectionMode="single" isDividerVisible={false}>
         <Accordion.Item value={itemValue}>
           <Accordion.Trigger className="flex-row items-center gap-2 px-1 py-2">
             <ToolIcon
@@ -388,7 +388,7 @@ function ToolCallItem({
           </Accordion.Content>
         </Accordion.Item>
       </Accordion>
-      {!isLast && <Separator />}
+      {!isLast && <Divider />}
     </>
   );
 }
@@ -401,7 +401,7 @@ export function ToolCallsSection({ tool_calls_data }: ToolCallsSectionProps) {
   );
 
   return (
-    <Accordion selectionMode="single">
+    <Accordion selectionMode="single" isDividerVisible={false}>
       <Accordion.Item value="tool-calls">
         <Accordion.Trigger className="flex-row items-center gap-1.5 py-1">
           <StackedToolIcons calls={tool_calls_data} />

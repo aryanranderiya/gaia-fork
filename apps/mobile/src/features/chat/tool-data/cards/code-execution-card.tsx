@@ -1,4 +1,3 @@
-import type { CodeData, CodeOutput } from "@gaia/shared";
 import { Card } from "heroui-native";
 import type React from "react";
 import { useState } from "react";
@@ -13,6 +12,21 @@ import { AppIcon } from "@/components/icons/app-icon";
 import { Text } from "@/components/ui/text";
 import { THEME } from "@/features/chat/components/code-block/syntax-theme";
 import { tokenizeLine } from "@/features/chat/components/code-block/tokenizer";
+
+export interface CodeOutput {
+  stdout?: string;
+  stderr?: string;
+  results?: string[];
+  error?: string | null;
+}
+
+export interface CodeData {
+  language?: string;
+  code?: string;
+  output?: CodeOutput | null;
+  status?: "executing" | "completed" | "error";
+  error?: string;
+}
 
 // ─── Syntax-highlighted code renderer ────────────────────────────────────────
 

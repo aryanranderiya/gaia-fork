@@ -65,7 +65,7 @@ async function request<T = unknown>(config: RequestConfig): Promise<T> {
     }
 
     const errorText = await response.text();
-    console.warn(`[API] ${method} ${url} → ${response.status}: ${errorText}`);
+    console.error(`[API] Error ${response.status}: ${errorText}`);
     throw new Error(`API request failed: ${response.status}`);
   }
 
