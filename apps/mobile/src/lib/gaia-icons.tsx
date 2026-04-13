@@ -28,6 +28,10 @@ export interface IconProps {
 type IconName = keyof typeof iconPathData;
 export type GaiaIconComponent = React.ComponentType<IconProps>;
 
+function isClosedPath(d: string): boolean {
+  return /[zZ]/.test(d);
+}
+
 function createIcon(name: IconName) {
   const { viewBox, paths } = iconPathData[name];
   return function GaiaIcon({
@@ -35,6 +39,7 @@ function createIcon(name: IconName) {
     width,
     height,
     color = "#ffffff",
+    strokeWidth = 1.5,
     style,
   }: IconProps) {
     return (
@@ -44,10 +49,21 @@ function createIcon(name: IconName) {
         viewBox={viewBox}
         style={style}
       >
-        {paths.map((d, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: stable path list per icon
-          <Path key={i} d={d} fill={color} />
-        ))}
+        {paths.map((d, i) => {
+          const closed = isClosedPath(d);
+          return (
+            <Path
+              // biome-ignore lint/suspicious/noArrayIndexKey: stable path list per icon
+              key={i}
+              d={d}
+              fill={closed ? color : "none"}
+              stroke={closed ? undefined : color}
+              strokeWidth={closed ? undefined : strokeWidth}
+              strokeLinecap={closed ? undefined : "round"}
+              strokeLinejoin={closed ? undefined : "round"}
+            />
+          );
+        })}
       </Svg>
     );
   };

@@ -130,7 +130,7 @@ export function EmailThreadCard({ data }: { data: EmailThreadData }) {
         {/* Messages accordion */}
         {messageCount > 0 ? (
           <View className="rounded-xl bg-white/5 border border-white/8 overflow-hidden">
-            <Accordion isDividerVisible={true}>
+            <Accordion>
               {(data.messages ?? []).map((message, index) => (
                 <MessageItem
                   key={`msg-${message.from || index}-${index}`}

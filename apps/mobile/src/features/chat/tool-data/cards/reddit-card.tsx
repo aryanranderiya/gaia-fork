@@ -1,3 +1,11 @@
+import type {
+  RedditCommentCreatedData,
+  RedditCommentData,
+  RedditData,
+  RedditPostCreatedData,
+  RedditPostData,
+  RedditSearchData,
+} from "@gaia/shared";
 import { Button, Card, Chip, PressableFeedback } from "heroui-native";
 import { useState } from "react";
 import { Linking, Pressable, View } from "react-native";
@@ -12,68 +20,6 @@ import {
 import { Text } from "@/components/ui/text";
 
 const REDDIT_ORANGE = "#FF4500";
-
-// Reddit "alien" logo as an SVG-free inline representation using text
-// We use the brand color + "r/" prefix styling to match the web implementation
-
-export interface RedditPostData {
-  id?: string;
-  title?: string;
-  author?: string;
-  subreddit?: string;
-  score?: number;
-  upvote_ratio?: number;
-  num_comments?: number;
-  created_utc?: number;
-  selftext?: string;
-  url?: string;
-  permalink?: string;
-  is_self?: boolean;
-  link_flair_text?: string;
-}
-
-export interface RedditCommentData {
-  id?: string;
-  author?: string;
-  body?: string;
-  score?: number;
-  created_utc?: number;
-  permalink?: string;
-  is_submitter?: boolean;
-}
-
-export interface RedditSearchData {
-  id?: string;
-  title?: string;
-  author?: string;
-  subreddit?: string;
-  score?: number;
-  num_comments?: number;
-  created_utc?: number;
-  permalink?: string;
-  url?: string;
-  selftext?: string;
-}
-
-export interface RedditPostCreatedData {
-  id?: string;
-  url?: string;
-  message?: string;
-  permalink?: string;
-}
-
-export interface RedditCommentCreatedData {
-  id?: string;
-  message?: string;
-  permalink?: string;
-}
-
-export type RedditData =
-  | { type: "search"; posts: RedditSearchData[] }
-  | { type: "post"; post: RedditPostData }
-  | { type: "comments"; comments: RedditCommentData[] }
-  | { type: "post_created"; data: RedditPostCreatedData }
-  | { type: "comment_created"; data: RedditCommentCreatedData };
 
 function formatTime(timestamp: number): string {
   const date = new Date(timestamp * 1000);

@@ -1,4 +1,4 @@
-import { Card, Chip, Divider } from "heroui-native";
+import { Card, Chip, Separator } from "heroui-native";
 import { View } from "react-native";
 import { AppIcon, SentIcon } from "@/components/icons";
 import { Text } from "@/components/ui/text";
@@ -54,7 +54,7 @@ export function EmailSentCard({ data }: { data: EmailSentData }) {
           ) : null}
         </View>
 
-        <Divider className="bg-white/8" />
+        <Separator className="bg-white/8" />
 
         {/* Body */}
         <View className="px-4 py-3 gap-2">
@@ -79,7 +79,7 @@ export function EmailSentCard({ data }: { data: EmailSentData }) {
           </View>
           {bodyPreview ? (
             <>
-              <Divider className="bg-white/8" />
+              <Separator className="bg-white/8" />
               <Text className="text-[#8e8e93] text-xs" numberOfLines={2}>
                 {bodyPreview}
               </Text>

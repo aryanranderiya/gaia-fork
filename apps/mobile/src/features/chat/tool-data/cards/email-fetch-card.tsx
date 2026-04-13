@@ -1,4 +1,4 @@
-import { Card, Chip, Divider, PressableFeedback } from "heroui-native";
+import { Card, Chip, PressableFeedback, Separator } from "heroui-native";
 import { View } from "react-native";
 import { AppIcon, Mail01Icon } from "@/components/icons";
 import { Text } from "@/components/ui/text";
@@ -106,13 +106,13 @@ export function EmailFetchCard({ data }: { data: EmailFetchItem[] }) {
         <View className="rounded-xl bg-white/5 border border-white/8 overflow-hidden">
           {data.slice(0, 5).map((email, index) => (
             <View key={`email-${email.subject || index}`}>
-              {index > 0 && <Divider className="bg-white/8" />}
+              {index > 0 && <Separator className="bg-white/8" />}
               <EmailRow email={email} />
             </View>
           ))}
           {data.length > 5 && (
             <>
-              <Divider className="bg-white/8" />
+              <Separator className="bg-white/8" />
               <View className="px-4 py-2">
                 <Text className="text-[#8e8e93] text-xs text-center">
                   +{data.length - 5} more emails

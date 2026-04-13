@@ -18,7 +18,6 @@ export function Collapsible({
     <View>
       <PressableFeedback
         onPress={() => setIsOpen((value) => !value)}
-        feedbackPosition="behind"
         accessibilityRole="button"
         accessibilityState={{ expanded: isOpen }}
       >

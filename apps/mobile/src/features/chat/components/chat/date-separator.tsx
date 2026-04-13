@@ -1,4 +1,4 @@
-import { Divider } from "heroui-native";
+import { Separator } from "heroui-native";
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 import { useResponsive } from "@/lib/responsive";
@@ -36,7 +36,7 @@ export function DateSeparator({ date }: DateSeparatorProps) {
         paddingHorizontal: spacing.lg,
       }}
     >
-      <Divider style={{ flex: 1 }} />
+      <Separator style={{ flex: 1 }} />
       <Text
         style={{
           fontSize: fontSize.xs,
@@ -47,7 +47,7 @@ export function DateSeparator({ date }: DateSeparatorProps) {
       >
         {label}
       </Text>
-      <Divider style={{ flex: 1 }} />
+      <Separator style={{ flex: 1 }} />
     </View>
   );
 }

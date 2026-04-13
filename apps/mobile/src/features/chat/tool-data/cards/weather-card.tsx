@@ -1,3 +1,4 @@
+import type { WeatherData } from "@gaia/shared";
 import { Card, PressableFeedback } from "heroui-native";
 import { useMemo, useState } from "react";
 import { View } from "react-native";
@@ -19,49 +20,6 @@ import {
   Tornado02Icon,
 } from "@/components/icons";
 import { Text } from "@/components/ui/text";
-
-export interface WeatherData {
-  coord?: { lon: number; lat: number };
-  weather?: Array<{
-    id: number;
-    main: string;
-    description: string;
-    icon: string;
-  }>;
-  main?: {
-    temp: number;
-    feels_like: number;
-    temp_min?: number;
-    temp_max?: number;
-    pressure?: number;
-    humidity: number;
-  };
-  visibility?: number;
-  wind?: { speed: number; deg?: number; gust?: number };
-  dt?: number;
-  sys?: { country: string; sunrise: number; sunset: number };
-  timezone?: number;
-  name?: string;
-  location?: {
-    city: string;
-    country: string | null;
-    region: string | null;
-  };
-  forecast?: Array<{
-    date: string;
-    timestamp: number;
-    temp_min: number;
-    temp_max: number;
-    humidity: number;
-    weather: { main: string; description: string; icon: string };
-  }>;
-  // Simple flat fields (fallback for tool output)
-  temperature?: number;
-  condition?: string;
-  humidity?: number;
-  wind_speed?: number;
-  unit?: string;
-}
 
 function celsiusToFahrenheit(c: number): number {
   return (c * 9) / 5 + 32;

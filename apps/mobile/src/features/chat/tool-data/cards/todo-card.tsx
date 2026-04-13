@@ -1,62 +1,25 @@
+import type {
+  TodoAction,
+  TodoToolData as TodoData,
+  TodoItem,
+  TodoPriority,
+  TodoProject,
+  TodoToolStats as TodoStats,
+  TodoSubtask,
+} from "@gaia/shared";
 import { Card, Checkbox, Chip, PressableFeedback } from "heroui-native";
 import { View } from "react-native";
 import { Text } from "@/components/ui/text";
 
-export type TodoPriority = "high" | "medium" | "low" | "none";
-export type TodoAction =
-  | "list"
-  | "create"
-  | "update"
-  | "delete"
-  | "search"
-  | "stats";
-
-export interface TodoSubtask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-export interface TodoProject {
-  id: string;
-  name: string;
-  color?: string;
-}
-
-export interface TodoItem {
-  id: string;
-  title: string;
-  completed: boolean;
-  priority: TodoPriority;
-  labels: string[];
-  due_date?: string;
-  project?: TodoProject;
-  subtasks: TodoSubtask[];
-  description?: string;
-}
-
-export interface TodoStats {
-  total: number;
-  completed: number;
-  pending: number;
-  overdue: number;
-  today: number;
-  upcoming: number;
-}
-
-export interface TodoData {
-  todos?: TodoItem[];
-  projects?: Array<{
-    id: string;
-    name: string;
-    color?: string;
-    todo_count?: number;
-    completion_percentage?: number;
-  }>;
-  stats?: TodoStats;
-  action?: TodoAction;
-  message?: string;
-}
+export type {
+  TodoAction,
+  TodoData,
+  TodoItem,
+  TodoPriority,
+  TodoProject,
+  TodoStats,
+  TodoSubtask,
+};
 
 const PRIORITY_CHIP_COLOR: Record<
   Exclude<TodoPriority, "none">,

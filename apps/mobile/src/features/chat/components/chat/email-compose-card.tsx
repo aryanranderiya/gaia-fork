@@ -1,4 +1,12 @@
-import { Button, Card, Chip, Divider, TextField } from "heroui-native";
+import {
+  Button,
+  Card,
+  Chip,
+  Input,
+  Label,
+  Separator,
+  TextField,
+} from "heroui-native";
 import { View } from "react-native";
 import { AppIcon, Mail01Icon, PencilEdit01Icon } from "@/components/icons";
 import { Text } from "@/components/ui/text";
@@ -70,28 +78,28 @@ export function EmailComposeCard({
           <AppIcon icon={PencilEdit01Icon} size={14} color="#8e8e93" />
         </View>
 
-        <Divider className="bg-white/10" />
+        <Separator className="bg-white/10" />
 
         {/* To field */}
         <View className="px-4 py-3">
           <TextField>
-            <TextField.Label>To</TextField.Label>
+            <Label>To</Label>
             <RecipientChips recipients={data.to} />
           </TextField>
         </View>
 
-        <Divider className="bg-white/10" />
+        <Separator className="bg-white/10" />
 
         {/* CC field */}
         {data.cc && data.cc.length > 0 && (
           <>
             <View className="px-4 py-3">
               <TextField>
-                <TextField.Label>Cc</TextField.Label>
+                <Label>Cc</Label>
                 <RecipientChips recipients={data.cc} />
               </TextField>
             </View>
-            <Divider className="bg-white/10" />
+            <Separator className="bg-white/10" />
           </>
         )}
 
@@ -100,19 +108,19 @@ export function EmailComposeCard({
           <>
             <View className="px-4 py-3">
               <TextField>
-                <TextField.Label>Bcc</TextField.Label>
+                <Label>Bcc</Label>
                 <RecipientChips recipients={data.bcc} />
               </TextField>
             </View>
-            <Divider className="bg-white/10" />
+            <Separator className="bg-white/10" />
           </>
         )}
 
         {/* Subject field */}
         <View className="px-4 py-3">
           <TextField>
-            <TextField.Label>Subject</TextField.Label>
-            <TextField.Input
+            <Label>Subject</Label>
+            <Input
               value={data.subject}
               editable={false}
               className="text-sm font-medium"
@@ -120,12 +128,12 @@ export function EmailComposeCard({
           </TextField>
         </View>
 
-        <Divider className="bg-white/10" />
+        <Separator className="bg-white/10" />
 
         {/* Body */}
         <View className="px-4 py-3">
           <TextField>
-            <TextField.Input
+            <Input
               value={data.body}
               editable={false}
               multiline
@@ -137,7 +145,7 @@ export function EmailComposeCard({
           </TextField>
         </View>
 
-        <Divider className="bg-white/10" />
+        <Separator className="bg-white/10" />
 
         {/* Send button */}
         <View className="flex-row justify-end px-4 py-3">

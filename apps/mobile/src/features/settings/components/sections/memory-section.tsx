@@ -1,4 +1,11 @@
-import { Button, Card, Spinner, TextField } from "heroui-native";
+import {
+  Button,
+  Card,
+  Input,
+  InputGroup,
+  Spinner,
+  TextField,
+} from "heroui-native";
 import { useEffect, useRef, useState } from "react";
 import { Alert, FlatList, Modal, Pressable, View } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
@@ -102,15 +109,16 @@ export function MemorySection() {
     <View style={{ flex: 1, gap: spacing.md, padding: spacing.md }}>
       {/* Search bar */}
       <TextField>
-        <TextField.Input
-          value={search}
-          onChangeText={setSearch}
-          placeholder="Search memories..."
-        >
-          <TextField.InputStartContent>
+        <InputGroup>
+          <InputGroup.Prefix isDecorative>
             <AppIcon icon={Search01Icon} size={16} color="#71717a" />
-          </TextField.InputStartContent>
-        </TextField.Input>
+          </InputGroup.Prefix>
+          <InputGroup.Input
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search memories..."
+          />
+        </InputGroup>
       </TextField>
 
       {isLoading ? (
@@ -214,7 +222,7 @@ export function MemorySection() {
               </Text>
 
               <TextField>
-                <TextField.Input
+                <Input
                   value={newMemoryText}
                   onChangeText={setNewMemoryText}
                   placeholder="What should GAIA remember?"

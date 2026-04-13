@@ -1,5 +1,14 @@
 import { useRouter } from "expo-router";
-import { Avatar, Button, Card, Spinner, TextField } from "heroui-native";
+import {
+  Avatar,
+  Button,
+  Card,
+  Description,
+  Input,
+  Label,
+  Spinner,
+  TextField,
+} from "heroui-native";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, ScrollView } from "react-native";
 import { AppIcon, Logout01Icon } from "@/components/icons";
@@ -89,8 +98,8 @@ export function AccountSection() {
       <Card variant="secondary" className="rounded-3xl bg-surface">
         <Card.Body className="gap-4 px-5 py-5">
           <TextField>
-            <TextField.Label>Display Name</TextField.Label>
-            <TextField.Input
+            <Label>Display Name</Label>
+            <Input
               value={name}
               onChangeText={setName}
               placeholder="Your name"
@@ -103,11 +112,9 @@ export function AccountSection() {
           </TextField>
 
           <TextField>
-            <TextField.Label>Email</TextField.Label>
-            <TextField.Input value={user?.email ?? "—"} editable={false} />
-            <TextField.Description>
-              Your WorkOS email stays read-only here.
-            </TextField.Description>
+            <Label>Email</Label>
+            <Input value={user?.email ?? "—"} editable={false} />
+            <Description>Your WorkOS email stays read-only here.</Description>
           </TextField>
 
           {isDirty ? (

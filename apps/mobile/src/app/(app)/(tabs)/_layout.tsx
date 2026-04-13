@@ -100,6 +100,11 @@ export default function TabsLayout() {
             ),
           }}
         />
+        <Tabs.Screen name="todos/label/[label]" options={{ href: null }} />
+        <Tabs.Screen
+          name="todos/priority/[priority]"
+          options={{ href: null }}
+        />
       </Tabs>
     </ErrorBoundary>
   );

@@ -1,3 +1,9 @@
+import type {
+  DeepResearchResults,
+  DeepResearchSource,
+  EnhancedWebResult,
+  SearchResults,
+} from "@gaia/shared";
 import { Card, Chip, PressableFeedback } from "heroui-native";
 import { useEffect, useState } from "react";
 import { Image, Linking, View } from "react-native";
@@ -19,52 +25,7 @@ import {
 } from "@/components/icons";
 import { Text } from "@/components/ui/text";
 
-export interface WebResult {
-  title?: string;
-  url?: string;
-  content?: string;
-  score?: number;
-  raw_content?: string;
-  favicon?: string;
-}
-
-export interface EnhancedWebResult extends WebResult {
-  full_content?: string;
-  screenshot_url?: string;
-}
-
-export interface SearchResults {
-  web?: WebResult[];
-  images?: string[];
-  news?: Array<{ title?: string; url?: string; content?: string }>;
-  answer?: string;
-  query?: string;
-}
-
-export interface DeepResearchSource {
-  url: string;
-  title: string;
-  snippet?: string;
-}
-
-export interface DeepResearchResults {
-  /** Present when streaming / running */
-  status?: "running" | "complete" | "error";
-  progress?: string;
-  subSteps?: string[];
-  sources?: DeepResearchSource[];
-  totalSources?: number;
-
-  /** Present when complete */
-  original_search?: SearchResults;
-  enhanced_results?: EnhancedWebResult[];
-  screenshots_taken?: boolean;
-  metadata?: {
-    total_content_size?: number;
-    elapsed_time?: number;
-    query?: string;
-  };
-}
+export type { DeepResearchResults, DeepResearchSource, EnhancedWebResult };
 
 type Tab = "enhanced" | "original" | "metadata";
 
