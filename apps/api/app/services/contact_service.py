@@ -2,6 +2,7 @@
 Service functions for handling contact-related operations.
 """
 
+from email.utils import getaddresses
 from typing import Any, Dict, List
 
 from shared.py.wide_events import log
@@ -313,23 +314,13 @@ def build_contact_index(messages: List[Dict[str, Any]]) -> Dict[str, Any]:
             if isinstance(h, dict) and "name" in h and "value" in h
         }
 
-        for field in ("From", "To", "Cc", "Reply-To"):
-            value = headers.get(field)
-            if not value:
-                continue
-            for raw_address in value.split(","):
-                address = raw_address.strip()
-                if not address:
-                    continue
-
-                name = ""
-                email = address
-                if "<" in address and ">" in address:
-                    name = address.split("<")[0].strip().strip('"')
-                    email = address.split("<")[1].split(">")[0].strip()
-
-                if "@" in email and "." in email:
-                    contact_dict[email] = {"name": name, "email": email}
+        # email.utils.getaddresses correctly handles names with embedded
+        # commas (e.g., '"Doe, John" <john@example.com>') that a naive
+        # split-on-comma would mangle.
+        raw_values = [headers[field] for field in ("From", "To", "Cc", "Reply-To") if headers.get(field)]
+        for name, email in getaddresses(raw_values):
+            if "@" in email and "." in email:
+                contact_dict[email] = {"name": name, "email": email}
 
     contacts = sorted(
         contact_dict.values(), key=lambda x: x["name"] or x["email"]

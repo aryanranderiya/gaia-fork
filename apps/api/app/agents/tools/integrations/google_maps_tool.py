@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, List
 
+from shared.py.wide_events import log
 from app.models.common_models import GatherContextInput
 from app.services.composio.proxy_client import proxy_request_sync
 from composio import Composio
@@ -35,7 +36,8 @@ def register_google_maps_custom_tools(composio: Composio) -> List[str]:
             ) or {}
             status = data.get("status", "UNKNOWN")
             connected = status == "OK"
-        except Exception:
+        except Exception as e:
+            log.debug(f"Google Maps integration failed: {e}")
             status = "ERROR"
             connected = False
 

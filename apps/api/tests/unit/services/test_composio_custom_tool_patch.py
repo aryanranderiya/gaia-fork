@@ -92,16 +92,19 @@ class TestPatchedCall:
         assert "execute_request" not in call_kwargs
         tool._CustomTool__get_auth_credentials.assert_not_called()
 
-    def test_default_user_id_when_missing(self):
-        tool = _make_tool(auth_credentials={})
-        _invoke(tool, foo="bar")
+    def test_missing_user_id_raises_app_error(self):
+        from app.utils.errors import AppError
 
-        assert tool.f.call_args.kwargs["auth_credentials"]["user_id"] == "default"
+        tool = _make_tool(auth_credentials={})
+        with pytest.raises(AppError) as exc:
+            _invoke(tool, foo="bar")
+        assert "Missing user_id" in exc.value.message
 
 
 @pytest.mark.parametrize("user_id", ["", None])
-def test_falls_back_to_default_user_id(user_id):
-    tool = _make_tool(auth_credentials={})
-    _invoke(tool, user_id=user_id, foo="bar")
+def test_empty_or_none_user_id_raises_app_error(user_id):
+    from app.utils.errors import AppError
 
-    assert tool.f.call_args.kwargs["auth_credentials"]["user_id"] == "default"
+    tool = _make_tool(auth_credentials={})
+    with pytest.raises(AppError):
+        _invoke(tool, user_id=user_id, foo="bar")

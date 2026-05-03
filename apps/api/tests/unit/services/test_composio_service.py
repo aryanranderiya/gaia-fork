@@ -617,7 +617,7 @@ class TestDeleteConnectedAccount:
                 {"gmail": config},
             ),
             patch(
-                "app.services.composio.proxy_client.invalidate_connected_account_cache"
+                "app.services.composio.composio_service.invalidate_connected_account_cache"
             ) as mock_invalidate,
         ):
             await svc.delete_connected_account("user1", "gmail")
@@ -646,7 +646,7 @@ class TestDeleteConnectedAccount:
                 {"gmail": config},
             ),
             patch(
-                "app.services.composio.proxy_client.invalidate_connected_account_cache"
+                "app.services.composio.composio_service.invalidate_connected_account_cache"
             ) as mock_invalidate,
         ):
             await svc.delete_connected_account("user1", "gmail")

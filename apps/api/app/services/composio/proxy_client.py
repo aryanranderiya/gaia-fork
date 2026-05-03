@@ -72,11 +72,21 @@ def _resolve_connected_account_id(user_id: str, toolkit: str) -> str:
         )
 
     composio = _get_composio()
-    accounts = composio.connected_accounts.list(
-        user_ids=[user_id],
-        auth_config_ids=[auth_config_id],
-        limit=10,
-    )
+    try:
+        accounts = composio.connected_accounts.list(
+            user_ids=[user_id],
+            auth_config_ids=[auth_config_id],
+            limit=10,
+        )
+    except AppError:
+        raise
+    except Exception as e:
+        raise AppError(
+            message=f"Composio connected_accounts.list failed: {e}",
+            why="SDK or transport error while resolving the connected account",
+            status_code=502,
+            meta={"toolkit": toolkit, "user_id": user_id, "exception": str(e)},
+        ) from e
 
     active = next(
         (
@@ -161,7 +171,22 @@ def _proxy_call(
     elif body is not None:
         proxy_kwargs["body"] = body
 
-    response = _get_composio().tools.proxy(**proxy_kwargs)
+    try:
+        response = _get_composio().tools.proxy(**proxy_kwargs)
+    except AppError:
+        raise
+    except Exception as e:
+        raise AppError(
+            message=f"Composio tools.proxy failed: {e}",
+            why="SDK or transport error while calling the provider",
+            status_code=502,
+            meta={
+                "toolkit": toolkit,
+                "endpoint": endpoint,
+                "method": method,
+                "exception": str(e),
+            },
+        ) from e
 
     status = int(response.status)
     if status >= 400:

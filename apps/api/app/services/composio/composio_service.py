@@ -9,6 +9,7 @@ from app.core.lazy_loader import MissingKeyStrategy, lazy_provider, providers
 from app.models.trigger_config import TriggerConfig
 from app.services.composio.custom_tools.registry import custom_tools_registry
 from app.services.composio.langchain_composio_service import LangchainProvider
+from app.services.composio.proxy_client import invalidate_connected_account_cache
 from app.services.mcp.mcp_tools_store import get_mcp_tools_store
 from app.utils.composio_hooks.registry import (
     master_after_execute_hook,
@@ -343,10 +344,6 @@ class ComposioService:
                 # No active account to delete - treat as success (idempotent disconnect).
                 # Still flush the proxy cache in case a previous session cached an ID
                 # that has since been revoked outside this code path.
-                from app.services.composio.proxy_client import (
-                    invalidate_connected_account_cache,
-                )
-
                 if config.toolkit:
                     invalidate_connected_account_cache(
                         user_id=user_id, toolkit=config.toolkit
@@ -372,10 +369,6 @@ class ComposioService:
             # Invalidate the proxy client's connected_account_id cache so the
             # next proxy request re-resolves and either finds the new account
             # or fails fast with a clear "no active connection" error.
-            from app.services.composio.proxy_client import (
-                invalidate_connected_account_cache,
-            )
-
             if config.toolkit:
                 invalidate_connected_account_cache(
                     user_id=user_id, toolkit=config.toolkit

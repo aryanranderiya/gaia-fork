@@ -352,7 +352,7 @@ async def update_calendar_preferences(
         user_id = current_user.get("user_id")
         log.set(user={"id": user_id}, calendar={"operation": "update_preferences"})
         return calendar_service.update_user_calendar_preferences(
-            current_user["user_id"], preferences.selected_calendars
+            str(user_id), preferences.selected_calendars
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

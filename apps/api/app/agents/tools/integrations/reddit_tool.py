@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, List
 
+from shared.py.wide_events import log
 from app.models.common_models import GatherContextInput
 from app.services.composio.proxy_client import proxy_request_sync
 from composio import Composio
@@ -26,13 +27,17 @@ def register_reddit_custom_tools(composio: Composio) -> List[str]:
         if not user_id:
             raise ValueError("Missing user_id in auth_credentials")
 
-        me = proxy_request_sync(
-            user_id=user_id,
-            toolkit=REDDIT_TOOLKIT,
-            endpoint=f"{REDDIT_API_BASE}/api/v1/me",
-            method="GET",
-            headers=_REDDIT_HEADERS,
-        ) or {}
+        me: Dict[str, Any] = {}
+        try:
+            me = proxy_request_sync(
+                user_id=user_id,
+                toolkit=REDDIT_TOOLKIT,
+                endpoint=f"{REDDIT_API_BASE}/api/v1/me",
+                method="GET",
+                headers=_REDDIT_HEADERS,
+            ) or {}
+        except Exception as e:
+            log.debug(f"Reddit /me fetch failed: {e}")
 
         subreddits: List[Dict[str, Any]] = []
         try:

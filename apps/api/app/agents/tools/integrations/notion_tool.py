@@ -365,9 +365,7 @@ def register_notion_custom_tools(composio: Composio) -> List[str]:
         Zero required parameters. Returns recently modified content for situational awareness.
         """
         log.set(tool={"integration": "notion", "action": "gather_context"})
-        user_id = auth_credentials.get("user_id", "")
-        if not user_id:
-            raise ValueError("Missing user_id in auth_credentials")
+        user_id = _user_id(auth_credentials)
         data = execute_tool(
             "NOTION_SEARCH_NOTION_PAGE", {"query": "", "page_size": 10}, user_id
         )
