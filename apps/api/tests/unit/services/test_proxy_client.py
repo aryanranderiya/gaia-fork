@@ -63,30 +63,30 @@ def _patch_auth_config(toolkit: str = "GMAIL", auth_config_id: str | None = "ac_
 
 
 class TestBuildParameters:
-    def test_returns_empty_when_no_inputs(self):
+    def test_returns_empty_when_no_inputs(self) -> None:
         assert _build_parameters(None, None) == []
 
-    def test_builds_header_entries(self):
+    def test_builds_header_entries(self) -> None:
         params = _build_parameters({"X-Foo": "bar"}, None)
         assert params == [{"name": "X-Foo", "type": "header", "value": "bar"}]
 
-    def test_builds_query_entries(self):
+    def test_builds_query_entries(self) -> None:
         params = _build_parameters(None, {"q": "abc", "n": 5})
         assert {"name": "q", "type": "query", "value": "abc"} in params
         assert {"name": "n", "type": "query", "value": "5"} in params
 
-    def test_skips_none_query_values(self):
+    def test_skips_none_query_values(self) -> None:
         params = _build_parameters(None, {"q": None, "k": "v"})
         assert params == [{"name": "k", "type": "query", "value": "v"}]
 
-    def test_expands_list_query_values(self):
+    def test_expands_list_query_values(self) -> None:
         params = _build_parameters(None, {"ids": ["a", "b"]})
         assert params == [
             {"name": "ids", "type": "query", "value": "a"},
             {"name": "ids", "type": "query", "value": "b"},
         ]
 
-    def test_combines_headers_and_query(self):
+    def test_combines_headers_and_query(self) -> None:
         params = _build_parameters({"H": "1"}, {"q": "x"})
         assert params == [
             {"name": "H", "type": "header", "value": "1"},
@@ -95,18 +95,18 @@ class TestBuildParameters:
 
 
 class TestResolveConnectedAccountId:
-    def test_raises_on_missing_user_id(self):
+    def test_raises_on_missing_user_id(self) -> None:
         with pytest.raises(AppError) as exc:
             _resolve_connected_account_id("", "GMAIL")
         assert exc.value.status_code == 500
 
-    def test_raises_when_toolkit_unknown(self):
+    def test_raises_when_toolkit_unknown(self) -> None:
         with _patch_auth_config(auth_config_id=None):
             with pytest.raises(AppError) as exc:
                 _resolve_connected_account_id("u1", "WHATSAPP")
         assert "Unknown" in exc.value.message
 
-    def test_raises_when_no_active_account(self):
+    def test_raises_when_no_active_account(self) -> None:
         composio = MagicMock()
         accounts = MagicMock()
         accounts.items = [_make_account(active=False)]
@@ -116,26 +116,26 @@ class TestResolveConnectedAccountId:
                 _resolve_connected_account_id("u1", "GMAIL")
         assert exc.value.status_code == 401
 
-    def test_returns_active_account_id(self):
+    def test_returns_active_account_id(self) -> None:
         composio = _make_composio(account_id="acc_xyz")
         with _patch_auth_config(), _patch_composio(composio):
             assert _resolve_connected_account_id("u1", "GMAIL") == "acc_xyz"
 
-    def test_caches_lookup_per_user_toolkit(self):
+    def test_caches_lookup_per_user_toolkit(self) -> None:
         composio = _make_composio(account_id="acc_xyz")
         with _patch_auth_config(), _patch_composio(composio):
             _resolve_connected_account_id("u1", "GMAIL")
             _resolve_connected_account_id("u1", "GMAIL")
         assert composio.connected_accounts.list.call_count == 1
 
-    def test_cache_keyed_per_user(self):
+    def test_cache_keyed_per_user(self) -> None:
         composio = _make_composio()
         with _patch_auth_config(), _patch_composio(composio):
             _resolve_connected_account_id("u1", "GMAIL")
             _resolve_connected_account_id("u2", "GMAIL")
         assert composio.connected_accounts.list.call_count == 2
 
-    def test_invalidate_clears_cache(self):
+    def test_invalidate_clears_cache(self) -> None:
         composio = _make_composio()
         with _patch_auth_config(), _patch_composio(composio):
             _resolve_connected_account_id("u1", "GMAIL")
@@ -145,7 +145,7 @@ class TestResolveConnectedAccountId:
 
 
 class TestProxyRequestSync:
-    def test_sends_basic_request(self):
+    def test_sends_basic_request(self) -> None:
         composio = _make_composio(proxy_data={"hello": "world"})
         with _patch_auth_config(), _patch_composio(composio):
             result = proxy_request_sync(
@@ -164,7 +164,7 @@ class TestProxyRequestSync:
         assert "binary_body" not in kwargs
         assert "parameters" not in kwargs
 
-    def test_passes_body_and_parameters(self):
+    def test_passes_body_and_parameters(self) -> None:
         composio = _make_composio()
         with _patch_auth_config(), _patch_composio(composio):
             proxy_request_sync(
@@ -185,7 +185,7 @@ class TestProxyRequestSync:
         } in kwargs["parameters"]
         assert {"name": "page", "type": "query", "value": "2"} in kwargs["parameters"]
 
-    def test_binary_body_takes_precedence_over_body(self):
+    def test_binary_body_takes_precedence_over_body(self) -> None:
         composio = _make_composio()
         with _patch_auth_config(), _patch_composio(composio):
             proxy_request_sync(
@@ -203,7 +203,7 @@ class TestProxyRequestSync:
         }
         assert "body" not in kwargs
 
-    def test_raises_app_error_on_non_2xx(self):
+    def test_raises_app_error_on_non_2xx(self) -> None:
         composio = _make_composio(proxy_status=404, proxy_data={"err": "missing"})
         with _patch_auth_config(), _patch_composio(composio):
             with pytest.raises(AppError) as exc:
@@ -220,7 +220,7 @@ class TestProxyRequestSync:
 
 class TestProxyRequestAsync:
     @pytest.mark.asyncio
-    async def test_async_delegates_to_sync(self):
+    async def test_async_delegates_to_sync(self) -> None:
         composio = _make_composio(proxy_data={"async": True})
         with _patch_auth_config(), _patch_composio(composio):
             result = await proxy_request(

@@ -94,7 +94,7 @@ def _capture_tools(register_fn: Callable[..., Any]) -> Dict[str, Any]:
 )
 def test_gather_context_tools_use_proxy(
     module_path: str, register_name: str, toolkit: str, tool_name: str
-):
+) -> None:
     module = __import__(module_path, fromlist=[register_name])
     register = getattr(module, register_name)
 
@@ -115,7 +115,7 @@ def test_gather_context_tools_use_proxy(
 # ---------------------------------------------------------------------------
 
 
-def test_google_meet_gather_context_swallows_calendar_failures():
+def test_google_meet_gather_context_swallows_calendar_failures() -> None:
     """If the GOOGLEMEET account lacks calendar scope, the events fetch raises.
 
     The tool must catch that and return an empty `upcoming_meets` list rather
@@ -144,7 +144,7 @@ def test_google_meet_gather_context_swallows_calendar_failures():
     assert result["upcoming_meet_count"] == 0
 
 
-def test_google_docs_share_doc_routes_through_proxy():
+def test_google_docs_share_doc_routes_through_proxy() -> None:
     from app.agents.tools.integrations.google_docs_tool import (
         register_google_docs_custom_tools,
     )
@@ -170,7 +170,7 @@ def test_google_docs_share_doc_routes_through_proxy():
     assert result["document_id"] == "doc-1"
 
 
-def test_google_docs_delete_doc_routes_through_proxy():
+def test_google_docs_delete_doc_routes_through_proxy() -> None:
     from app.agents.tools.integrations.google_docs_tool import (
         register_google_docs_custom_tools,
     )
@@ -197,7 +197,7 @@ def test_google_docs_delete_doc_routes_through_proxy():
 # ---------------------------------------------------------------------------
 
 
-def test_google_sheets_share_routes_through_proxy():
+def test_google_sheets_share_routes_through_proxy() -> None:
     from app.agents.tools.integrations.google_sheets_tool import (
         register_google_sheets_custom_tools,
     )
@@ -225,7 +225,7 @@ def test_google_sheets_share_routes_through_proxy():
 # ---------------------------------------------------------------------------
 
 
-def test_notion_move_page_uses_execute_request_proxy():
+def test_notion_move_page_uses_execute_request_proxy() -> None:
     from app.agents.tools.integrations.notion_tool import (
         register_notion_custom_tools,
     )
@@ -244,7 +244,7 @@ def test_notion_move_page_uses_execute_request_proxy():
     assert result["page_id"] == "page-1"
 
 
-def test_notion_fetch_data_routes_through_proxy():
+def test_notion_fetch_data_routes_through_proxy() -> None:
     from app.agents.tools.integrations.notion_tool import (
         register_notion_custom_tools,
     )
@@ -271,7 +271,7 @@ def test_notion_fetch_data_routes_through_proxy():
 # ---------------------------------------------------------------------------
 
 
-def test_twitter_batch_follow_uses_proxy_via_utils():
+def test_twitter_batch_follow_uses_proxy_via_utils() -> None:
     from app.agents.tools.integrations.twitter_tool import (
         register_twitter_custom_tools,
     )
@@ -296,7 +296,7 @@ def test_twitter_batch_follow_uses_proxy_via_utils():
     assert result["followed_count"] == 1
 
 
-def test_twitter_create_thread_uses_proxy():
+def test_twitter_create_thread_uses_proxy() -> None:
     from app.agents.tools.integrations.twitter_tool import (
         register_twitter_custom_tools,
     )
@@ -329,7 +329,7 @@ def test_twitter_create_thread_uses_proxy():
 # ---------------------------------------------------------------------------
 
 
-def test_linkedin_react_to_post_uses_proxy():
+def test_linkedin_react_to_post_uses_proxy() -> None:
     from app.agents.tools.integrations.linkedin_tool import (
         register_linkedin_custom_tools,
     )
@@ -356,7 +356,7 @@ def test_linkedin_react_to_post_uses_proxy():
     assert kwargs["method"] == "POST"
 
 
-def test_linkedin_add_comment_uses_proxy_full():
+def test_linkedin_add_comment_uses_proxy_full() -> None:
     from app.agents.tools.integrations.linkedin_tool import (
         register_linkedin_custom_tools,
     )

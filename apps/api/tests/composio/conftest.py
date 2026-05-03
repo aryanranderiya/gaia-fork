@@ -1,7 +1,19 @@
 """Composio test fixtures.
 
-Provides mocking infrastructure for Gmail custom tool tests.
-No real API credentials or network calls are made.
+After the GAIA-641 proxy migration, the per-toolkit unit tests previously
+in this directory (test_gmail.py, test_calendar.py, test_google_docs.py,
+test_linkedin.py, test_notion.py, test_twitter.py) were deleted: they
+mocked `httpx.Client` against the legacy direct-API contract that no
+longer exists. Equivalent coverage now lives in `tests/unit/` and patches
+`proxy_request_sync` at the call-site module instead.
+
+Only `test_linear.py` remains because it patches at the
+`graphql_request` boundary (which is still the public surface of
+`linear_utils`) rather than the now-removed httpx layer.
+
+New live-credential tests added here should patch nothing — they should
+exercise the real `proxy_request_sync` path with a real Composio API key
+and a real connected account.
 """
 
 from typing import Any, Dict
