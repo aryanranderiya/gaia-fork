@@ -486,8 +486,10 @@ def find_event_for_action(
             ),
             method="GET",
         )
-    except HTTPException:
-        return None
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            return None
+        raise
 
 
 def create_calendar_event(
@@ -789,8 +791,12 @@ def update_calendar_event(
 
     try:
         existing_event = _proxy(user_id, endpoint=endpoint, method="GET")
-    except HTTPException:
-        raise HTTPException(status_code=404, detail="Event not found or access denied")
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            raise HTTPException(
+                status_code=404, detail="Event not found or access denied"
+            )
+        raise
 
     event_payload: Dict[str, Any] = {
         "summary": (

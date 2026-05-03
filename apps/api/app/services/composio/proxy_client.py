@@ -203,10 +203,16 @@ def _proxy_call(
             },
         )
 
+    # Normalize header keys to lowercase. Upstream APIs return mixed casing
+    # (e.g. LinkedIn's `X-RestLi-Id`) and Composio forwards them as a plain
+    # dict, so callers doing `headers["x-restli-id"]` would otherwise miss.
+    raw_headers = response.headers or {}
+    normalized_headers = {str(k).lower(): v for k, v in raw_headers.items()}
+
     return {
         "status": status,
         "data": response.data,
-        "headers": response.headers or {},
+        "headers": normalized_headers,
     }
 
 

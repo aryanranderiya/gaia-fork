@@ -8,6 +8,7 @@ The proxy attaches the user's OAuth token server-side; tools only need
 import datetime
 from typing import Any, Dict, List, Optional
 
+from shared.py.wide_events import log
 from app.models.common_models import GatherContextInput
 from app.services.composio.proxy_client import proxy_request_sync
 from app.services.contact_service import build_contact_index
@@ -416,6 +417,7 @@ def register_gmail_custom_tools(composio: Composio):
         ]
 
         messages: List[Dict[str, Any]] = []
+        fetch_failures = 0
         for message_id in message_ids:
             try:
                 full = _gmail_proxy(
@@ -429,8 +431,19 @@ def register_gmail_custom_tools(composio: Composio):
                 )
                 if isinstance(full, dict):
                     messages.append(full)
-            except Exception:  # nosec B110
-                continue
+            except Exception as exc:
+                fetch_failures += 1
+                log.warning(
+                    f"Gmail message fetch failed for {message_id}: {exc}"
+                )
+
+        if message_ids and not messages:
+            log.error(
+                f"Gmail contact list: all {len(message_ids)} message fetches failed "
+                f"for user {user_id}; returning empty contacts"
+            )
+        elif fetch_failures:
+            log.set(gmail_contact_fetch_failures=fetch_failures)
 
         return build_contact_index(messages)
 
