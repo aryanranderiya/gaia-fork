@@ -23,38 +23,13 @@ def pytest_collection_modifyitems(config, items):
 
 @pytest.fixture
 def mock_gmail_credentials() -> Dict[str, Any]:
-    """Fake OAuth credentials as supplied by Composio auth_credentials."""
-    return {
-        "access_token": "test_access_token_abc123",
-        "refresh_token": "test_refresh_token_xyz789",
-        "token_type": "Bearer",
-        "expires_in": 3600,
-        "scope": "https://mail.google.com/",
-    }
+    """Auth credentials shape Composio passes into custom tools post-migration.
 
-
-@pytest.fixture
-def mock_gmail_credentials_no_token() -> Dict[str, Any]:
-    """OAuth credentials dict that is missing the access_token."""
-    return {
-        "refresh_token": "test_refresh_token_xyz789",
-        "token_type": "Bearer",
-    }
-
-
-# ---------------------------------------------------------------------------
-# Mock HTTP client fixture
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture
-def mock_http_client():
+    Composio no longer returns OAuth `access_token` in connected-account
+    credentials. The patched `CustomTool.__call__` injects only `user_id`,
+    and tools route provider requests through `proxy_request_sync`.
     """
-    Returns a MagicMock that replaces the module-level _http_client in
-    gmail_tools.  Tests patch the client directly and configure .post/.get
-    return values per scenario.
-    """
-    return MagicMock()
+    return {"user_id": "test_user_123"}
 
 
 # ---------------------------------------------------------------------------

@@ -284,3 +284,40 @@ def user_id(request):
 def skip_destructive(request):
     """Whether to skip destructive tests."""
     return request.config.getoption("--skip-destructive")
+
+
+@pytest.fixture
+def fake_auth_credentials() -> dict:
+    """Auth credentials shape that matches the post-migration contract.
+
+    Composio no longer returns `access_token` in connected-account credentials.
+    The patched `CustomTool.__call__` injects only `user_id`. Tests that exercise
+    custom tools should use this fixture instead of hand-rolling a bearer token.
+    """
+    return {"user_id": "test_user_123"}
+
+
+@pytest.fixture
+def mock_proxy_request_sync():
+    """Patch `proxy_request_sync` and yield the mock for assertions.
+
+    The patch covers both the source module and the call sites in custom-tool
+    and helper modules so tests can assert on call arguments regardless of
+    where the helper is invoked.
+    """
+    with patch(
+        "app.services.composio.proxy_client.proxy_request_sync"
+    ) as mock_in_module:
+        mock_in_module.return_value = {}
+        yield mock_in_module
+
+
+@pytest.fixture
+def mock_proxy_request():
+    """Patch the async `proxy_request` and yield the mock for assertions."""
+    with patch(
+        "app.services.composio.proxy_client.proxy_request",
+        new_callable=AsyncMock,
+    ) as mock_in_module:
+        mock_in_module.return_value = {}
+        yield mock_in_module

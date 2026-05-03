@@ -286,3 +286,56 @@ def get_gmail_contacts(
         log.error(error_msg)
         log.exception("CONTACT_SERVICE: Full traceback:")
         return {"success": False, "error": error_msg, "contacts": []}
+
+
+def build_contact_index(messages: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Extract unique contacts from already-fetched Gmail message payloads.
+
+    Used by the Composio-proxy variant of GET_CONTACT_LIST: instead of relying
+    on `googleapiclient` to fetch messages, callers fetch via the proxy and
+    pass the resulting message dicts (with `payload.headers`) into this helper.
+
+    Args:
+        messages: Gmail message payload dicts as returned by
+            `users.messages.get` with format=metadata or full
+
+    Returns:
+        Dict with `success`, `contacts` (list of {name, email}), and `count`
+    """
+    contact_dict: Dict[str, Dict[str, str]] = {}
+
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        headers = {
+            h["name"]: h["value"]
+            for h in message.get("payload", {}).get("headers", [])
+            if isinstance(h, dict) and "name" in h and "value" in h
+        }
+
+        for field in ("From", "To", "Cc", "Reply-To"):
+            value = headers.get(field)
+            if not value:
+                continue
+            for raw_address in value.split(","):
+                address = raw_address.strip()
+                if not address:
+                    continue
+
+                name = ""
+                email = address
+                if "<" in address and ">" in address:
+                    name = address.split("<")[0].strip().strip('"')
+                    email = address.split("<")[1].split(">")[0].strip()
+
+                if "@" in email and "." in email:
+                    contact_dict[email] = {"name": name, "email": email}
+
+    contacts = sorted(
+        contact_dict.values(), key=lambda x: x["name"] or x["email"]
+    )
+    return {
+        "success": True,
+        "contacts": contacts,
+        "count": len(contacts),
+    }

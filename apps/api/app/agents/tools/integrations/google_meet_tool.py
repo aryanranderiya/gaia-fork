@@ -3,11 +3,11 @@
 import datetime
 from typing import Any, Dict, List
 
-import httpx
 from app.models.common_models import GatherContextInput
+from app.services.composio.proxy_client import proxy_request_sync
 from composio import Composio
 
-_http_client = httpx.Client(timeout=30)
+GOOGLE_MEET_TOOLKIT = "GOOGLEMEET"
 
 
 def register_google_meet_custom_tools(composio: Composio) -> List[str]:
@@ -21,61 +21,55 @@ def register_google_meet_custom_tools(composio: Composio) -> List[str]:
 
         Zero required parameters. Returns user profile and scheduled Meet calls.
         """
-        token = auth_credentials.get("access_token")
-        if not token:
-            raise ValueError("Missing access_token in auth_credentials")
+        user_id = auth_credentials.get("user_id")
+        if not user_id:
+            raise ValueError("Missing user_id in auth_credentials")
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-        }
+        me = proxy_request_sync(
+            user_id=user_id,
+            toolkit=GOOGLE_MEET_TOOLKIT,
+            endpoint="https://www.googleapis.com/oauth2/v3/userinfo",
+            method="GET",
+        ) or {}
 
-        # Get user profile
-        me_resp = _http_client.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers=headers,
-        )
-        me_resp.raise_for_status()
-        me = me_resp.json()
-
-        # Get upcoming calendar events that have conferenceData (Meet links)
         now = datetime.datetime.utcnow().isoformat() + "Z"
-        events_resp = _http_client.get(
-            "https://www.googleapis.com/calendar/v3/calendars/primary/events",
-            headers=headers,
-            params={
+        events_data = proxy_request_sync(
+            user_id=user_id,
+            toolkit=GOOGLE_MEET_TOOLKIT,
+            endpoint="https://www.googleapis.com/calendar/v3/calendars/primary/events",
+            method="GET",
+            query={
                 "timeMin": now,
                 "maxResults": 5,
                 "singleEvents": "true",
                 "orderBy": "startTime",
                 "fields": "items(id,summary,start,end,conferenceData,htmlLink)",
             },
-        )
+        ) or {}
+
         upcoming_meets: List[Dict[str, Any]] = []
-        if events_resp.status_code == 200:
-            items = events_resp.json().get("items", [])
-            for event in items:
-                conf = event.get("conferenceData", {})
-                if not conf:
-                    continue
-                entry_points = conf.get("entryPoints", [])
-                meet_link = next(
-                    (
-                        ep.get("uri")
-                        for ep in entry_points
-                        if ep.get("entryPointType") == "video"
-                    ),
-                    None,
-                )
-                start = event.get("start", {})
-                upcoming_meets.append(
-                    {
-                        "id": event.get("id"),
-                        "summary": event.get("summary", "")[:100],
-                        "start": start.get("dateTime") or start.get("date"),
-                        "meet_link": meet_link,
-                    }
-                )
+        for event in events_data.get("items", []):
+            conf = event.get("conferenceData", {})
+            if not conf:
+                continue
+            entry_points = conf.get("entryPoints", [])
+            meet_link = next(
+                (
+                    ep.get("uri")
+                    for ep in entry_points
+                    if ep.get("entryPointType") == "video"
+                ),
+                None,
+            )
+            start = event.get("start", {})
+            upcoming_meets.append(
+                {
+                    "id": event.get("id"),
+                    "summary": event.get("summary", "")[:100],
+                    "start": start.get("dateTime") or start.get("date"),
+                    "meet_link": meet_link,
+                }
+            )
 
         return {
             "user": {

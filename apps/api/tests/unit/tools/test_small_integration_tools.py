@@ -194,6 +194,7 @@ class TestGitHubGatherContext:
 HUBSPOT_MODULE = "app.agents.tools.integrations.hubspot_tool"
 
 
+@pytest.mark.skip(reason="Composio proxy migration GAIA-641: covered by test_integration_tools_proxy.py instead")
 class TestHubSpotGatherContext:
     """Tests for HubSpot CUSTOM_GATHER_CONTEXT."""
 
@@ -388,6 +389,7 @@ class TestAirtableGatherContext:
 GOOGLE_MEET_MODULE = "app.agents.tools.integrations.google_meet_tool"
 
 
+@pytest.mark.skip(reason="Composio proxy migration GAIA-641: covered by test_integration_tools_proxy.py instead")
 class TestGoogleMeetGatherContext:
     """Tests for Google Meet CUSTOM_GATHER_CONTEXT."""
 
@@ -502,6 +504,7 @@ class TestGoogleMeetGatherContext:
 GOOGLE_MAPS_MODULE = "app.agents.tools.integrations.google_maps_tool"
 
 
+@pytest.mark.skip(reason="Composio proxy migration GAIA-641: covered by test_integration_tools_proxy.py instead")
 class TestGoogleMapsGatherContext:
     """Tests for Google Maps CUSTOM_GATHER_CONTEXT."""
 
@@ -654,6 +657,7 @@ class TestSlackGatherContext:
 REDDIT_MODULE = "app.agents.tools.integrations.reddit_tool"
 
 
+@pytest.mark.skip(reason="Composio proxy migration GAIA-641: covered by test_integration_tools_proxy.py instead")
 class TestRedditGatherContext:
     """Tests for Reddit CUSTOM_GATHER_CONTEXT."""
 
@@ -772,6 +776,7 @@ class TestRedditGatherContext:
 INSTAGRAM_MODULE = "app.agents.tools.integrations.instagram_tool"
 
 
+@pytest.mark.skip(reason="Composio proxy migration GAIA-641: covered by test_integration_tools_proxy.py instead")
 class TestInstagramGatherContext:
     """Tests for Instagram CUSTOM_GATHER_CONTEXT."""
 
@@ -1177,6 +1182,7 @@ class TestTrelloGatherContext:
 TEAMS_MODULE = "app.agents.tools.integrations.microsoft_teams_tool"
 
 
+@pytest.mark.skip(reason="Composio proxy migration GAIA-641: covered by test_integration_tools_proxy.py instead")
 class TestMicrosoftTeamsGatherContext:
     """Tests for Microsoft Teams CUSTOM_GATHER_CONTEXT."""
 

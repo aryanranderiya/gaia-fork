@@ -658,17 +658,19 @@ class TestGetComposioService:
 
 
 class TestAuthHeaders:
-    def test_valid_token(self):
-        from app.services.composio.custom_tools.gmail_tools import _auth_headers
+    """The `_auth_headers` helper was removed in the Composio proxy migration.
 
-        result = _auth_headers({"access_token": "tok123"})
-        assert result == {"Authorization": "Bearer tok123"}
+    Gmail tools now route every request through `proxy_request_sync`, which
+    Composio authenticates server-side. Bearer-token construction is no longer
+    a Gmail-tools concern, so the helper and its tests no longer exist.
+    See test_composio_gmail_tools.py for the replacement coverage.
+    """
 
-    def test_missing_token_raises(self):
-        from app.services.composio.custom_tools.gmail_tools import _auth_headers
+    def test_helper_no_longer_exists(self):
+        from app.services.composio.custom_tools import gmail_tools
 
-        with pytest.raises(ValueError, match="Missing access_token"):
-            _auth_headers({})
+        assert not hasattr(gmail_tools, "_auth_headers")
+        assert not hasattr(gmail_tools, "_http_client")
 
 
 class TestGmailInputModels:
@@ -739,33 +741,18 @@ class TestRegisterGmailCustomTools:
 
 
 class TestGmailMarkAsRead:
-    """Test MARK_AS_READ via direct function call after registration."""
+    """MARK_AS_READ now routes through `proxy_request_sync`.
 
-    def test_mark_as_read_calls_api(self):
-        from app.services.composio.custom_tools.gmail_tools import (
-            MarkAsReadInput,
-            _http_client,
-        )
+    See test_composio_gmail_tools.TestMarkAsRead for the proxy-based test;
+    this stub keeps test discovery happy and asserts the request payload
+    shape via the public Pydantic model.
+    """
+
+    def test_input_model_carries_message_ids(self):
+        from app.services.composio.custom_tools.gmail_tools import MarkAsReadInput
 
         request = MarkAsReadInput(message_ids=["msg1", "msg2"])
-
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status = MagicMock()
-
-        with patch.object(_http_client, "post", return_value=mock_resp) as mock_post:
-            # Call the inner logic directly
-            url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/batchModify"
-            payload = {"ids": request.message_ids, "removeLabelIds": ["UNREAD"]}
-            resp = _http_client.post(
-                url,
-                json=payload,
-                headers={"Authorization": "Bearer tok"},
-            )
-            resp.raise_for_status()
-
-        mock_post.assert_called_once()
-        call_kwargs = mock_post.call_args
-        assert call_kwargs[1]["json"]["removeLabelIds"] == ["UNREAD"]
+        assert request.message_ids == ["msg1", "msg2"]
 
 
 class TestGmailStarEmail:

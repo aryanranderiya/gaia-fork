@@ -2,6 +2,12 @@
 
 """Patch module that overrides ``CustomTool.__call__`` to ensure the ``user_id``
 provided to a custom tool is added to the ``auth_credentials`` dictionary.
+
+Composio no longer returns OAuth ``access_token`` values inside
+``auth_credentials``. Custom tools must route provider API requests through
+``app.services.composio.proxy_client.proxy_request_sync`` (which uses
+``composio.tools.proxy``) rather than reading a token from this dict.
+The injected ``user_id`` is the only value tools should rely on here.
 """
 
 from composio.core.models.custom_tools import CustomTool
