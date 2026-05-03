@@ -440,12 +440,21 @@ def register_gmail_custom_tools(composio: Composio):
         if message_ids and not messages:
             log.error(
                 f"Gmail contact list: all {len(message_ids)} message fetches failed "
-                f"for user {user_id}; returning empty contacts"
+                f"for user {user_id}"
             )
-        elif fetch_failures:
+            return {
+                "success": False,
+                "error": (
+                    f"Failed to fetch any of the {len(message_ids)} matched "
+                    "messages; cannot extract contacts"
+                ),
+                "contacts": [],
+                "count": 0,
+            }
+        if fetch_failures:
             log.set(gmail_contact_fetch_failures=fetch_failures)
 
-        return build_contact_index(messages)
+        return build_contact_index(messages, filter_query=request.query)
 
     @composio.tools.custom_tool(toolkit="gmail")
     def CUSTOM_GATHER_CONTEXT(
