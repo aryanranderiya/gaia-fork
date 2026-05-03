@@ -426,7 +426,7 @@ def register_gmail_custom_tools(composio: Composio):
                     method="GET",
                     query={
                         "format": "metadata",
-                        "metadataHeaders": ["From", "To", "Cc", "Bcc"],
+                        "metadataHeaders": ["From", "To", "Cc", "Reply-To"],
                     },
                 )
                 if isinstance(full, dict):
