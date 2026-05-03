@@ -115,6 +115,35 @@ def test_gather_context_tools_use_proxy(
 # ---------------------------------------------------------------------------
 
 
+def test_google_meet_gather_context_swallows_calendar_failures():
+    """If the GOOGLEMEET account lacks calendar scope, the events fetch raises.
+
+    The tool must catch that and return an empty `upcoming_meets` list rather
+    than failing the whole gather_context call.
+    """
+    from app.agents.tools.integrations.google_meet_tool import (
+        register_google_meet_custom_tools,
+    )
+    from app.utils.errors import AppError
+
+    with patch(
+        "app.agents.tools.integrations.google_meet_tool.proxy_request_sync"
+    ) as proxy:
+        # First call (userinfo) succeeds; second call (calendar/events) raises.
+        proxy.side_effect = [
+            {"email": "u@x.com", "name": "User", "picture": None},
+            AppError(message="GOOGLEMEET API error (403)", status_code=403),
+        ]
+        tools = _capture_tools(register_google_meet_custom_tools)
+        result = tools["CUSTOM_GATHER_CONTEXT"](
+            GatherContextInput(), EXECUTE_REQUEST, AUTH_CREDS
+        )
+
+    assert result["user"]["email"] == "u@x.com"
+    assert result["upcoming_meets"] == []
+    assert result["upcoming_meet_count"] == 0
+
+
 def test_google_docs_share_doc_routes_through_proxy():
     from app.agents.tools.integrations.google_docs_tool import (
         register_google_docs_custom_tools,

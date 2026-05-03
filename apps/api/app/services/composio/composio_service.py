@@ -340,7 +340,17 @@ class ComposioService:
             ]
 
             if not active_accounts:
-                # No active account to delete - treat as success (idempotent disconnect)
+                # No active account to delete - treat as success (idempotent disconnect).
+                # Still flush the proxy cache in case a previous session cached an ID
+                # that has since been revoked outside this code path.
+                from app.services.composio.proxy_client import (
+                    invalidate_connected_account_cache,
+                )
+
+                if config.toolkit:
+                    invalidate_connected_account_cache(
+                        user_id=user_id, toolkit=config.toolkit
+                    )
                 log.info(
                     f"No active connected account found for {provider} and user {user_id}, nothing to delete"
                 )
@@ -358,6 +368,18 @@ class ComposioService:
                 delete_tasks.append(loop.run_in_executor(None, _delete_account))
 
             await asyncio.gather(*delete_tasks)
+
+            # Invalidate the proxy client's connected_account_id cache so the
+            # next proxy request re-resolves and either finds the new account
+            # or fails fast with a clear "no active connection" error.
+            from app.services.composio.proxy_client import (
+                invalidate_connected_account_cache,
+            )
+
+            if config.toolkit:
+                invalidate_connected_account_cache(
+                    user_id=user_id, toolkit=config.toolkit
+                )
 
             log.info(
                 f"Deleted {len(active_accounts)} connected account(s) for {provider} and user {user_id}"

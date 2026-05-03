@@ -297,27 +297,11 @@ def fake_auth_credentials() -> dict:
     return {"user_id": "test_user_123"}
 
 
-@pytest.fixture
-def mock_proxy_request_sync():
-    """Patch `proxy_request_sync` and yield the mock for assertions.
-
-    The patch covers both the source module and the call sites in custom-tool
-    and helper modules so tests can assert on call arguments regardless of
-    where the helper is invoked.
-    """
-    with patch(
-        "app.services.composio.proxy_client.proxy_request_sync"
-    ) as mock_in_module:
-        mock_in_module.return_value = {}
-        yield mock_in_module
-
-
-@pytest.fixture
-def mock_proxy_request():
-    """Patch the async `proxy_request` and yield the mock for assertions."""
-    with patch(
-        "app.services.composio.proxy_client.proxy_request",
-        new_callable=AsyncMock,
-    ) as mock_in_module:
-        mock_in_module.return_value = {}
-        yield mock_in_module
+# Note: There is intentionally no shared `mock_proxy_request_sync` fixture.
+# Every consumer does `from app.services.composio.proxy_client import
+# proxy_request_sync`, which binds the symbol at the call-site module's
+# namespace. A fixture that patches `app.services.composio.proxy_client.
+# proxy_request_sync` would NOT intercept those bindings — the tests would
+# pass without exercising the mock. Tests must patch the call site directly
+# (e.g. `app.services.calendar_service.proxy_request_sync`,
+# `app.utils.twitter_utils.proxy_request_sync`).
