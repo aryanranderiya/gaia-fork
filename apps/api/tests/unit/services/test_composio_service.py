@@ -1,6 +1,5 @@
 """Tests for ComposioService and Gmail custom tools."""
 
-from typing import Any, Dict
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -740,94 +739,9 @@ class TestRegisterGmailCustomTools:
         assert len(result) == 7
 
 
-class TestGmailMarkAsRead:
-    """MARK_AS_READ now routes through `proxy_request_sync`.
-
-    See test_composio_gmail_tools.TestMarkAsRead for the proxy-based test;
-    this stub keeps test discovery happy and asserts the request payload
-    shape via the public Pydantic model.
-    """
-
-    def test_input_model_carries_message_ids(self):
-        from app.services.composio.custom_tools.gmail_tools import MarkAsReadInput
-
-        request = MarkAsReadInput(message_ids=["msg1", "msg2"])
-        assert request.message_ids == ["msg1", "msg2"]
-
-
-class TestGmailStarEmail:
-    def test_star_payload(self):
-        from app.services.composio.custom_tools.gmail_tools import StarEmailInput
-
-        request = StarEmailInput(message_ids=["m1"], unstar=False)
-        if request.unstar:
-            payload = {"ids": request.message_ids, "removeLabelIds": ["STARRED"]}
-            action = "unstarred"
-        else:
-            payload = {"ids": request.message_ids, "addLabelIds": ["STARRED"]}
-            action = "starred"
-        assert payload["addLabelIds"] == ["STARRED"]
-        assert action == "starred"
-
-    def test_unstar_payload(self):
-        from app.services.composio.custom_tools.gmail_tools import StarEmailInput
-
-        request = StarEmailInput(message_ids=["m1"], unstar=True)
-        if request.unstar:
-            payload = {"ids": request.message_ids, "removeLabelIds": ["STARRED"]}
-            action = "unstarred"
-        else:
-            payload = {"ids": request.message_ids, "addLabelIds": ["STARRED"]}
-            action = "starred"
-        assert payload["removeLabelIds"] == ["STARRED"]
-        assert action == "unstarred"
-
-
-class TestGetUnreadCountLogic:
-    """Test the GET_UNREAD_COUNT logic branches."""
-
-    def test_default_label_ids_is_inbox(self):
-        from app.services.composio.custom_tools.gmail_tools import GetUnreadCountInput
-
-        request = GetUnreadCountInput()
-        resolved: list[str] = []
-        if request.label_ids:
-            resolved = [label for label in request.label_ids if label]
-        elif not request.query:
-            resolved = ["INBOX"]
-        assert resolved == ["INBOX"]
-
-    def test_query_mode_adds_unread_filter(self):
-        from app.services.composio.custom_tools.gmail_tools import GetUnreadCountInput
-
-        request = GetUnreadCountInput(query="from:alice@example.com")
-        query = request.query.strip() if request.query else ""
-        unread_query = query if "is:unread" in query.lower() else f"{query} is:unread"
-        assert unread_query == "from:alice@example.com is:unread"
-
-    def test_query_already_has_unread(self):
-        from app.services.composio.custom_tools.gmail_tools import GetUnreadCountInput
-
-        request = GetUnreadCountInput(query="is:unread from:bob")
-        query = request.query.strip() if request.query else ""
-        unread_query = query if "is:unread" in query.lower() else f"{query} is:unread"
-        assert unread_query == "is:unread from:bob"
-
-    def test_explicit_label_ids_used(self):
-        from app.services.composio.custom_tools.gmail_tools import GetUnreadCountInput
-
-        request = GetUnreadCountInput(label_ids=["CATEGORY_PROMOTIONS", ""])
-        resolved: list[str] = []
-        if request.label_ids:
-            resolved = [label for label in request.label_ids if label]
-        assert resolved == ["CATEGORY_PROMOTIONS"]
-
-
-class TestGetContactList:
-    def test_missing_token_raises(self):
-        from app.services.composio.custom_tools.gmail_tools import GetContactListInput
-
-        GetContactListInput(query="john")
-        auth: Dict[str, Any] = {}
-        token = auth.get("access_token")
-        assert token is None
+# Behavior tests for MARK_AS_READ / STAR_EMAIL / GET_UNREAD_COUNT /
+# GET_CONTACT_LIST live in test_composio_gmail_tools.py — they invoke the
+# registered tool functions with the proxy mocked at the module boundary.
+# The previous tests here duplicated production logic inline (constructing
+# payloads in the test body instead of calling the tool), which provided
+# false confidence; they have been removed in the Composio proxy migration.

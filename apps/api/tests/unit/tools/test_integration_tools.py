@@ -14,7 +14,7 @@ is a pass-through, call register_*_custom_tools() to capture the inner functions
 then invoke them directly with mock auth_credentials and request objects.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from typing import Any, Dict
 from unittest.mock import MagicMock, patch
 
@@ -22,27 +22,7 @@ import httpx
 import pytest
 
 # ── Models ────────────────────────────────────────────────────────────────────
-from app.models.calendar_models import (
-    AddRecurrenceInput,
-    CreateEventInput,
-    DeleteEventInput,
-    EventReference,
-    FetchEventsInput,
-    FindEventInput,
-    GetDaySummaryInput,
-    GetEventInput,
-    ListCalendarsInput,
-    PatchEventInput,
-    SingleEventInput,
-)
 from app.models.common_models import GatherContextInput
-from app.models.google_sheets_models import (
-    ChartInput,
-    ConditionalFormatInput,
-    DataValidationInput,
-    ShareRecipient,
-    ShareSpreadsheetInput,
-)
 from app.models.linear_models import (
     BulkUpdateIssuesInput,
     CreateIssueInput,
@@ -57,28 +37,6 @@ from app.models.linear_models import (
     ResolveContextInput,
     SearchIssuesInput,
     SubIssueItem,
-)
-from app.models.linkedin_models import (
-    AddCommentInput,
-    CreatePostInput,
-    DeleteReactionInput,
-    GetPostCommentsInput,
-    GetPostReactionsInput,
-    ReactToPostInput,
-)
-from app.models.notion_models import (
-    CreateTestPageInput,
-    FetchDataInput,
-    FetchPageAsMarkdownInput,
-    InsertMarkdownInput,
-    MovePageInput,
-)
-from app.models.twitter_models import (
-    BatchFollowInput,
-    BatchUnfollowInput,
-    CreateThreadInput,
-    ScheduleTweetInput,
-    SearchUsersInput,
 )
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -1750,4 +1708,3 @@ class TestLinearGatherContext:
         result = fn(GatherContextInput(), EXECUTE_REQUEST, AUTH_CREDS)
         assert result["user"]["id"] == "u1"
         assert len(result["teams"]) == 1
-
