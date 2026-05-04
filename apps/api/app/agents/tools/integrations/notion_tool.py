@@ -3,7 +3,7 @@
 These tools wrap existing Composio Notion tools and add markdown conversion:
 - FETCH_PAGE_AS_MARKDOWN: Calls NOTION_FETCH_ALL_BLOCK_CONTENTS → converts to markdown
 - INSERT_MARKDOWN: Converts markdown → calls NOTION_ADD_MULTIPLE_PAGE_CONTENT
-- MOVE_PAGE / FETCH_DATA / CUSTOM_CREATE_TEST_PAGE: route through Composio's
+- MOVE_PAGE / FETCH_DATA : route through Composio's
   proxy via `proxy_request_sync` (no existing Composio equivalent)
 
 Note: Errors are raised as exceptions - Composio wraps responses automatically.
@@ -11,11 +11,9 @@ Note: Errors are raised as exceptions - Composio wraps responses automatically.
 
 from typing import Any, Dict, List
 
-from shared.py.wide_events import log
 from app.decorators import with_doc
 from app.models.common_models import GatherContextInput
 from app.models.notion_models import (
-    CreateTestPageInput,
     FetchDataInput,
     FetchPageAsMarkdownInput,
     InsertMarkdownInput,
@@ -33,6 +31,7 @@ from app.utils.errors import AppError
 from app.utils.notion_md import blocks_to_markdown, markdown_to_notion_blocks
 from composio import Composio
 from composio.core.models.tools import ToolExecutionResponse
+from shared.py.wide_events import log
 
 NOTION_API_BASE = "https://api.notion.com/v1"
 NOTION_TOOLKIT = "NOTION"
@@ -303,58 +302,6 @@ def register_notion_custom_tools(composio: Composio) -> List[str]:
             raise RuntimeError(f"Failed to fetch {request.fetch_type}: {str(e)}")
 
     @composio.tools.custom_tool(toolkit="NOTION")
-    @with_doc("Create a simple test page for integration testing.")
-    def CUSTOM_CREATE_TEST_PAGE(
-        request: CreateTestPageInput,
-        execute_request: Any,
-        auth_credentials: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        """Create a new page in Notion."""
-        log.set(tool={"integration": "notion", "action": "create_test_page"})
-        user_id = _user_id(auth_credentials)
-
-        if not request.parent_page_id:
-            try:
-                search_data = proxy_request_sync(
-                    user_id=user_id,
-                    toolkit=NOTION_TOOLKIT,
-                    endpoint=f"{NOTION_API_BASE}/search",
-                    method="POST",
-                    body={
-                        "filter": {"property": "object", "value": "page"},
-                        "page_size": 1,
-                    },
-                    headers=_NOTION_HEADERS,
-                ) or {}
-                results = search_data.get("results", [])
-                if results:
-                    request.parent_page_id = results[0]["id"]
-                else:
-                    raise ValueError(
-                        "No parent page provided and no pages found in workspace."
-                    )
-            except Exception as e:
-                raise ValueError(f"Failed to search for parent page: {e}")
-
-        properties = {"title": [{"type": "text", "text": {"content": request.title}}]}
-
-        try:
-            data = proxy_request_sync(
-                user_id=user_id,
-                toolkit=NOTION_TOOLKIT,
-                endpoint=f"{NOTION_API_BASE}/pages",
-                method="POST",
-                body={
-                    "parent": {"page_id": request.parent_page_id},
-                    "properties": properties,
-                },
-                headers=_NOTION_HEADERS,
-            ) or {}
-            return {"page_id": data.get("id"), "url": data.get("url")}
-        except Exception as e:
-            raise RuntimeError(f"Failed to create page: {e}")
-
-    @composio.tools.custom_tool(toolkit="NOTION")
     def CUSTOM_GATHER_CONTEXT(
         request: GatherContextInput,
         execute_request: Any,
@@ -377,6 +324,5 @@ def register_notion_custom_tools(composio: Composio) -> List[str]:
         "NOTION_FETCH_PAGE_AS_MARKDOWN",
         "NOTION_INSERT_MARKDOWN",
         "NOTION_FETCH_DATA",
-        "NOTION_CUSTOM_CREATE_TEST_PAGE",
         "NOTION_CUSTOM_GATHER_CONTEXT",
     ]
