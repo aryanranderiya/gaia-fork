@@ -57,6 +57,12 @@ const nextConfig = {
     // and:  https://nextjs-forum.com/post/1471409705514569798
     resolveAlias: {
       "@icons": "@theexperiencecompany/gaia-icons/solid-rounded",
+      // Stub out unused heavy deps (mirrors the webpack hook below). Webpack's
+      // `alias: false` doesn't exist for Turbopack — we point to a tiny empty
+      // module that exports a no-op proxy.
+      cytoscape: "./scripts/empty-module.mjs",
+      "cytoscape-cose-bilkent": "./scripts/empty-module.mjs",
+      "cytoscape-fcose": "./scripts/empty-module.mjs",
       "node:inspector": "inspector",
       "node:fs": "fs",
       "node:fs/promises": "fs/promises",
