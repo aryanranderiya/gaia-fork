@@ -341,13 +341,6 @@ class ComposioService:
             ]
 
             if not active_accounts:
-                # No active account to delete - treat as success (idempotent disconnect).
-                # Still flush the proxy cache in case a previous session cached an ID
-                # that has since been revoked outside this code path.
-                if config.toolkit:
-                    invalidate_connected_account_cache(
-                        user_id=user_id, toolkit=config.toolkit
-                    )
                 log.info(
                     f"No active connected account found for {provider} and user {user_id}, nothing to delete"
                 )
@@ -366,14 +359,6 @@ class ComposioService:
 
             await asyncio.gather(*delete_tasks)
 
-            # Invalidate the proxy client's connected_account_id cache so the
-            # next proxy request re-resolves and either finds the new account
-            # or fails fast with a clear "no active connection" error.
-            if config.toolkit:
-                invalidate_connected_account_cache(
-                    user_id=user_id, toolkit=config.toolkit
-                )
-
             log.info(
                 f"Deleted {len(active_accounts)} connected account(s) for {provider} and user {user_id}"
             )
@@ -389,6 +374,17 @@ class ComposioService:
                 f"Error deleting connected account for {provider} and user {user_id}: {e}"
             )
             raise
+        finally:
+            # Always flush the proxy connected_account_id cache: on success the
+            # cached ID is gone, on partial failure it may now be invalid, and
+            # on the idempotent no-op path a previous session may have cached
+            # an ID revoked outside this code path. Skipping invalidation when
+            # gather() raises would leave stale IDs in memory for up to the
+            # full TTL.
+            if config.toolkit:
+                invalidate_connected_account_cache(
+                    user_id=user_id, toolkit=config.toolkit
+                )
 
     async def handle_subscribe_trigger(
         self, user_id: str, triggers: list[TriggerConfig]
