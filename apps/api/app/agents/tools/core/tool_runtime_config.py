@@ -47,13 +47,24 @@ def build_provider_parent_tool_runtime_config(
     auto_bind_tool_names: list[str] | None,
     use_direct_tools: bool,
     disable_retrieve_tools: bool,
+    include_finish_task: bool = True,
 ) -> ToolRuntimeConfig:
     """Build parent provider-agent tool runtime config."""
+    finish = [FINISH_TASK_NAME] if include_finish_task else []
+    # When `use_direct_tools=True`, `provider_tool_names` already contains every
+    # tool in the subagent's tool_space, so any overlap with `auto_bind_tool_names`
+    # would duplicate entries in `initial`. Filter the auto-bind list against
+    # the provider tools to keep `initial` deduplicated.
+    provider_tool_set = set(provider_tool_names)
+    extra_auto_bind = [
+        name for name in (auto_bind_tool_names or []) if name not in provider_tool_set
+    ]
     if use_direct_tools:
         initial = [
             *provider_tool_names,
+            *extra_auto_bind,
             *todo_tool_names,
-            FINISH_TASK_NAME,
+            *finish,
             "vfs_read",
             "vfs_cmd",
         ]
@@ -62,11 +73,10 @@ def build_provider_parent_tool_runtime_config(
             "search_memory",
             "vfs_read",
             "vfs_cmd",
-            FINISH_TASK_NAME,
+            *finish,
             *todo_tool_names,
+            *extra_auto_bind,
         ]
-        if auto_bind_tool_names and not disable_retrieve_tools:
-            initial.extend(auto_bind_tool_names)
 
     return ToolRuntimeConfig(
         initial_tool_names=initial,
