@@ -18,7 +18,9 @@ async def finish_task(result: str) -> str:
 # matches the routing constant. If someone renames the function without
 # updating FINISH_TASK_NAME, this fires immediately instead of silently
 # breaking the finish_task → END short-circuit.
-assert finish_task.name == FINISH_TASK_NAME, (
+# nosec B101 — intentional import-time invariant; the message is for developers,
+# not security-sensitive runtime data.
+assert finish_task.name == FINISH_TASK_NAME, (  # nosec B101
     f"finish_task tool name mismatch: tool exposes {finish_task.name!r} but "
     f"FINISH_TASK_NAME is {FINISH_TASK_NAME!r}"
 )

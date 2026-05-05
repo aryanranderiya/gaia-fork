@@ -17,14 +17,14 @@ Key exports:
 
 import json
 from datetime import datetime
-from typing import AsyncGenerator, List, Optional
+from typing import AsyncGenerator, Optional
 
+from app.agents.core.subagents.registry import all_subagents, get_subagent_by_id
 from app.agents.core.subagents.subagent_helpers import (
     create_agent_context_message,
     create_subagent_system_message,
 )
 from shared.py.wide_events import log
-from app.config.oauth_config import OAUTH_INTEGRATIONS
 from app.constants.general import FINISH_TASK_NAME
 from app.core.lazy_loader import providers
 from app.core.stream_manager import stream_manager
@@ -38,6 +38,20 @@ from langchain_core.messages import (
     SystemMessage,
     ToolMessage,
 )
+
+
+def _capture_finish_task_content(chunk: ToolMessage, current_message: str) -> str:
+    """Return the finish_task chunk's textual content if applicable.
+
+    `finish_task` (when used by a subagent) carries the final answer in its
+    return value. Capture it as the complete message so the parent handoff
+    returns the actual content rather than the literal "Task completed"
+    fallback. Subagents with include_finish_task=False terminate via a
+    normal AIMessage and never enter this branch.
+    """
+    if chunk.name == FINISH_TASK_NAME and isinstance(chunk.content, str):
+        return chunk.content
+    return current_message
 
 
 class SubagentExecutionContext:
@@ -62,27 +76,6 @@ class SubagentExecutionContext:
         self.initial_state = initial_state
         self.user_id = user_id
         self.stream_id = stream_id
-
-
-def get_subagent_integrations() -> List:
-    """Get all integrations that have subagent configurations."""
-    return [
-        integration
-        for integration in OAUTH_INTEGRATIONS
-        if integration.subagent_config and integration.subagent_config.has_subagent
-    ]
-
-
-def get_subagent_by_id(subagent_id: str):
-    """Get subagent integration by ID or short_name."""
-    search_id = subagent_id.lower().strip()
-    for integ in OAUTH_INTEGRATIONS:
-        if integ.id.lower() == search_id or (
-            integ.short_name and integ.short_name.lower() == search_id
-        ):
-            if integ.subagent_config and integ.subagent_config.has_subagent:
-                return integ
-    return None
 
 
 async def build_initial_messages(
@@ -165,20 +158,19 @@ async def prepare_subagent_execution(
     clean_id = subagent_id.replace("subagent:", "").strip()
 
     # Resolve subagent
-    integration = get_subagent_by_id(clean_id)
-    if not integration or not integration.subagent_config:
-        available = [i.id for i in get_subagent_integrations()][:5]
+    subagent = get_subagent_by_id(clean_id)
+    if not subagent:
+        available = [s.id for s in all_subagents()][:5]
         return None, (
             f"Subagent '{subagent_id}' not found. "
             f"Available: {', '.join(available)}{'...' if len(available) == 5 else ''}"
         )
 
-    subagent_cfg = integration.subagent_config
-    agent_name = subagent_cfg.agent_name
+    agent_name = subagent.config.agent_name
     log.set(
         subagent={
             "name": agent_name,
-            "provider": integration.provider,
+            "provider": subagent.provider,
             "task_length": len(task),
         }
     )
@@ -189,7 +181,7 @@ async def prepare_subagent_execution(
         return None, f"Subagent {agent_name} not available"
 
     # Build thread ID and config
-    subagent_thread_id = f"{integration.id}_{conversation_id}"
+    subagent_thread_id = f"{subagent.id}_{conversation_id}"
     config = build_agent_config(
         conversation_id=conversation_id,
         user=user,
@@ -204,7 +196,7 @@ async def prepare_subagent_execution(
 
     # Create messages using shared helper
     system_message = await create_subagent_system_message(
-        integration_id=integration.id,
+        integration_id=subagent.id,
         agent_name=agent_name,
         user_id=user_id,
     )
@@ -225,7 +217,7 @@ async def prepare_subagent_execution(
         agent_name=agent_name,
         config=config,
         configurable=configurable,
-        integration_id=integration.id,
+        integration_id=subagent.id,
         initial_state=initial_state,
         user_id=user_id,
         stream_id=stream_id,
@@ -305,12 +297,7 @@ async def execute_subagent_stream(
                     if isinstance(chunk.content, str)
                     else str(chunk.content)
                 )
-                # finish_task is the explicit "this is my final answer" tool —
-                # its content IS the message returned to the parent. The
-                # AIMessage that issued the call typically has empty content
-                # (tool-call-only response), so we capture the result here.
-                if chunk.name == FINISH_TASK_NAME:
-                    finish_task_result = content_str
+                complete_message = _capture_finish_task_content(chunk, complete_message)
                 if stream_writer:
                     stream_writer(
                         {
@@ -415,8 +402,7 @@ async def prepare_executor_execution(
     tool_category = configurable.get("tool_category")
     selected_tool = configurable.get("selected_tool")
     if tool_category and selected_tool:
-        subagent_integration = get_subagent_by_id(tool_category)
-        if subagent_integration:
+        if get_subagent_by_id(tool_category):
             enhanced_task = (
                 f"{task}\n\n"
                 f"DIRECT EXECUTION HINT: The tool '{selected_tool}' belongs to the "
@@ -511,9 +497,9 @@ async def call_subagent(
     # Optional integration check (before prepare to fail fast)
     if not skip_integration_check and user_id:
         clean_id = subagent_id.replace("subagent:", "").strip()
-        integration = get_subagent_by_id(clean_id)
-        if integration:
-            error_message = await check_subagent_integration(integration.id, user_id)
+        subagent = get_subagent_by_id(clean_id)
+        if subagent:
+            error_message = await check_subagent_integration(subagent.id, user_id)
             if error_message:
                 yield f"data: {json.dumps({'error': error_message})}\n\n"
                 yield "data: [DONE]\n\n"
@@ -587,12 +573,8 @@ async def call_subagent(
                     if isinstance(chunk.content, str)
                     else str(chunk.content)
                 )
-                # finish_task content is the subagent's final response —
-                # capture it for the parent and surface it as a streamed
-                # response chunk so the user sees the same text the parent
-                # will receive.
+                complete_message = _capture_finish_task_content(chunk, complete_message)
                 if chunk.name == FINISH_TASK_NAME:
-                    finish_task_result = content_str
                     yield f"data: {json.dumps({'response': content_str})}\n\n"
                 yield f"data: {json.dumps({'tool_output': {'tool_call_id': chunk.tool_call_id, 'output': content_str[:3000]}})}\n\n"
             continue
