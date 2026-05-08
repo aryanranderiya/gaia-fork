@@ -2,7 +2,7 @@ import {
   Cancel01Icon,
   CheckmarkCircle02Icon,
   SourceCodeCircleIcon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type React from "react";
 import CopyButton from "@/features/chat/components/code-block/CopyButton";
 

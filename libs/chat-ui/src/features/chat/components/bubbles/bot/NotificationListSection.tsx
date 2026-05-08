@@ -2,7 +2,7 @@ import { Accordion, AccordionItem } from "@heroui/accordion";
 import { Button } from "@heroui/button";
 import { Chip } from "@heroui/chip";
 import { ScrollShadow } from "@heroui/scroll-shadow";
-import { NotificationIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { NotificationIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useState } from "react";
 import { NotificationItem } from "@/features/notification/components/NotificationItem";
 import { toast } from "@/lib/toast";

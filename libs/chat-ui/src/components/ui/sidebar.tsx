@@ -1,6 +1,6 @@
 "use client";
 
-import { SidebarLeft01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { SidebarLeft01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";

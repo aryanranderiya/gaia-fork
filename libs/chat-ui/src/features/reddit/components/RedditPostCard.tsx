@@ -2,7 +2,7 @@
 
 import { Chip } from "@heroui/chip";
 
-import { ArrowUp02Icon, BubbleChatIcon, LinkSquare02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { ArrowUp02Icon, BubbleChatIcon, LinkSquare02Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type { RedditPostData } from "@/types/features/redditTypes";
 
 interface RedditPostCardProps {

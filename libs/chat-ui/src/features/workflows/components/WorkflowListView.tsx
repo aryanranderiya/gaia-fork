@@ -6,7 +6,7 @@ import {
   MagicWand01Icon,
   WorkflowSquare05Icon,
   ZapIcon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useMemo } from "react";
 import type { CardAction } from "@/features/chat/components/interface/BaseCardView";

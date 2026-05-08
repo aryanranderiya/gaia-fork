@@ -1,5 +1,5 @@
 import { Button } from "@heroui/button";
-import { SquareLock01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { SquareLock01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type React from "react";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
 import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";

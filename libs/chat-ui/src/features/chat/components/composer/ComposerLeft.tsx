@@ -1,6 +1,6 @@
 import { Kbd } from "@heroui/react";
 import { Tooltip } from "@heroui/tooltip";
-import { AttachmentIcon, PlusSignIcon, Tick02Icon, ToolsIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { AttachmentIcon, PlusSignIcon, Tick02Icon, ToolsIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {

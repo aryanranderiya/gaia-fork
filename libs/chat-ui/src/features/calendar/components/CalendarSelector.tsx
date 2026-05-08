@@ -1,5 +1,5 @@
 import { Chip } from "@heroui/chip";
-import { ViewIcon, ViewOffSlashIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { ViewIcon, ViewOffSlashIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { isTooDark } from "@/features/calendar/utils/calendarUtils";
 import type {
   CalendarChipProps,

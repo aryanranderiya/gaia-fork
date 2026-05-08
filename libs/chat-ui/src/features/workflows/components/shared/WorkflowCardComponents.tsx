@@ -8,7 +8,7 @@ import {
   Mail01Icon,
   PlayIcon,
   UserCircle02Icon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import Image from "next/image";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";
 import {

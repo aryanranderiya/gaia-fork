@@ -1,7 +1,7 @@
 "use client";
 
 import { Accordion, AccordionItem } from "@heroui/accordion";
-import { ToolsIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { ToolsIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useMemo, useState } from "react";
 import { ChevronDown } from "@/components/shared/icons";
 import { CompactMarkdown } from "@/components/ui/CompactMarkdown";

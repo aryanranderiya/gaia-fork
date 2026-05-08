@@ -1,7 +1,7 @@
 "use client";
 
 import { ScrollShadow } from "@heroui/scroll-shadow";
-import { ArrowUp02Icon, BubbleChatIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { ArrowUp02Icon, BubbleChatIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import Link from "next/link";
 import CollapsibleListWrapper from "@/components/shared/CollapsibleListWrapper";
 import { RedditIcon } from "@/components/shared/icons";

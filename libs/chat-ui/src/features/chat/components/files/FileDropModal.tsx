@@ -1,6 +1,6 @@
 "use client";
 
-import { File01Icon, FileUploadIcon, Upload01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { File01Icon, FileUploadIcon, Upload01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 

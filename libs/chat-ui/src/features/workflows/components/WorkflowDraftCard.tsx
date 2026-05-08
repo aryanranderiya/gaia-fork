@@ -8,7 +8,7 @@ import {
   FlashIcon,
   FlowIcon,
   PencilEdit01Icon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useState } from "react";
 import type { WorkflowDraftData } from "@/types/features/toolDataTypes";
 

@@ -6,7 +6,7 @@ import {
   CheckmarkBadge02Icon,
   LinkIcon,
   MapsIcon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import { format, parseISO } from "date-fns";
 import CollapsibleListWrapper from "@/components/shared/CollapsibleListWrapper";

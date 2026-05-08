@@ -1,5 +1,5 @@
 import { Tab, Tabs } from "@heroui/tabs";
-import { Clock04Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Clock04Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 
 import type { Workflow } from "../../api/workflowApi";
 import WorkflowExecutionHistory from "../WorkflowExecutionHistory";

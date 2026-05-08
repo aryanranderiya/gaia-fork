@@ -4,7 +4,7 @@ import { Chip } from "@heroui/chip";
 import { Link } from "@heroui/link";
 import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Tooltip } from "@heroui/tooltip";
-import { ArrowRight02Icon, ConnectIcon, InformationCircleIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { ArrowRight02Icon, ConnectIcon, InformationCircleIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CollapsibleListWrapper from "@/components/shared/CollapsibleListWrapper";

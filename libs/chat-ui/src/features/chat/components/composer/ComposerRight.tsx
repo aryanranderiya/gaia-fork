@@ -1,7 +1,7 @@
 import { Button } from "@heroui/button";
 import { Kbd } from "@heroui/react";
 import { Tooltip } from "@heroui/tooltip";
-import { ArrowUp02Icon, StopIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { ArrowUp02Icon, StopIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useCalendarEventSelection } from "@/features/chat/hooks/useCalendarEventSelection";
 import { useLoading } from "@/features/chat/hooks/useLoading";
 import { useWorkflowSelection } from "@/features/chat/hooks/useWorkflowSelection";

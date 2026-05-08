@@ -1,6 +1,6 @@
 "use client";
 
-import { Folder02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Folder02Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type { Project } from "@/types/features/todoTypes";
 
 import BaseFieldChip from "./BaseFieldChip";

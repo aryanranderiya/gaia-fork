@@ -1,4 +1,4 @@
-import { Brain02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Brain02Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useState } from "react";
 
 interface ThinkingBubbleProps {

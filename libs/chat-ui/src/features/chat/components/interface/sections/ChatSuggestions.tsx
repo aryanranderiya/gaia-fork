@@ -1,5 +1,5 @@
 import { Button } from "@heroui/button";
-import { UndoIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { UndoIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import * as m from "motion/react-m";
 import type React from "react";
 import { useCallback, useMemo, useState } from "react";

@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingIcon, MicIcon, MicOffIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { LoadingIcon, MicIcon, MicOffIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type { useTrackToggle } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import * as React from "react";

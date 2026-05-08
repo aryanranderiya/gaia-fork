@@ -1,4 +1,4 @@
-import { Timer02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Timer02Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import Twemoji from "react-twemoji";
 import {
   formatEventDate,

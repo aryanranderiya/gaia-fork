@@ -1,6 +1,6 @@
 "use client";
 
-import { Flag02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Flag02Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { Priority } from "@/types/features/todoTypes";
 
 import BaseFieldChip from "./BaseFieldChip";

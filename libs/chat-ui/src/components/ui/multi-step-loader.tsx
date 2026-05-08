@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckmarkCircle02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { CheckmarkCircle02Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import { useEffect, useState } from "react";

@@ -8,7 +8,7 @@ import {
   Flag02Icon,
   Folder02Icon,
   Tag01Icon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { memo, useMemo } from "react";
 import { ChevronRight } from "@/components/shared/icons";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";

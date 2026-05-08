@@ -8,7 +8,7 @@ import {
   CheckmarkCircle02Icon,
   Clock04Icon,
   Loading03Icon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useRouter } from "next/navigation";
 import { ChevronRight } from "@/components/shared/icons";
 

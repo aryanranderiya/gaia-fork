@@ -13,7 +13,7 @@ function getTypedData<K extends ToolName>(
 }
 
 import { Chip } from "@heroui/chip";
-import { Alert01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Alert01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import dynamic from "next/dynamic";
 import React, { useId } from "react";
 // import { PostHogCaptureOnViewed } from "posthog-js/react";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { AiBrain01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { AiBrain01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { useEffect, useState } from "react";
 
 interface MemoryResult {

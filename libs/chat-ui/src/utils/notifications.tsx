@@ -6,7 +6,7 @@ import {
   CheckmarkSquare03Icon,
   Mail01Icon,
   NotificationIcon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type { NotificationSource } from "@/types/notifications";
 
 export const getNotificationIcon = (type: NotificationSource) => {

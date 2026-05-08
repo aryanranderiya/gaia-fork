@@ -1,6 +1,6 @@
 "use client";
 
-import { Cancel01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { Cancel01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import type { SelectedCalendarEventData } from "@/features/chat/hooks/useCalendarEventSelection";

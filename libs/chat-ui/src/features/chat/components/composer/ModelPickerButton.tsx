@@ -5,7 +5,7 @@ import {
   SelectSection,
   type SharedSelection,
 } from "@heroui/react";
-import { BubbleChatSparkIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { BubbleChatSparkIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import Image from "next/image";
 import type React from "react";
 import { useMemo } from "react";

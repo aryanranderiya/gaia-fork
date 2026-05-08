@@ -13,7 +13,7 @@ import {
   ReloadIcon,
   ToggleOffIcon,
   ToggleOnIcon,
-} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+} from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { type Control, Controller, type FieldErrors } from "react-hook-form";
 
 import type { Workflow } from "../../api/workflowApi";

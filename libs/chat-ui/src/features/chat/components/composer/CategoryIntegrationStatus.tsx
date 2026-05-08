@@ -1,5 +1,5 @@
 import { Chip } from "@heroui/chip";
-import { SquareLock01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { SquareLock01Icon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import type React from "react";
 import { useIntegrations } from "@/features/integrations/hooks/useIntegrations";
 

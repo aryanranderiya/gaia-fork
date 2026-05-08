@@ -1,7 +1,7 @@
 "use client";
 
 import { Input } from "@heroui/input";
-import { CalendarIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
+import { CalendarIcon } from "@theexperiencecompany/gaia-icons/solid-rounded";
 import { parseDate } from "chrono-node";
 import React, { useId } from "react";
 import { Calendar } from "@/components/ui/calendar";
