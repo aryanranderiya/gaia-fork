@@ -517,8 +517,8 @@ importers:
         specifier: 2.2.25
         version: 2.2.25(@heroui/system@2.4.26(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@heroui/theme@2.4.26(tailwindcss@4.2.2))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       '@heygaia/chat-ui':
-        specifier: 0.0.0-feat-chat-ui.1706af7
-        version: 0.0.0-feat-chat-ui.1706af7(99c4c8eecee0fa91c4884ef0cb0fdd32)
+        specifier: workspace:*
+        version: link:../../libs/chat-ui
       '@hookform/resolvers':
         specifier: ^5.2.1
         version: 5.2.2(react-hook-form@7.72.1(react@19.1.0))
@@ -4152,31 +4152,6 @@ packages:
       '@heroui/theme': '>=2.4.24'
       react: 19.1.0
       react-dom: 19.1.0
-
-  '@heygaia/chat-ui@0.0.0-feat-chat-ui.1706af7':
-    resolution: {integrity: sha512-cj6bI/KmT3Km+iNo0/ePsTYZ3rgLGEQ7mRv7GMulroXVOlVJizt/pF/IkEzhDDj4cRqXNRK+TjbwM6KqbFXwVQ==}
-    peerDependencies:
-      '@heroui/accordion': '*'
-      '@heroui/button': '*'
-      '@heroui/chip': '*'
-      '@heroui/skeleton': '*'
-      '@heroui/spinner': '*'
-      '@heroui/tooltip': '*'
-      '@theexperiencecompany/gaia-icons': ^1.9.0
-      class-variance-authority: '*'
-      clsx: '*'
-      date-fns: '*'
-      motion: '*'
-      next: '>=15'
-      react: 19.1.0
-      react-dom: 19.1.0
-      react-markdown: '*'
-      remark-gfm: '*'
-      tailwind-merge: '*'
-      zustand: '*'
-    peerDependenciesMeta:
-      next:
-        optional: true
 
   '@hono/node-server@1.19.12':
     resolution: {integrity: sha512-txsUW4SQ1iilgE0l9/e9VQWmELXifEFvmdA1j6WFh/aFPj99hIntrSsq/if0UWyGVkmrRPKA1wCeP+UCr1B9Uw==}
@@ -23413,28 +23388,6 @@ snapshots:
       '@react-aria/focus': 3.21.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
-
-  '@heygaia/chat-ui@0.0.0-feat-chat-ui.1706af7(99c4c8eecee0fa91c4884ef0cb0fdd32)':
-    dependencies:
-      '@heroui/accordion': 2.2.27(@heroui/system@2.4.26(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@heroui/button': 2.2.30(@heroui/system@2.4.26(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@heroui/chip': 2.2.24(@heroui/system@2.4.26(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@heroui/theme@2.4.26(tailwindcss@4.2.2))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@heroui/skeleton': 2.2.18(@heroui/system@2.4.26(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@heroui/theme@2.4.26(tailwindcss@4.2.2))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@heroui/spinner': 2.2.27(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@heroui/tooltip': 2.2.27(@heroui/system@2.4.26(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(@heroui/theme@2.4.26(tailwindcss@4.2.2))(framer-motion@12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@theexperiencecompany/gaia-icons': 1.9.0(react@19.1.0)
-      class-variance-authority: 0.7.1
-      clsx: 2.1.1
-      date-fns: 4.1.0
-      motion: 12.38.0(@emotion/is-prop-valid@1.4.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      react: 19.1.0
-      react-dom: 19.1.0(react@19.1.0)
-      react-markdown: 10.1.0(@types/react@19.2.14)(react@19.1.0)
-      remark-gfm: 4.0.1
-      tailwind-merge: 3.5.0
-      zustand: 5.0.12(@types/react@19.2.14)(react@19.1.0)(use-sync-external-store@1.6.0(react@19.1.0))
-    optionalDependencies:
-      next: 16.1.7(@babel/core@7.29.0)(@opentelemetry/api@1.9.1)(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(sass@1.99.0)
 
   '@hono/node-server@1.19.12(hono@4.12.12)':
     dependencies:

@@ -1,7 +1,7 @@
 /**
  * Stub for chat-ui — real impl in apps/web. Replace at integration time.
  */
-import type { SystemPurpose } from "../api/chatApi";
+import type { SystemPurpose } from "@/types/features/chatApiTypes";
 
 interface ConversationListItem {
   conversation_id: string;

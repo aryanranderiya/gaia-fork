@@ -1,5 +1,7 @@
 /**
- * Stub for chat-ui — real impl in apps/web. Replace at integration time.
+ * Stub for chat-ui — types come from libs/chat-ui/src/types/features/chatApiTypes.ts
+ * (the real, shared source of truth). Only the runtime functions are stubbed.
+ * Real impl in apps/web/src/features/chat/api/chatApi.ts.
  */
 import type { EventSourceMessage } from "@microsoft/fetch-event-source";
 
@@ -8,70 +10,29 @@ import type { MessageType } from "@/types/features/convoTypes";
 import type { WorkflowData } from "@/types/features/workflowTypes";
 import type { FileData } from "@/types/shared/fileTypes";
 
-export interface FileUploadResponse {
-  fileId: string;
-  fileName: string;
-  fileSize: number;
-  contentType: string;
-  url?: string;
-  description?: string;
-  message?: string;
-}
+export type {
+  Conversation,
+  ConversationSyncItem,
+  ConversationWithMessages,
+  FetchConversationsResponse,
+  FileUploadResponse,
+  GenerateImageResponse,
+} from "@/types/features/chatApiTypes";
+// Re-export the canonical types so existing consumers
+// (`from "@/features/chat/api/chatApi"`) keep working unchanged.
+export {
+  ConversationSource,
+  SystemPurpose,
+} from "@/types/features/chatApiTypes";
 
-export interface GenerateImageResponse {
-  url: string;
-  improved_prompt?: string;
-}
-
-// Enums copied verbatim — pure data.
-export enum SystemPurpose {
-  EMAIL_PROCESSING = "email_processing",
-  WORKFLOW_EXECUTION = "workflow_execution",
-  OTHER = "other",
-}
-
-export enum ConversationSource {
-  WEB = "web",
-  MOBILE = "mobile",
-  TELEGRAM = "telegram",
-  DISCORD = "discord",
-  SLACK = "slack",
-  WHATSAPP = "whatsapp",
-  WORKFLOW_SYSTEM = "workflow_system",
-}
-
-export interface Conversation {
-  _id: string;
-  user_id: string;
-  conversation_id: string;
-  description: string;
-  starred?: boolean;
-  is_system_generated?: boolean;
-  system_purpose?: SystemPurpose;
-  is_unread?: boolean;
-  source?: ConversationSource;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface ConversationWithMessages {
-  id: string;
-  title: string;
-  messages: MessageType[];
-}
-
-export interface FetchConversationsResponse {
-  conversations: Conversation[];
-  total: number;
-  page: number;
-  limit: number;
-  total_pages: number;
-}
-
-export interface ConversationSyncItem {
-  conversation_id: string;
-  last_updated?: string;
-}
+import type {
+  Conversation,
+  ConversationSyncItem,
+  FetchConversationsResponse,
+  FileUploadResponse,
+  GenerateImageResponse,
+  SystemPurpose,
+} from "@/types/features/chatApiTypes";
 
 export const chatApi = {
   fetchConversations: async (
@@ -88,17 +49,19 @@ export const chatApi = {
   batchSyncConversations: async (
     _conversations: ConversationSyncItem[],
   ): Promise<{
-    conversations: {
-      conversation_id: string;
-      description: string;
-      starred?: boolean;
-      is_system_generated?: boolean;
+    conversations: (Pick<
+      Conversation,
+      | "conversation_id"
+      | "description"
+      | "starred"
+      | "is_system_generated"
+      | "is_unread"
+      | "createdAt"
+      | "updatedAt"
+    > & {
       system_purpose?: SystemPurpose;
-      is_unread?: boolean;
-      createdAt: string;
-      updatedAt?: string;
       messages: MessageType[];
-    }[];
+    })[];
   }> => ({ conversations: [] }),
 
   uploadFile: async (_file: File): Promise<FileUploadResponse> => ({
@@ -108,9 +71,9 @@ export const chatApi = {
     contentType: "",
   }),
 
-  generateImage: async (
-    _prompt: string,
-  ): Promise<GenerateImageResponse> => ({ url: "" }),
+  generateImage: async (_prompt: string): Promise<GenerateImageResponse> => ({
+    url: "",
+  }),
 
   togglePinMessage: async (
     _conversationId: string,
