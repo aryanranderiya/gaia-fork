@@ -16,7 +16,7 @@ export type {
   FetchConversationsResponse,
   FileUploadResponse,
   GenerateImageResponse,
-} from "@heygaia/chat-ui";
+} from "@chat-ui";
 // Types are the canonical source of truth in @heygaia/chat-ui — re-exported
 // here so existing consumers (`from "@/features/chat/api/chatApi"`) keep
 // working unchanged. No drift between the package's stubs and apps/web's
@@ -24,7 +24,7 @@ export type {
 export {
   ConversationSource,
   SystemPurpose,
-} from "@heygaia/chat-ui";
+} from "@chat-ui";
 
 import type {
   ConversationSyncItem,
@@ -33,7 +33,7 @@ import type {
   FileUploadResponse,
   GenerateImageResponse,
   SystemPurpose,
-} from "@heygaia/chat-ui";
+} from "@chat-ui";
 
 export const chatApi = {
   // Fetch conversations with pagination

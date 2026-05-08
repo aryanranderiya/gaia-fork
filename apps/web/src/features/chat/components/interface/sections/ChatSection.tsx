@@ -1,4 +1,4 @@
-import { ChatRenderer } from "@heygaia/chat-ui";
+import { ChatRenderer } from "@chat-ui";
 import type React from "react";
 
 interface ChatSectionProps {

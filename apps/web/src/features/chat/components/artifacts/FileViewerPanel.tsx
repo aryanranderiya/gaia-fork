@@ -1,8 +1,8 @@
 "use client";
 
+import { MarkdownRenderer } from "@chat-ui";
 import { Button } from "@heroui/button";
 import { Spinner } from "@heroui/spinner";
-import { MarkdownRenderer } from "@heygaia/chat-ui";
 import {
   Cancel01Icon,
   CodeIcon,

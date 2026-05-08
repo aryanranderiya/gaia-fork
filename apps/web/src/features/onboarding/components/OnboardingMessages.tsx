@@ -1,4 +1,4 @@
-import { ChatBubbleBot, ChatBubbleUser } from "@heygaia/chat-ui";
+import { ChatBubbleBot, ChatBubbleUser } from "@chat-ui";
 import * as m from "motion/react-m";
 
 import type { Message } from "../types";
