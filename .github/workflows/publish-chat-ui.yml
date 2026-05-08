@@ -69,6 +69,8 @@ jobs:
         run: pnpm run build
         working-directory: libs/chat-ui
 
+      # Auth via OIDC (npm Trusted Publishers) when NPM_TOKEN is not set;
+      # falls back to NPM_TOKEN if it exists for one-time bootstrap.
       - name: Publish (prerelease)
         if: steps.version.outputs.is_prerelease == 'true'
         working-directory: libs/chat-ui
