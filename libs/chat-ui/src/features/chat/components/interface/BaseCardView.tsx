@@ -14,7 +14,7 @@ import {
   RedoIcon,
   SquareArrowUpRight02Icon,
   ZapIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { IntegrationConnectCard } from "@/components/shared/IntegrationConnectCard";
 

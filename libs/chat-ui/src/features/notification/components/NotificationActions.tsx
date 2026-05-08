@@ -1,6 +1,6 @@
 "use client";
 
-import { Delete02Icon } from "@icons";
+import { Delete02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import {
   LeadingActions,
   SwipeAction,

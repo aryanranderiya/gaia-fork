@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleArrowUpRightIcon } from "@icons";
+import { CircleArrowUpRightIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import UnifiedWorkflowCard from "@/features/workflows/components/shared/UnifiedWorkflowCard";

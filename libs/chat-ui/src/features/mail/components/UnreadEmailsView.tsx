@@ -9,7 +9,7 @@ import {
   Edit02Icon,
   InboxUnreadIcon,
   Notification01Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { useMemo } from "react";
 import { Gmail } from "@/components/shared/icons";

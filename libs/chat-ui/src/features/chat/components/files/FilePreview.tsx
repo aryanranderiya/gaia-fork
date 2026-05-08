@@ -7,7 +7,7 @@ import {
   MusicNote01Icon,
   Pdf02Icon,
   Video01Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import Image from "next/image";
 import Spinner from "@/components/ui/spinner";
 

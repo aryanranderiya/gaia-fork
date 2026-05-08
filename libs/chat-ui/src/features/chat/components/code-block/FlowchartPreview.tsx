@@ -6,7 +6,7 @@ import {
   RedoIcon,
   ZoomInAreaIcon,
   ZoomOutAreaIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 

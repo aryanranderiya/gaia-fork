@@ -7,7 +7,7 @@ import {
   MessageIcon,
   RepeatIcon,
   ShareIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 import { format, parseISO } from "date-fns";
 import type { TwitterTweetData } from "@/types/features/twitterTypes";

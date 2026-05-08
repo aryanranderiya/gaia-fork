@@ -1,4 +1,4 @@
-import { SquareLock01Icon } from "@icons";
+import { SquareLock01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { formatToolName } from "@/features/chat/utils/chatUtils";
 import { getToolCategoryIcon } from "@/features/chat/utils/toolIcons";

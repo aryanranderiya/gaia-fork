@@ -13,7 +13,7 @@ import {
   Loading02Icon,
   PlusSignIcon,
   Upload01Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatApi } from "@/features/chat/api/chatApi";

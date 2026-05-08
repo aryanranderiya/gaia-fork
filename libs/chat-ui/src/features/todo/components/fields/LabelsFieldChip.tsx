@@ -2,7 +2,7 @@
 
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-import { Cancel01Icon, PlusSignIcon, Tag01Icon } from "@icons";
+import { Cancel01Icon, PlusSignIcon, Tag01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useState } from "react";
 
 import BaseFieldChip from "./BaseFieldChip";

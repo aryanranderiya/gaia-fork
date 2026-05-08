@@ -1,7 +1,7 @@
 "use client";
 
 import { Input } from "@heroui/react";
-import { CalendarIcon, Cancel01Icon } from "@icons";
+import { CalendarIcon, Cancel01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { format, isToday, isTomorrow, isYesterday } from "date-fns";
 
 import BaseFieldChip from "./BaseFieldChip";

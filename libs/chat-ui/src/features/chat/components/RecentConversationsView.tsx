@@ -9,7 +9,7 @@ import {
   HelpCircleIcon,
   MessageMultiple02Icon,
   PlayIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useRouter } from "next/navigation";
 import { memo, useCallback, useMemo } from "react";
 import { DiscordIcon } from "@/components/shared/icons";

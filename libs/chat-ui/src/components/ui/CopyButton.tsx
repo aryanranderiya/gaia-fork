@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { CheckmarkCircle01Icon, Copy01Icon } from "@icons";
+import { CheckmarkCircle01Icon, Copy01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useState } from "react";
 
 interface CopyButtonProps {

@@ -8,7 +8,7 @@ import {
   Sent02Icon,
   SentIcon,
   Tick02Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { EditorContent } from "@tiptap/react";
 import { TagInput } from "emblor";
 import Image from "next/image";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Checkbox } from "@heroui/checkbox";
-import { Cancel01Icon, PlusSignIcon, Tick02Icon } from "@icons";
+import { Cancel01Icon, PlusSignIcon, Tick02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

@@ -1,5 +1,5 @@
 import { Button } from "@heroui/button";
-import { Download01Icon } from "@icons";
+import { Download01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 
 interface DownloadButtonProps {

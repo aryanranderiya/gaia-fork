@@ -9,7 +9,7 @@ import {
   Home12Icon,
   PackageOpenIcon,
   UserCircle02Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { formatDistanceToNow } from "date-fns";
 import Image from "next/image";
 import Link from "next/link";

@@ -1,6 +1,6 @@
 // components/mail/EmailChip.tsx
 import { Chip } from "@heroui/chip";
-import { Cancel01Icon } from "@icons";
+import { Cancel01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 
 export interface EmailSuggestion {

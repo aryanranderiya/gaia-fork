@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { Cancel01Icon } from "@icons";
+import { Cancel01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import * as m from "motion/react-m";
 import { useRouter } from "next/navigation";
 import type { SelectedWorkflowData } from "@/features/chat/hooks/useWorkflowSelection";

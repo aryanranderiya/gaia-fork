@@ -1,4 +1,4 @@
-import { Alert01Icon } from "@icons";
+import { Alert01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import {
   type ActionEvent,
   type ParseResult,

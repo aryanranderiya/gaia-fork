@@ -1,6 +1,6 @@
 import { Skeleton } from "@heroui/skeleton";
 import { Tooltip } from "@heroui/tooltip";
-import { GlobalIcon } from "@icons";
+import { GlobalIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import Image from "next/image";
 import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import {

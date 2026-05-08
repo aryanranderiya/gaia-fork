@@ -5,7 +5,7 @@ import {
   InternetIcon,
   LinkBackwardIcon,
   SearchIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useState } from "react";
 import type {
   DeepResearchResults,

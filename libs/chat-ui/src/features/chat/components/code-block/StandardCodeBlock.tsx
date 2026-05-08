@@ -1,5 +1,5 @@
 import { Button } from "@heroui/button";
-import { Copy01Icon, Tick02Icon } from "@icons";
+import { Copy01Icon, Tick02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { PrismAsyncLight } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";

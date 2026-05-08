@@ -5,7 +5,7 @@ import {
   Download01Icon,
   Image02Icon,
   MaximizeScreenIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import Image from "next/image";
 import type React from "react";
 import { useState } from "react";

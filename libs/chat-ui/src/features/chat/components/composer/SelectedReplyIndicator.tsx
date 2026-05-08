@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { Cancel01Icon, LinkBackwardIcon } from "@icons";
+import { Cancel01Icon, LinkBackwardIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
 import type React from "react";

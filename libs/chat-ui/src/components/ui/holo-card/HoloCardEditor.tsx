@@ -16,7 +16,7 @@ import {
   PaintBoardIcon,
   ReloadIcon,
   Share08Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useCallback, useEffect, useRef, useState } from "react";
 import ColorPicker from "react-best-gradient-color-picker";
 import { TwitterShareButton } from "react-share";

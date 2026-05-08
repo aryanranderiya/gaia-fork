@@ -1,5 +1,5 @@
 import { Button } from "@heroui/button";
-import { Task01Icon, TaskDone01Icon } from "@icons";
+import { Task01Icon, TaskDone01Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 
 interface CopyButtonProps {

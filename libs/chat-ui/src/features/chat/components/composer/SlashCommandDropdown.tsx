@@ -1,7 +1,7 @@
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
 import { ScrollShadow } from "@heroui/scroll-shadow";
-import { Cancel01Icon, GridIcon, SearchIcon } from "@icons";
+import { Cancel01Icon, GridIcon, SearchIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useVirtualizer, type VirtualItem } from "@tanstack/react-virtual";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";

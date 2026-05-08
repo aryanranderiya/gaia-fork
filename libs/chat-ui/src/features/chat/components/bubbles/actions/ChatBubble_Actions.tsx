@@ -7,7 +7,7 @@ import {
   RedoIcon,
   ThumbsDownIcon,
   ThumbsUpIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useParams } from "next/navigation";
 import { chatApi } from "@/features/chat/api/chatApi";
 import { useConversation } from "@/features/chat/hooks/useConversation";

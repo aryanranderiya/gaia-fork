@@ -11,7 +11,7 @@ import {
   SquareIcon,
   StarIcon,
   Timer02Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import dynamic from "next/dynamic";
 import { useCallback, useMemo, useState } from "react";
 import {

@@ -6,7 +6,7 @@ import {
   DownloadCircle01Icon,
   FolderLibraryIcon,
   PackageOpenIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useState } from "react";

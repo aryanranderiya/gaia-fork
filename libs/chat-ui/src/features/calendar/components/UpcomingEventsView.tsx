@@ -8,7 +8,7 @@ import {
   Edit02Icon,
   Mail01Icon,
   Target02Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { useMemo } from "react";
 import { GoogleCalendarIcon } from "@/components/shared/icons";

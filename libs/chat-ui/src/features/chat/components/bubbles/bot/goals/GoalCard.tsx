@@ -7,7 +7,7 @@ import {
   CheckmarkCircle02Icon,
   Target02Icon,
   UserGroupIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { format } from "date-fns";
 
 import type {

@@ -2,7 +2,7 @@
 
 import { Button } from "@heroui/button";
 
-import { ArrowDown02Icon } from "@icons";
+import { ArrowDown02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 
 interface ScrollToBottomButtonProps {
   onScrollToBottom: () => void;

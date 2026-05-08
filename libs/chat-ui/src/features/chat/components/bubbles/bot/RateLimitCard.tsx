@@ -6,7 +6,7 @@ import {
   CheckmarkCircle02Icon,
   Clock01Icon,
   UploadCircle01Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type { RateLimitData } from "@/config/registries/toolRegistry";
 import { usePricingModalStore } from "@/stores/pricingModalStore";
 

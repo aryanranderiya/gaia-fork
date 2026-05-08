@@ -8,7 +8,7 @@ import {
   Copy01Icon,
   Download01Icon,
   File01Icon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useCallback, useEffect, useState, type WheelEvent } from "react";
 import { type VFSReadResponse, vfsApi } from "@/features/chat/api/vfsApi";
 import MarkdownRenderer from "@/features/chat/components/interface/MarkdownRenderer";

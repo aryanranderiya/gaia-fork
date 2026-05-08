@@ -9,7 +9,7 @@ import {
   Flowchart01Icon,
   Loading02Icon,
   TaskDailyIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TodoSidebar } from "@/components/layout/sidebar/right-variants/TodoSidebar";
 import type { CardAction } from "@/features/chat/components/interface/BaseCardView";

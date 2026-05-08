@@ -16,7 +16,7 @@ import {
   ListViewIcon,
   NeuralNetworkIcon,
   PlusSignIcon,
-} from "@icons";
+} from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ConfirmationDialog } from "@/components/shared/ConfirmationDialog";

@@ -10,7 +10,7 @@ import {
   ModalFooter,
   ModalHeader,
 } from "@heroui/react";
-import { KeyIcon } from "@icons";
+import { KeyIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePlatform } from "@/hooks/ui/usePlatform";
 

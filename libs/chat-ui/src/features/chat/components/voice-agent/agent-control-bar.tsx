@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@heroui/button";
-import { Message01Icon, PhoneOffIcon } from "@icons";
+import { Message01Icon, PhoneOffIcon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import { useRemoteParticipants } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import * as React from "react";

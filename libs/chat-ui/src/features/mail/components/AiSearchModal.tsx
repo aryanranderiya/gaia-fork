@@ -1,6 +1,6 @@
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
-import { AiSearch02Icon } from "@icons";
+import { AiSearch02Icon } from "@theexperiencecompany/gaia-icons/dist/solid-rounded";
 import type React from "react";
 import { useMemo, useState } from "react";
 import {
