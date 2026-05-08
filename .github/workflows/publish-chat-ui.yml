@@ -71,17 +71,20 @@ jobs:
 
       # Auth via OIDC (npm Trusted Publishers) when NPM_TOKEN is not set;
       # falls back to NPM_TOKEN if it exists for one-time bootstrap.
+      # Provenance requires github-hosted runners; this workflow runs on
+      # Blacksmith (self-hosted), so provenance is disabled. Re-enable
+      # after migrating to ubuntu-latest or once Blacksmith supports it.
       - name: Publish (prerelease)
         if: steps.version.outputs.is_prerelease == 'true'
         working-directory: libs/chat-ui
-        run: npm publish --tag prerelease --access public --provenance
+        run: npm publish --tag prerelease --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish (stable)
         if: steps.version.outputs.is_prerelease == 'false'
         working-directory: libs/chat-ui
-        run: npm publish --access public --provenance
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 

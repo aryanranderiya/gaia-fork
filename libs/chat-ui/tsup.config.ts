@@ -12,31 +12,14 @@ export default defineConfig({
   // Resolve via tsconfig paths (esbuild reads tsconfig.json paths automatically).
   tsconfig: "./tsconfig.json",
   // External: keep React + heavy peer deps unbundled so consumers dedupe.
+  // Externalize everything that isn't relative or path-aliased.
+  // Anything starting with a letter/@ is an npm dep — peer-resolved
+  // by consumers. Path-aliased imports (@/..., @shared/...) get
+  // resolved into the bundle by tsconfig paths.
   external: [
-    "react",
-    "react-dom",
+    /^[a-z@]/,
     "next",
-    "next/image",
-    "next/link",
-    "next/navigation",
-    "next/dynamic",
-    "motion",
-    "motion/react",
-    "motion/react-m",
-    /^@heroui\//,
-    /^@hugeicons\//,
-    "@theexperiencecompany/gaia-icons",
-    "@theexperiencecompany/gaia-icons/dist/solid-rounded",
-    "react-markdown",
-    "react-syntax-highlighter",
-    /^remark/,
-    /^rehype/,
-    "zustand",
-    "zod",
-    "axios",
-    "posthog-node",
-    "posthog-js",
-    "posthog-js/react",
+    /^next\//,
   ],
   loader: {
     ".css": "copy",
