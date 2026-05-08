@@ -3,10 +3,7 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: ["src/index.ts", "src/styles.css"],
   format: ["esm"],
-  // dts disabled until residual type errors in stubs are tightened —
-  // unblocks JS publish so consumers (lyon, GAIA web) can integrate now.
-  // Re-enable after stubs are typed cleanly.
-  dts: false,
+  dts: true,
   clean: true,
   sourcemap: true,
   // Resolve via tsconfig paths (esbuild reads tsconfig.json paths automatically).

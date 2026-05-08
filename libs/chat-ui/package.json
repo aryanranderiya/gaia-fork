@@ -6,8 +6,10 @@
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
     "./styles.css": "./dist/styles.css"
@@ -54,7 +56,9 @@
     "zustand": "*"
   },
   "peerDependenciesMeta": {
-    "next": { "optional": true }
+    "next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@heroui/accordion": "^2.2.21",
