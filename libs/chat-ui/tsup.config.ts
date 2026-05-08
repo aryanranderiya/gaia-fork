@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: ["src/index.ts", "src/styles.css"],
   format: ["esm"],
   // dts disabled until residual type errors in stubs are tightened —
   // unblocks JS publish so consumers (lyon, GAIA web) can integrate now.
