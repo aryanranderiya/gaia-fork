@@ -40,7 +40,7 @@ const intlMiddlewareDefaultOnly = createMiddleware({
   localeDetection: false,
 });
 
-export default async function middleware(request: NextRequest) {
+export default function middleware(request: NextRequest) {
   if (isTranslatedRoute(request.nextUrl.pathname)) {
     return intlMiddleware(request);
   }

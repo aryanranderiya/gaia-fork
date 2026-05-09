@@ -129,6 +129,7 @@ docs/plans/
 i18n.cache
 .worktrees/
 superpowers/
+~/
 
 # Local prod config (secrets, credentials, etc.) — runbooks should be tracked
 ops/*.env

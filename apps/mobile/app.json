@@ -37,39 +37,29 @@
               "pathPrefix": "/callback"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
         },
         {
           "action": "VIEW",
           "data": [
             {
               "scheme": "gaia",
-              "host": "chat"
-            },
-            {
-              "scheme": "gaia",
-              "host": "todos"
-            },
-            {
-              "scheme": "gaia",
-              "host": "notifications"
-            },
-            {
-              "scheme": "gaia",
-              "host": "settings"
-            },
-            {
-              "scheme": "gaia",
-              "host": "integrations"
+              "host": "integrations",
+              "pathPrefix": "/callback"
             }
           ],
-          "category": [
-            "BROWSABLE",
-            "DEFAULT"
-          ]
+          "category": ["BROWSABLE", "DEFAULT"]
+        },
+        {
+          "action": "VIEW",
+          "data": [
+            { "scheme": "gaia", "host": "chat" },
+            { "scheme": "gaia", "host": "todos" },
+            { "scheme": "gaia", "host": "notifications" },
+            { "scheme": "gaia", "host": "settings" },
+            { "scheme": "gaia", "host": "integrations" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
         }
       ]
     },
@@ -95,9 +85,7 @@
         {
           "icon": "./assets/icons/gaialogo.png",
           "color": "#ffffff",
-          "sounds": [
-            "./assets/sound/uwu.mp3"
-          ],
+          "sounds": ["./assets/sound/uwu.mp3"],
           "defaultChannel": "gaia_channel"
         }
       ]
