@@ -92,6 +92,12 @@ const nextConfig = {
   },
   serverExternalPackages: ["moment", "moment-timezone"],
   experimental: {
+    // optimizeCss disabled: @opennextjs/aws unconditionally cpSyncs
+    // .next/static/css when this is on, but Next 16 + Turbopack does not
+    // emit that directory in this build (no separate CSS chunks), so the
+    // bundle step crashes with ENOENT. Bug exists across @opennextjs/aws
+    // 3.9.16 → main; critters has nothing to inline anyway, so this was
+    // a no-op.
     optimizePackageImports: [
       "mermaid",
       "react-syntax-highlighter",
