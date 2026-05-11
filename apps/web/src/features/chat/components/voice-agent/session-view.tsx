@@ -1,4 +1,3 @@
-import { ChatRenderer } from "@chat-ui";
 import {
   type AgentState,
   useRoomContext,
@@ -7,6 +6,7 @@ import {
 import type { TextStreamReader } from "livekit-client";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
+import ChatRenderer from "@/features/chat/components/interface/ChatRenderer";
 import { AgentControlBar } from "@/features/chat/components/voice-agent/agent-control-bar";
 import useChatAndTranscription from "@/features/chat/components/voice-agent/hooks/useChatAndTranscription";
 import { MediaTiles } from "@/features/chat/components/voice-agent/media-tiles";
