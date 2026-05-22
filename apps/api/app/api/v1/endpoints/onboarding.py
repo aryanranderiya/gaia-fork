@@ -1,12 +1,22 @@
 from datetime import datetime, timezone
 
+from bson import ObjectId
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from pydantic import BaseModel
+from shared.py.wide_events import log
+
 from app.api.v1.dependencies.oauth_dependencies import (
     GET_USER_TZ_TYPE,
     get_current_user,
     get_user_timezone,
 )
-from shared.py.wide_events import log
-from app.db.mongodb.collections import users_collection, workflows_collection
+from app.constants.todos import ONBOARDING_TODO_LIMIT
+from app.core.websocket_manager import websocket_manager
+from app.db.mongodb.collections import (
+    todos_collection,
+    users_collection,
+    workflows_collection,
+)
 from app.models.user_models import (
     BioStatus,
     OnboardingPhaseUpdateRequest,
@@ -15,17 +25,40 @@ from app.models.user_models import (
     OnboardingResponse,
 )
 from app.services.composio.composio_service import get_composio_service
+from app.services.onboarding.clarify_service import generate_clarify_questions
 from app.services.onboarding.onboarding_service import (
     complete_onboarding,
     get_user_onboarding_status,
-    queue_personalization,
+    reset_onboarding,
     update_onboarding_preferences,
 )
-from bson import ObjectId
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
-from app.core.websocket_manager import websocket_manager
+from app.services.onboarding.social_profile_service import save_confirmed_profiles
+from app.services.onboarding.writing_style_service import (
+    regenerate_example_for_style,
+    save_generated_example,
+    save_user_edited_summary,
+)
 
 router = APIRouter()
+
+
+def _normalize_example_blocks(raw: object) -> dict | None:
+    """Normalize a writing-style example (dict or legacy string) into blocks."""
+    if isinstance(raw, dict):
+        return {
+            "greeting": str(raw.get("greeting", "")),
+            "body": [str(p) for p in raw.get("body", []) if str(p).strip()],
+            "signoff": str(raw.get("signoff", "")),
+            "name": str(raw.get("name", "")),
+        }
+    if isinstance(raw, str) and raw.strip():
+        return {
+            "greeting": "",
+            "body": [raw.strip()],
+            "signoff": "",
+            "name": "",
+        }
+    return None
 
 
 @router.post("", response_model=OnboardingResponse)
@@ -35,13 +68,7 @@ async def complete_user_onboarding(
     user: dict = Depends(get_current_user),
     tz_info: GET_USER_TZ_TYPE = Depends(get_user_timezone),
 ):
-    """
-    Complete user onboarding by storing preferences.
-
-    Flow:
-    - If user has Gmail connected: Email processor will trigger personalization after parsing
-    - If no Gmail: Queue personalization ARQ job directly
-    """
+    """Complete user onboarding by storing preferences and queuing the intelligence pipeline."""
     log.set(
         user={"id": user["user_id"]},
         onboarding={
@@ -56,47 +83,7 @@ async def complete_user_onboarding(
             user["user_id"],
             onboarding_data,
             background_tasks,
-            user_timezone=tz_info[0],
         )
-
-        composio_service = get_composio_service()
-        connection_status = await composio_service.check_connection_status(
-            ["gmail"], user["user_id"]
-        )
-        has_gmail = connection_status.get("gmail", False)
-
-        # Check if Gmail emails have already been processed
-        user_doc = await users_collection.find_one({"_id": ObjectId(user["user_id"])})
-        email_already_processed = (
-            user_doc.get("email_memory_processed", False) if user_doc else False
-        )
-
-        if has_gmail and not email_already_processed:
-            # Gmail connected but not yet processed - queue email processing
-            # Email processor will trigger personalization when done
-            log.info(
-                f"User {user['user_id']} has Gmail (not processed) - queueing email processing"
-            )
-            from app.utils.redis_utils import RedisPoolManager
-
-            try:
-                pool = await RedisPoolManager.get_pool()
-                await pool.enqueue_job(
-                    "process_gmail_emails_to_memory", user["user_id"]
-                )
-                log.info(f"Queued Gmail processing for user {user['user_id']}")
-            except Exception as e:
-                log.error(f"Failed to queue Gmail processing: {e}", exc_info=True)
-                # Fallback: queue personalization directly
-                background_tasks.add_task(queue_personalization, user["user_id"])
-        else:
-            # No Gmail OR already processed - queue personalization directly
-            reason = "already processed" if email_already_processed else "no Gmail"
-            log.info(
-                f"User {user['user_id']} ({reason}) - queueing personalization directly"
-            )
-            background_tasks.add_task(queue_personalization, user["user_id"])
-
         return OnboardingResponse(
             success=True, message="Onboarding completed successfully", user=updated_user
         )
@@ -105,6 +92,50 @@ async def complete_user_onboarding(
     except Exception as e:
         log.error(f"Error completing onboarding: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Failed to complete onboarding")
+
+
+class ClarifyQuestionsRequest(BaseModel):
+    name: str
+    profession: str
+    focus: str
+
+
+@router.post("/clarify-questions", response_model=dict)
+async def get_clarify_questions(
+    payload: ClarifyQuestionsRequest,
+    user: dict = Depends(get_current_user),
+):
+    """Generate the LLM 3-question follow-up for the no-Gmail path."""
+    log.set(
+        user={"id": user["user_id"]},
+        onboarding={"operation": "clarify_questions"},
+    )
+    name = payload.name.strip() or "there"
+    profession = payload.profession.strip() or "professional"
+    focus = payload.focus.strip()
+    if not focus:
+        raise HTTPException(status_code=400, detail="Focus is required")
+
+    questions = await generate_clarify_questions(name, profession, focus)
+    return {"questions": questions}
+
+
+@router.post(
+    "/reset",
+    response_model=dict,
+    responses={500: {"description": "Failed to reset onboarding"}},
+)
+async def reset_user_onboarding(user: dict = Depends(get_current_user)):
+    """Fully reset onboarding so the user can run the flow again from scratch."""
+    log.set(user={"id": user["user_id"]}, onboarding={"operation": "reset"})
+    try:
+        result = await reset_onboarding(user["user_id"])
+        return {"success": True, **result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error resetting onboarding: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to reset onboarding")
 
 
 @router.get("/status", response_model=dict)
@@ -153,7 +184,6 @@ async def update_onboarding_phase(
             f"[update_onboarding_phase] Updating phase to {phase} for user {user_id}"
         )
 
-        # Update the phase in database
         result = await users_collection.update_one(
             {"_id": ObjectId(user_id)},
             {
@@ -164,9 +194,9 @@ async def update_onboarding_phase(
             },
         )
 
-        if result.modified_count == 0:
+        if result.matched_count == 0:
             log.warning(
-                f"[update_onboarding_phase] No document modified for user {user_id}"
+                f"[update_onboarding_phase] No document found for user {user_id}"
             )
             raise HTTPException(status_code=404, detail="User not found")
 
@@ -174,7 +204,6 @@ async def update_onboarding_phase(
             f"[update_onboarding_phase] Successfully updated phase to {phase} for user {user_id}, modified_count={result.modified_count}"
         )
 
-        # Send WebSocket notification about phase update
         try:
             await websocket_manager.broadcast_to_user(
                 user_id=user_id,
@@ -255,7 +284,6 @@ async def get_onboarding_personalization(user: dict = Depends(get_current_user))
 
         onboarding = user_doc.get("onboarding", {})
         user_bio = onboarding.get("user_bio", "")
-        # Check the phase to determine if personalization is complete
         phase = onboarding.get("phase", "initial")
         log.info(
             f"[get_onboarding_personalization] User {user_id} has phase: {phase}, bio_status: {onboarding.get('bio_status')}"
@@ -266,7 +294,6 @@ async def get_onboarding_personalization(user: dict = Depends(get_current_user))
             "completed",
         ]
 
-        # Get stored metadata or calculate if not stored (for older users)
         account_number = onboarding.get("account_number")
         member_since = onboarding.get("member_since")
 
@@ -281,38 +308,41 @@ async def get_onboarding_personalization(user: dict = Depends(get_current_user))
                 account_number = 1
 
             member_since = (
-                created_at.strftime("%b %d, %Y") if created_at else "Nov 21, 2024"
+                created_at.strftime("%b %d, %Y")
+                if created_at
+                else datetime.now(timezone.utc).strftime("%b %d, %Y")
             )
 
-        # Fetch full workflow objects
         workflow_ids = onboarding.get("suggested_workflows", [])
         workflows = []
-        for wf_id in workflow_ids:
+        if workflow_ids:
             try:
-                query_id = ObjectId(wf_id) if ObjectId.is_valid(wf_id) else wf_id
-                wf = await workflows_collection.find_one({"_id": query_id})
-                if wf:
-                    workflows.append(
-                        {
-                            "id": str(wf["_id"]),
-                            "title": wf.get("title", ""),
-                            "description": wf.get("description", ""),
-                            "steps": wf.get("steps", []),
-                        }
-                    )
+                query_ids = [
+                    ObjectId(wf_id) if ObjectId.is_valid(wf_id) else wf_id
+                    for wf_id in workflow_ids
+                ]
+                cursor = workflows_collection.find({"_id": {"$in": query_ids}})
+                wf_docs = {str(wf["_id"]): wf async for wf in cursor}
+                for wf_id in workflow_ids:
+                    wf = wf_docs.get(str(wf_id))
+                    if wf:
+                        workflows.append(
+                            {
+                                "id": str(wf["_id"]),
+                                "title": wf.get("title", ""),
+                                "description": wf.get("description", ""),
+                                "steps": wf.get("steps", []),
+                            }
+                        )
             except Exception as e:
-                log.error(f"Error fetching workflow {wf_id}: {str(e)}", exc_info=True)
+                log.error(f"Error fetching workflows: {str(e)}", exc_info=True)
 
-        # Determine what bio to show based on bio_status
         bio_status = onboarding.get("bio_status", "pending")
         display_bio = user_bio
 
-        # Override bio display based on status
         if bio_status in ["processing", BioStatus.PROCESSING]:
             display_bio = "Processing your insights... Please check back in a moment."
         elif bio_status in ["pending", BioStatus.PENDING]:
-            # Check if user has Gmail via Composio to show appropriate message
-
             composio_service = get_composio_service()
             connection_status = await composio_service.check_connection_status(
                 ["gmail"], str(user_id)
@@ -324,8 +354,48 @@ async def get_onboarding_personalization(user: dict = Depends(get_current_user))
                 )
             else:
                 display_bio = "Setting up your profile..."
-        # For "no_gmail" and "completed" status, use the actual bio content
-        # (no_gmail now has a default bio, completed has the full bio)
+
+        raw_writing_style = onboarding.get("writing_style")
+        # Only surface writing_style if it has a usable summary; otherwise
+        # return null so the frontend skips the reveal.
+        writing_style_payload: dict | None = None
+        if raw_writing_style:
+            resolved_summary = (
+                raw_writing_style.get("user_edited_summary")
+                or raw_writing_style.get("summary")
+                or ""
+            ).strip()
+            if resolved_summary:
+                writing_style_payload = {
+                    "style_summary": resolved_summary,
+                    "example": _normalize_example_blocks(
+                        raw_writing_style.get("example")
+                    ),
+                }
+        raw_social_profiles = onboarding.get("social_profiles", [])
+        triage_summary = onboarding.get("triage_summary")
+
+        onboarding_todos: list[dict] = []
+        try:
+            todo_cursor = (
+                todos_collection.find(
+                    {"user_id": user_id, "labels": "onboarding"},
+                    {"_id": 1, "title": 1, "description": 1, "source_email": 1},
+                )
+                .sort("created_at", -1)
+                .limit(ONBOARDING_TODO_LIMIT)
+            )
+            onboarding_todos = [
+                {
+                    "id": str(t["_id"]),
+                    "title": t.get("title", ""),
+                    "description": t.get("description"),
+                    "source_email": t.get("source_email"),
+                }
+                async for t in todo_cursor
+            ]
+        except Exception as e:
+            log.warning(f"Failed to fetch onboarding todos: {e}")
 
         return {
             "phase": phase,
@@ -342,6 +412,19 @@ async def get_onboarding_personalization(user: dict = Depends(get_current_user))
             "suggested_workflows": workflows,
             "name": user_doc.get("name", "User"),
             "holo_card_id": str(user_doc["_id"]),
+            "first_message_conversation_id": onboarding.get(
+                "first_message_conversation_id"
+            ),
+            "first_message": onboarding.get("first_message"),
+            "writing_style": writing_style_payload,
+            "social_profiles": [
+                {"platform": p.get("platform", ""), "url": p.get("url", "")}
+                for p in raw_social_profiles
+            ]
+            if raw_social_profiles
+            else None,
+            "triage_summary": triage_summary,
+            "onboarding_todos": onboarding_todos if onboarding_todos else None,
         }
 
     except HTTPException:
@@ -351,3 +434,93 @@ async def get_onboarding_personalization(user: dict = Depends(get_current_user))
         raise HTTPException(
             status_code=500, detail="Failed to fetch personalization data"
         )
+
+
+class WritingStyleEditRequest(BaseModel):
+    edited_summary: str
+
+
+class WritingStyleRegenerateRequest(BaseModel):
+    edited_summary: str
+    profession: str = ""
+
+
+@router.post(
+    "/writing-style",
+    response_model=dict,
+    responses={500: {"description": "Failed to save writing style"}},
+)
+async def save_writing_style(
+    request: WritingStyleEditRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Save a user-edited writing style summary from the onboarding reveal card."""
+    user_id: str = user["user_id"]
+    log.set(user={"id": user_id}, onboarding={"operation": "save_writing_style"})
+    try:
+        await save_user_edited_summary(user_id, request.edited_summary.strip())
+        return {"success": True}
+    except Exception as e:
+        log.error(f"[onboarding] Failed to save writing style: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save writing style")
+
+
+@router.post(
+    "/writing-style/regenerate-example",
+    response_model=dict,
+    responses={500: {"description": "Failed to regenerate writing style example"}},
+)
+async def regenerate_writing_style_example(
+    request: WritingStyleRegenerateRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Generate a new example email from an edited writing style summary."""
+    user_id: str = user["user_id"]
+    log.set(user={"id": user_id}, onboarding={"operation": "regenerate_style_example"})
+    try:
+        example = await regenerate_example_for_style(
+            summary=request.edited_summary.strip(),
+            profession=request.profession,
+        )
+        if example:
+            await save_generated_example(user_id, example)
+            return {"example": example.model_dump()}
+        return {"example": None}
+    except Exception as e:
+        log.error(
+            f"[onboarding] Failed to regenerate writing style example: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500, detail="Failed to regenerate writing style example"
+        )
+
+
+class SocialProfileItem(BaseModel):
+    platform: str
+    url: str
+
+
+class SocialProfilesConfirmRequest(BaseModel):
+    profiles: list[SocialProfileItem]
+
+
+@router.post(
+    "/social-profiles",
+    response_model=dict,
+    responses={500: {"description": "Failed to save social profiles"}},
+)
+async def confirm_social_profiles(
+    request: SocialProfilesConfirmRequest,
+    user: dict = Depends(get_current_user),
+) -> dict:
+    """Save user-confirmed (and optionally edited) social profiles from onboarding."""
+    user_id: str = user["user_id"]
+    log.set(user={"id": user_id}, onboarding={"operation": "confirm_social_profiles"})
+    try:
+        profiles = [p.model_dump() for p in request.profiles]
+        await save_confirmed_profiles(user_id, profiles)
+        return {"success": True, "saved": len(profiles)}
+    except Exception as e:
+        log.error(f"[onboarding] Failed to save social profiles: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Failed to save social profiles")

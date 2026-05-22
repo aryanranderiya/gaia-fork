@@ -3,8 +3,12 @@ from datetime import datetime, timezone
 from typing import List, Literal, Optional
 from zoneinfo import ZoneInfo
 
+from bson import ObjectId
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from app.agents.prompts.onboarding_prompts import (
+    ONBOARDING_FIRST_CONVERSATION_SYSTEM_PROMPT,
+)
 from app.agents.prompts.workflow_prompts import (
     EMAIL_TRIGGERED_WORKFLOW_PROMPT,
     WORKFLOW_EXECUTION_PROMPT,
@@ -13,12 +17,14 @@ from app.agents.templates.agent_template import (
     EXECUTOR_PROMPT_TEMPLATE,
     get_comms_static_prompt,
 )
+from app.db.mongodb.collections import conversations_collection, users_collection
 from app.models.message_models import (
     FileData,
     ReplyToMessageData,
     SelectedCalendarEventData,
     SelectedWorkflowData,
 )
+from app.models.user_models import OnboardingPhase
 from app.services.gaia_knowledge_service import gaia_knowledge_service
 from app.services.memory_service import memory_service
 from app.services.workflow import WorkflowService
@@ -156,6 +162,7 @@ async def build_dynamic_context_message(
     user_name: Optional[str] = None,
     user_timezone: Optional[str] = None,
     user_preferences: Optional[dict] = None,
+    writing_style: Optional[dict] = None,
     source: Optional[str] = None,
     include_openui: bool = False,
     memories_text: Optional[str] = None,
@@ -208,8 +215,10 @@ async def build_dynamic_context_message(
             user_stable_parts.append(f"User Name: {user_name}")
         if user_timezone:
             user_stable_parts.append(f"User Timezone: {user_timezone}")
-        if user_preferences:
-            if formatted := format_user_preferences_for_agent(user_preferences):
+        if user_preferences or writing_style:
+            if formatted := format_user_preferences_for_agent(
+                user_preferences or {}, writing_style=writing_style
+            ):
                 user_stable_parts.append(f"User Preferences:\n{formatted}")
 
         # --- Fetches (may change turn-to-turn) -----------------------------
@@ -430,6 +439,73 @@ def format_reply_context(
     context = f"""[The user is responding to {role_label} earlier message: "{reply_to_message.content}"]"""
 
     return f"{context}\n\n{existing_content}" if existing_content else context
+
+
+# Must match the prefix the frontend's RevealTodos run-now demo sends.
+_RUN_NOW_DEMO_PREFIX = "Execute this todo for me:"
+
+
+async def get_onboarding_system_prompt_if_applicable(
+    user_id: str,
+    conversation_id: str,
+    latest_user_message: Optional[str] = None,
+) -> Optional[str]:
+    try:
+        conv = await conversations_collection.find_one(
+            {"conversation_id": conversation_id},
+            {"is_onboarding_conversation": 1, "messages": 1},
+        )
+        is_tagged_onboarding = bool(conv and conv.get("is_onboarding_conversation"))
+        is_run_now_demo = bool(
+            latest_user_message
+            and latest_user_message.lstrip().startswith(_RUN_NOW_DEMO_PREFIX)
+        )
+
+        if not is_tagged_onboarding and not is_run_now_demo:
+            return None
+
+        if is_tagged_onboarding:
+            message_count = len(conv.get("messages", [])) if conv else 0
+            if message_count >= 7:
+                await users_collection.update_one(
+                    {"_id": ObjectId(user_id)},
+                    {"$set": {"onboarding.phase": OnboardingPhase.COMPLETED}},
+                )
+                log.info(
+                    f"[onboarding_prompt] Auto-completed onboarding for {user_id} after {message_count} messages"
+                )
+                return None
+
+        user_doc = await users_collection.find_one(
+            {"_id": ObjectId(user_id)},
+            {"onboarding.phase": 1, "name": 1, "onboarding.preferences": 1},
+        )
+        if not user_doc:
+            return None
+
+        phase = user_doc.get("onboarding", {}).get("phase", "initial")
+        if phase == OnboardingPhase.COMPLETED:
+            return None
+
+        name = user_doc.get("name", "there")
+        onboarding = user_doc.get("onboarding", {})
+        profession = onboarding.get("preferences", {}).get("profession", "")
+        triage_summary = onboarding.get("triage_summary", "")
+
+        onboarding_context = (
+            f"Profession: {profession}" if profession else "Profession: not specified"
+        )
+        if triage_summary:
+            onboarding_context += f"\nInbox summary: {triage_summary}"
+
+        return ONBOARDING_FIRST_CONVERSATION_SYSTEM_PROMPT.format(
+            name=name,
+            onboarding_context=onboarding_context,
+        )
+
+    except Exception as e:
+        log.warning(f"[onboarding_prompt] Failed to check onboarding conversation: {e}")
+        return None
 
 
 def format_files_list(

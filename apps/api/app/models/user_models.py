@@ -127,6 +127,29 @@ class OnboardingData(BaseModel):
         default_factory=dict,
         description="Map of integration IDs to their scan state data (e.g. {'gmail': {'last_scan': timestamp}})",
     )
+    writing_style: Optional[dict] = Field(
+        None, description="Learned writing style profile from sent emails"
+    )
+    first_message_conversation_id: Optional[str] = Field(
+        None, description="ID of the seeded onboarding conversation"
+    )
+    intelligence_job_id: Optional[str] = Field(
+        None,
+        description="ARQ job id of the in-flight intelligence pipeline; used to abort on reset/re-enqueue",
+    )
+
+
+class ClarifyAnswer(BaseModel):
+    """One answered no-Gmail clarify question, persisted on onboarding.clarify_answers."""
+
+    id: str = Field(..., description="Question id — one of scope, blocker, constraint")
+    kind: str = Field(..., description="scope / blocker / constraint")
+    question: str = Field(..., description="Original question text")
+    value: Optional[str] = Field(
+        None,
+        max_length=500,
+        description="User's answer; None means the question was skipped",
+    )
 
 
 class OnboardingRequest(BaseModel):
@@ -138,6 +161,13 @@ class OnboardingRequest(BaseModel):
     )
     timezone: Optional[str] = Field(
         None, description="User's detected timezone (e.g., 'America/New_York', 'UTC')"
+    )
+    focus: Optional[str] = Field(
+        None, max_length=500, description="User's current primary focus or goal"
+    )
+    clarify_answers: Optional[list[ClarifyAnswer]] = Field(
+        None,
+        description="No-Gmail follow-up answers (scope/blocker/constraint)",
     )
 
     @field_validator("name")

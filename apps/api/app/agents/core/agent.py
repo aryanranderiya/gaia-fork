@@ -85,7 +85,7 @@ async def _core_agent_logic(
             selected_calendar_event=request.selectedCalendarEvent,
             reply_to_message=request.replyToMessage,
             trigger_context=trigger_context,
-            source=source,
+            conversation_id=conversation_id,
         ),
         GraphManager.get_graph("comms_agent"),
     )
@@ -111,7 +111,6 @@ async def _core_agent_logic(
         agent_name="comms_agent",
         selected_tool=request.selectedTool,
         tool_category=request.toolCategory,
-        source=source,
     )
 
     log.set(

@@ -81,10 +81,22 @@ def _build_trigger_hint(trigger_config: Optional[dict]) -> str:
     return f"User has selected trigger type: {trigger_type}."
 
 
-def _build_available_triggers() -> str:
-    """Build a compact list of available integration triggers for the LLM."""
+def _build_available_triggers(
+    connected_integration_ids: Optional[set[str]] = None,
+) -> str:
+    """Build a compact list of available integration triggers for the LLM.
+
+    If `connected_integration_ids` is provided, only triggers from those
+    integrations are listed. This prevents the LLM from suggesting triggers
+    the user can't actually use.
+    """
     lines: List[str] = []
     for integration in OAUTH_INTEGRATIONS:
+        if (
+            connected_integration_ids is not None
+            and integration.id not in connected_integration_ids
+        ):
+            continue
         for tc in integration.associated_triggers:
             schema = tc.workflow_trigger_schema
             if schema:
@@ -312,11 +324,20 @@ class WorkflowGenerationService:
         description: Optional[str] = None,
         trigger_config: Optional[dict] = None,
         existing_prompt: Optional[str] = None,
+        connected_integration_ids: Optional[set[str]] = None,
         selected_integrations: Optional[List[str]] = None,
     ) -> dict:
-        """Generate or improve workflow instructions using LLM."""
+        """Generate or improve workflow instructions using LLM.
+
+        Returns a dict with keys: prompt, suggested_trigger (optional).
+
+        If `connected_integration_ids` is provided, the available-triggers
+        list shown to the LLM is restricted to those integrations.
+        If `selected_integrations` is provided, the LLM is hinted to prefer
+        those integrations when naming triggers/actions.
+        """
         trigger_hint = _build_trigger_hint(trigger_config)
-        available_triggers = _build_available_triggers()
+        available_triggers = _build_available_triggers(connected_integration_ids)
 
         normalized_slugs = _normalize_slugs(selected_integrations)
         if normalized_slugs:
@@ -329,7 +350,7 @@ class WorkflowGenerationService:
         else:
             integrations_hint = ""
 
-        llm = init_llm(use_free=True)
+        llm = init_llm()
 
         formatted = WORKFLOW_PROMPT_GENERATION_TEMPLATE.format(
             title_section=f"Title: {title}\n" if title else "",
@@ -357,7 +378,13 @@ class WorkflowGenerationService:
         ]
 
         response = await llm.ainvoke(messages)
-        response_content = getattr(response, "content", str(response)).strip()
+        raw_content = getattr(response, "content", str(response))
+        if isinstance(raw_content, list):
+            raw_content = "".join(
+                block.get("text", "") if isinstance(block, dict) else str(block)
+                for block in raw_content
+            )
+        response_content = raw_content.strip()
 
         result = prompt_output_parser.parse(response_content)
 

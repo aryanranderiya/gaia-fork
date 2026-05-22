@@ -93,9 +93,11 @@ def gmail_fetch_emails_schema_modifier(tool: str, toolkit: str, schema: Tool) ->
     Set sensible defaults for GMAIL_FETCH_EMAILS and GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID.
 
     - max_results: default to 10 (was 1)
-    - label_ids: default to ["INBOX"]
     - format: default to "full"
     - Add Gmail search syntax tips to description
+
+    Do NOT default label_ids to ["INBOX"]: Gmail ANDs it with the query, so a
+    stale default silently zeroes out folder-scoped searches (e.g. in:sent).
     """
     input_params = schema.input_parameters
     if not isinstance(input_params, dict):
@@ -109,10 +111,6 @@ def gmail_fetch_emails_schema_modifier(tool: str, toolkit: str, schema: Tool) ->
         # Set max_results default to 10
         if "max_results" in props and isinstance(props["max_results"], dict):
             props["max_results"]["default"] = 10
-
-        # Set label_ids default to ["INBOX"]
-        if "label_ids" in props and isinstance(props["label_ids"], dict):
-            props["label_ids"]["default"] = ["INBOX"]
 
         # Add Gmail search syntax tips to description
         search_tips = (

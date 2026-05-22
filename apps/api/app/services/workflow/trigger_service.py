@@ -157,14 +157,16 @@ class TriggerService:
             workflow_id: The workflow ID
             trigger_name: The trigger name (e.g., 'calendar_event_created')
             trigger_config: The TriggerConfig object with properly typed trigger_data
-            raise_on_failure: If True, raise TriggerRegistrationError when no triggers created
+            raise_on_failure: If True, raise when the handler is missing or
+                raises. An empty list is a legitimate success (e.g. account-level
+                Gmail has no per-workflow IDs), NOT a failure.
 
         Returns:
-            List of registered Composio trigger IDs
+            List of registered Composio trigger IDs (may be empty on success)
 
         Raises:
             TypeError: If trigger_data type doesn't match expected type
-            TriggerRegistrationError: If raise_on_failure=True and no triggers were created
+            TriggerRegistrationError: If the handler raises or is missing
         """
         handler = get_handler_by_name(trigger_name)
         if not handler:
@@ -179,14 +181,6 @@ class TriggerService:
             trigger_ids = await handler.register(
                 user_id, workflow_id, trigger_name, trigger_config
             )
-
-            if not trigger_ids and raise_on_failure:
-                raise TriggerRegistrationError(
-                    f"Failed to register any triggers for '{trigger_name}'. "
-                    "This may be due to permission issues or invalid configuration.",
-                    trigger_name,
-                )
-
             return trigger_ids
         except TypeError as e:
             # Re-raise TypeError for type validation failures

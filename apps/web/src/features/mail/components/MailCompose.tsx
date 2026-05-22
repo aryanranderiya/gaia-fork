@@ -27,7 +27,6 @@ import { ANALYTICS_EVENTS, trackEvent } from "@/lib/analytics";
 
 // import { MenuBar } from "@/features/notes/components/NotesMenuBar";
 import { Button as ShadcnButton } from "../../../components/ui/button";
-import { AiSearchModal } from "./AiSearchModal";
 
 interface MailComposeProps {
   open: boolean;
@@ -67,7 +66,6 @@ export default function MailCompose({ open, onOpenChange }: MailComposeProps) {
     setClarityOption,
     setIsAiModalOpen,
     setActiveTagIndex,
-    handleAiSelect,
     handleAskGaia,
     handleAskGaiaKeyPress,
   } = actions;
@@ -335,11 +333,6 @@ export default function MailCompose({ open, onOpenChange }: MailComposeProps) {
           </Drawer.Content>
         </Drawer.Portal>
       </Drawer.Root>
-      <AiSearchModal
-        open={isAiModalOpen}
-        onOpenChange={setIsAiModalOpen}
-        onSelect={handleAiSelect}
-      />
     </>
   );
 }
