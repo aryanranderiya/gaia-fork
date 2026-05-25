@@ -6,20 +6,18 @@ building, state initialization, and graph execution in both streaming and silent
 These functions are tightly coupled to agent-specific logic and LangGraph execution.
 """
 
+from collections.abc import AsyncGenerator
+from datetime import UTC, datetime
 import json
 import re
-from datetime import datetime, timezone
-from typing import AsyncGenerator, Optional
 
 from langchain_core.callbacks import BaseCallbackHandler, UsageMetadataCallbackHandler
 from langchain_core.messages import AIMessage, AIMessageChunk, ToolMessage
 from langsmith import traceable
-from opik.integrations.langchain import OpikTracer
 from posthog.ai.langchain import CallbackHandler as PostHogCallbackHandler
 
+from app.agents.core.subagents.registry import get_subagent_by_id
 from app.agents.tools.core.registry import get_tool_registry
-from app.config.oauth_config import OAUTH_INTEGRATIONS
-from shared.py.wide_events import log
 from app.config.settings import settings
 from app.constants.cache import (
     CUSTOM_INT_METADATA_CACHE_PREFIX,
@@ -45,6 +43,7 @@ from app.utils.agent_utils import (
     parse_subagent_id,
     process_custom_event_for_tools,
 )
+from shared.py.wide_events import log
 
 
 async def get_custom_integration_metadata(tool_name: str, user_id: str) -> dict:
@@ -142,18 +141,15 @@ async def get_handoff_metadata(subagent_id: str) -> dict:
     clean_id, _ = parse_subagent_id(subagent_id)
     clean_id = clean_id.lower()
 
-    # Check platform integrations first (in-memory, no caching needed)
-    for integ in OAUTH_INTEGRATIONS:
-        if integ.id.lower() == clean_id or (
-            integ.short_name and integ.short_name.lower() == clean_id
-        ):
-            if integ.subagent_config and integ.subagent_config.has_subagent:
-                log.set(integration_type="platform")
-                return {
-                    "icon_url": None,  # Platform integrations use category-based icons
-                    "integration_id": integ.id,
-                    "integration_name": integ.name,
-                }
+    # Check platform/builtin subagents first (in-memory, no caching needed)
+    subagent = get_subagent_by_id(clean_id)
+    if subagent:
+        log.set(integration_type="platform")
+        return {
+            "icon_url": None,  # Platform/builtin subagents use category-based icons
+            "integration_id": subagent.id,
+            "integration_name": subagent.name,
+        }
 
     # Check Redis cache for custom integrations
     cache_key = f"{HANDOFF_METADATA_CACHE_PREFIX}:{clean_id}"
@@ -234,15 +230,15 @@ def build_agent_config(
     user: dict,
     user_time: datetime,
     agent_name: str,
-    user_model_config: Optional[ModelConfig] = None,
-    usage_metadata_callback: Optional[UsageMetadataCallbackHandler] = None,
-    thread_id: Optional[str] = None,
-    base_configurable: Optional[dict] = None,
-    selected_tool: Optional[str] = None,
-    tool_category: Optional[str] = None,
-    subagent_id: Optional[str] = None,
-    vfs_session_id: Optional[str] = None,
-    source: Optional[str] = None,
+    user_model_config: ModelConfig | None = None,
+    usage_metadata_callback: UsageMetadataCallbackHandler | None = None,
+    thread_id: str | None = None,
+    base_configurable: dict | None = None,
+    selected_tool: str | None = None,
+    tool_category: str | None = None,
+    subagent_id: str | None = None,
+    vfs_session_id: str | None = None,
+    source: str | None = None,
 ) -> dict:
     """Build configuration for graph execution with optional authentication tokens.
 
@@ -271,10 +267,14 @@ def build_agent_config(
 
     callbacks: list[BaseCallbackHandler] = []
 
-    # Add OpikTracer in production, or in development only if configured
-    # This prevents cluttered error logs when Opik isn't set up locally
+    # Add OpikTracer in production, or in development only if configured.
+    # Import is deferred to avoid paying the cost when Opik is unused and to
+    # sidestep import-time litellm shadowing (crawl4ai installs unclecode-litellm
+    # which conflicts with the real litellm at module load time).
     is_opik_configured = settings.OPIK_API_KEY and settings.OPIK_WORKSPACE
     if settings.ENV == "production" or is_opik_configured:
+        from opik.integrations.langchain import OpikTracer  # noqa: PLC0415
+
         callbacks.append(
             OpikTracer(
                 tags=["langchain", settings.ENV],
@@ -287,9 +287,7 @@ def build_agent_config(
                 project_name="GAIA",
             )
         )
-    posthog_client = (
-        providers.get("posthog") if providers.is_available("posthog") else None
-    )
+    posthog_client = providers.get("posthog") if providers.is_available("posthog") else None
 
     if posthog_client is not None:
         callbacks.append(
@@ -320,6 +318,8 @@ def build_agent_config(
 
     # Cherry-pick specific keys from base_configurable if provided
     # Only inherit model config and user context, not LangChain internal state
+    pinned_memories = None
+    pinned_skills = None
     if base_configurable:
         # Inherit model config from parent if not overridden
         provider_name = base_configurable.get("provider", provider_name)
@@ -330,6 +330,10 @@ def build_agent_config(
         subagent_id = subagent_id or base_configurable.get("subagent_id")
         vfs_session_id = vfs_session_id or base_configurable.get("vfs_session_id")
         source = source or base_configurable.get("conversation_source")
+        # Pass pre-fetched memory/skills sections through to avoid repeat
+        # ChromaDB lookups on the subagent side.
+        pinned_memories = base_configurable.get("__pinned_memories__")
+        pinned_skills = base_configurable.get("__pinned_skills__")
 
     configurable = {
         "thread_id": thread_id or conversation_id,
@@ -347,6 +351,8 @@ def build_agent_config(
         "subagent_id": subagent_id,
         "vfs_session_id": vfs_session_id,
         "conversation_source": source,
+        "__pinned_memories__": pinned_memories,
+        "__pinned_skills__": pinned_skills,
     }
 
     config = {
@@ -365,7 +371,7 @@ def build_initial_state(
     user_id: str,
     conversation_id: str,
     history,
-    trigger_context: Optional[dict] = None,
+    trigger_context: dict | None = None,
 ) -> dict:
     """Construct initial state dictionary for LangGraph execution.
 
@@ -386,10 +392,12 @@ def build_initial_state(
     """
     state = {
         "query": request.message,
+        "intent": request.message,
         "messages": history,
-        "current_datetime": datetime.now(timezone.utc).isoformat(),
+        "current_datetime": datetime.now(UTC).isoformat(),
         "mem0_user_id": user_id,
         "conversation_id": conversation_id,
+        "integration_usernames": {},
         "selected_tool": request.selectedTool,
         "selected_workflow": request.selectedWorkflow,
         "selected_calendar_event": request.selectedCalendarEvent,
@@ -469,9 +477,7 @@ async def execute_graph_silent(
                                 args = tc.get("args", {})
                                 subagent_id = args.get("subagent_id", "")
                                 if subagent_id:
-                                    tool_metadata = await get_handoff_metadata(
-                                        subagent_id
-                                    )
+                                    tool_metadata = await get_handoff_metadata(subagent_id)
                             elif tool_name and user_id:
                                 tool_metadata = await get_custom_integration_metadata(
                                     tool_name, user_id
@@ -524,7 +530,7 @@ async def execute_graph_silent(
             {
                 "tool_name": "todo_progress",
                 "data": todo_progress_accumulated,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -624,9 +630,7 @@ async def execute_graph_streaming(
                                 args = tc.get("args", {})
                                 subagent_id = args.get("subagent_id", "")
                                 if subagent_id:
-                                    tool_metadata = await get_handoff_metadata(
-                                        subagent_id
-                                    )
+                                    tool_metadata = await get_handoff_metadata(subagent_id)
                             elif tool_name and user_id:
                                 tool_metadata = await get_custom_integration_metadata(
                                     tool_name, user_id
@@ -651,25 +655,15 @@ async def execute_graph_streaming(
                                     and tool_entry.get("mcp_ui")
                                     and tool_entry["mcp_ui"].get("resource_uri")
                                 ):
-                                    tc_id_for_app = tool_entry["data"].get(
-                                        "tool_call_id", ""
-                                    )
+                                    tc_id_for_app = tool_entry["data"].get("tool_call_id", "")
                                     if tc_id_for_app:
                                         pending_mcp_apps[tc_id_for_app] = {
-                                            "tool_category": tool_entry.get(
-                                                "tool_category", ""
-                                            ),
-                                            "tool_name": tool_entry["data"].get(
-                                                "tool_name", ""
-                                            ),
-                                            "server_url": tool_entry.get(
-                                                "mcp_server_url", ""
-                                            ),
+                                            "tool_category": tool_entry.get("tool_category", ""),
+                                            "tool_name": tool_entry["data"].get("tool_name", ""),
+                                            "server_url": tool_entry.get("mcp_server_url", ""),
                                             "mcp_ui": tool_entry["mcp_ui"],
                                             "timestamp": tool_entry.get("timestamp"),
-                                            "tool_arguments": tool_entry["data"].get(
-                                                "inputs", {}
-                                            ),
+                                            "tool_arguments": tool_entry["data"].get("inputs", {}),
                                         }
             continue
 
@@ -728,15 +722,11 @@ async def execute_graph_streaming(
                             user_id=user_id or "",
                         )
                         html_content = (
-                            ui_resource.get("html")
-                            if isinstance(ui_resource, dict)
-                            else None
+                            ui_resource.get("html") if isinstance(ui_resource, dict) else None
                         )
                         if html_content:
                             content_csp = (
-                                ui_resource.get("csp")
-                                if isinstance(ui_resource, dict)
-                                else None
+                                ui_resource.get("csp") if isinstance(ui_resource, dict) else None
                             )
                             content_permissions = (
                                 ui_resource.get("permissions")
@@ -752,9 +742,7 @@ async def execute_graph_streaming(
                                             "tool_call_id": chunk.tool_call_id,
                                             "tool_name": app_meta["tool_name"],
                                             "server_url": app_meta["server_url"],
-                                            "resource_uri": app_meta["mcp_ui"][
-                                                "resource_uri"
-                                            ],
+                                            "resource_uri": app_meta["mcp_ui"]["resource_uri"],
                                             "html_content": html_content,
                                             "tool_result": tool_result_payload,
                                             "csp": content_csp
@@ -762,12 +750,8 @@ async def execute_graph_streaming(
                                             else app_meta["mcp_ui"].get("csp"),
                                             "permissions": content_permissions
                                             if content_permissions is not None
-                                            else app_meta["mcp_ui"].get(
-                                                "permissions", []
-                                            ),
-                                            "tool_arguments": app_meta.get(
-                                                "tool_arguments", {}
-                                            ),
+                                            else app_meta["mcp_ui"].get("permissions", []),
+                                            "tool_arguments": app_meta.get("tool_arguments", {}),
                                         },
                                         "timestamp": app_meta["timestamp"],
                                     }
@@ -799,9 +783,7 @@ async def execute_graph_streaming(
                             "server_url": sub_entry.get("mcp_server_url", ""),
                             "mcp_ui": sub_entry["mcp_ui"],
                             "timestamp": sub_entry.get("timestamp"),
-                            "tool_arguments": sub_entry.get("data", {}).get(
-                                "inputs", {}
-                            ),
+                            "tool_arguments": sub_entry.get("data", {}).get("inputs", {}),
                         }
 
             # Intercept subagent tool_output events to emit deferred mcp_app
@@ -817,15 +799,11 @@ async def execute_graph_streaming(
                             user_id=user_id or "",
                         )
                         html_content = (
-                            ui_resource.get("html")
-                            if isinstance(ui_resource, dict)
-                            else None
+                            ui_resource.get("html") if isinstance(ui_resource, dict) else None
                         )
                         if html_content:
                             content_csp = (
-                                ui_resource.get("csp")
-                                if isinstance(ui_resource, dict)
-                                else None
+                                ui_resource.get("csp") if isinstance(ui_resource, dict) else None
                             )
                             content_permissions = (
                                 ui_resource.get("permissions")
@@ -841,9 +819,7 @@ async def execute_graph_streaming(
                                             "tool_call_id": tc_id,
                                             "tool_name": app_meta["tool_name"],
                                             "server_url": app_meta["server_url"],
-                                            "resource_uri": app_meta["mcp_ui"][
-                                                "resource_uri"
-                                            ],
+                                            "resource_uri": app_meta["mcp_ui"]["resource_uri"],
                                             "html_content": html_content,
                                             "tool_result": sub_output.get("output"),
                                             "csp": content_csp
@@ -851,12 +827,8 @@ async def execute_graph_streaming(
                                             else app_meta["mcp_ui"].get("csp"),
                                             "permissions": content_permissions
                                             if content_permissions is not None
-                                            else app_meta["mcp_ui"].get(
-                                                "permissions", []
-                                            ),
-                                            "tool_arguments": app_meta.get(
-                                                "tool_arguments", {}
-                                            ),
+                                            else app_meta["mcp_ui"].get("permissions", []),
+                                            "tool_arguments": app_meta.get("tool_arguments", {}),
                                         },
                                         "timestamp": app_meta["timestamp"],
                                     }
