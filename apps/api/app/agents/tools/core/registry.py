@@ -207,6 +207,7 @@ class ToolRegistry:
             skill_tools,
             support_tool,
             todo_tool,
+            tracked_todo_tools,
             vfs_tools,
             weather_tool,
             webpage_tool,
@@ -228,6 +229,11 @@ class ToolRegistry:
         )
 
         self._add_category("notifications", tools=[*notification_tool.tools])
+        self._add_category(
+            "tracked_todos",
+            tools=[*tracked_todo_tools.tools],
+            space="tasks",
+        )
         self._add_category(
             "todos",
             tools=[*todo_tool.tools],
