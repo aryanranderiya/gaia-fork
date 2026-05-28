@@ -118,10 +118,10 @@ async def create_subagent(subagent: Subagent) -> CompiledStateGraph:
 async def create_subagent_for_user(integration_id: str, user_id: str) -> CompiledStateGraph | None:
     """Build a per-user subagent graph.
 
-    No memoization — every handoff rebuilds the graph from live MCPClient state.
-    The build itself is sub-second; the cost that used to motivate caching
-    (MCP connect + Chroma indexing) now lives in MCPClient where it belongs and
-    is paid once per worker lifetime per integration.
+    No memoization — every handoff rebuilds the graph from live MCPClient
+    state. The build itself is sub-second; the cost that used to motivate
+    caching (MCP connect + Chroma indexing) lives in MCPClient, which keeps
+    warm sessions per integration for the worker's lifetime.
     """
     return await _build_user_subagent(integration_id, user_id)
 

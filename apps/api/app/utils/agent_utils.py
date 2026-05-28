@@ -16,6 +16,7 @@ from app.models.chat_models import (
     UpdateMessagesRequest,
     tool_fields,
 )
+from app.services.chat.chunks import extract_tool_data
 from app.services.conversation_service import update_messages
 from shared.py.wide_events import log
 
@@ -395,9 +396,6 @@ def process_custom_event_for_tools(payload) -> dict:
         extraction fails or no data is available
     """
     try:
-        # Inline import avoids the stream_utils → agent_utils → stream_utils circular dep
-        from app.utils.stream_utils import extract_tool_data
-
         serialized = json.dumps(payload) if payload else "{}"
         new_data = extract_tool_data(serialized)
         return new_data if new_data else {}

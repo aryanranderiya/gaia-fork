@@ -31,6 +31,7 @@ dependencies = [
   "livekit-api>=1.1.0",
   "favicon>=0.7.0",
   "alt-profanity-check>=1.6.1",
+  "e2b>=2.10.2",
   "playwright>=1.58.0",
 ]
 
@@ -168,7 +169,6 @@ backend = [
   "pyinstrument>=5.1.1",
   "posthog>=7.4.2",
   "sentry-sdk[langgraph]>=2.44.0",
-  "opik>=1.9.47,<1.9.80",
   "langfuse>=3.7.0",
   "litellm!=1.81.0",
   "prometheus-fastapi-instrumentator>=7.0.0",

@@ -338,8 +338,6 @@ class TestBuildAgentConfig:
     @patch("app.helpers.agent_helpers.settings")
     def test_basic_config(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = None  # no posthog
 
         user_time = _make_user_time(5)
@@ -361,8 +359,6 @@ class TestBuildAgentConfig:
     @patch("app.helpers.agent_helpers.settings")
     def test_custom_thread_id(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = None
 
         config = build_agent_config(
@@ -378,8 +374,6 @@ class TestBuildAgentConfig:
     @patch("app.helpers.agent_helpers.settings")
     def test_user_model_config(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = None
 
         model_cfg = MagicMock()
@@ -402,8 +396,6 @@ class TestBuildAgentConfig:
     @patch("app.helpers.agent_helpers.settings")
     def test_base_configurable_inheritance(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = None
 
         base = {
@@ -427,27 +419,8 @@ class TestBuildAgentConfig:
 
     @patch("app.helpers.agent_helpers.providers")
     @patch("app.helpers.agent_helpers.settings")
-    def test_opik_tracer_added_in_production(self, mock_settings, mock_providers):
-        mock_settings.ENV = "production"
-        mock_settings.OPIK_API_KEY = "key"  # pragma: allowlist secret
-        mock_settings.OPIK_WORKSPACE = "ws"
-        mock_providers.get.return_value = None
-
-        config = build_agent_config(
-            conversation_id=CONV_ID,
-            user=FAKE_USER,
-            user_time=_make_user_time(),
-            agent_name="comms_agent",
-        )
-        # Should have at least the OpikTracer callback
-        assert len(config["callbacks"]) >= 1
-
-    @patch("app.helpers.agent_helpers.providers")
-    @patch("app.helpers.agent_helpers.settings")
     def test_posthog_callback_added(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = MagicMock()  # posthog client present
 
         config = build_agent_config(
@@ -462,8 +435,6 @@ class TestBuildAgentConfig:
     @patch("app.helpers.agent_helpers.settings")
     def test_usage_metadata_callback(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = None
 
         usage_cb = MagicMock()
@@ -480,8 +451,6 @@ class TestBuildAgentConfig:
     @patch("app.helpers.agent_helpers.settings")
     def test_selected_tool_and_category(self, mock_settings, mock_providers):
         mock_settings.ENV = "development"
-        mock_settings.OPIK_API_KEY = None
-        mock_settings.OPIK_WORKSPACE = None
         mock_providers.get.return_value = None
 
         config = build_agent_config(
