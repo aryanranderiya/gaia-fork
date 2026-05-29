@@ -22,6 +22,8 @@ from app.agents.workspace.system_docs import (
     INTEGRATIONS_GUIDE_MD,
     SESSIONS_GUIDE_MD,
 )
+from app.services.storage.juicefs import ensure_safe_path_id
+from shared.py.wide_events import log
 
 SKILLS_HASH_MARKER = ".gaia/skills.v"
 
@@ -118,4 +120,48 @@ def materialize_skills(user_root: Path, connected_ids: set[str]) -> int:
         if not matches_text(target, skill.body):
             target.write_text(skill.body, encoding="utf-8")
             written += 1
+    return written
+
+
+def materialize_instructions(user_root: Path, instructions: dict[str, str]) -> int:
+    """Write per-user custom instructions under ``integrations/<id>/agent/``.
+
+    ``instructions`` maps integration id → markdown body (already filtered to
+    non-empty by the service). Each lands at
+    ``integrations/<id>/agent/instructions.md`` as a read-only projection of the
+    ``integration_instructions`` MongoDB collection — the same Mongo-is-truth
+    contract as the skill bodies beside it. Stale files (instructions the user
+    cleared) are removed so the projection never outlives its source.
+
+    Returns the count of files actually rewritten.
+    """
+    written = 0
+    integrations_root = user_root / "integrations"
+    for iid, content in instructions.items():
+        if not content:
+            continue
+        # Backstop: iid is user/agent-supplied. Refuse anything that isn't a
+        # single safe path component so a crafted id (e.g. "../../<victim>")
+        # cannot escape the user's integrations/ root and write elsewhere on the
+        # shared mount. Skip the bad entry rather than aborting the bootstrap.
+        try:
+            ensure_safe_path_id(iid, label="integration_id")
+        except ValueError:
+            log.warning(f"Skipping unsafe integration_id in instructions projection: {iid!r}")
+            continue
+        agent_dir = integrations_root / iid / "agent"
+        agent_dir.mkdir(parents=True, exist_ok=True)
+        target = agent_dir / "instructions.md"
+        if not matches_text(target, content):
+            target.write_text(content, encoding="utf-8")
+            written += 1
+
+    # Drop projections whose source instruction was cleared since the last sync.
+    if integrations_root.is_dir():
+        for agent_dir in integrations_root.glob("*/agent"):
+            iid = agent_dir.parent.name
+            stale = agent_dir / "instructions.md"
+            if iid not in instructions and stale.exists():
+                stale.unlink()
+
     return written
