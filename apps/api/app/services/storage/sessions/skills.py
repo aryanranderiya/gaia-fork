@@ -95,6 +95,26 @@ def materialize_skills(user_root: Path, connected_ids: set[str]) -> int:
             if not matches_text(target, skill.body):
                 target.write_text(skill.body, encoding="utf-8")
                 written += 1
+            # Also write the skill's bundled resources (templates/, reference.md,
+            # scripts/, …) so multi-file skills work when the shared _system
+            # subtree + symlinks are unavailable (the linker replaces these with
+            # symlinks once the subtree exists). `rel` is always contained within
+            # the skill dir (see skill_loader._load_resources), so no traversal.
+            for rel, content in skill.resources:
+                res = slug_dir / rel
+                if not matches_text(res, content):
+                    res.parent.mkdir(parents=True, exist_ok=True)
+                    res.write_text(content, encoding="utf-8")
+                    written += 1
+            # Drop fallback copies of resources that left the manifest (renamed or
+            # removed) so a stale template can't outlive the registry change. Only
+            # real files are pruned — symlinks are owned by link_system_files.
+            expected = {SKILL_BODY_FILENAME, *(rel for rel, _ in skill.resources)}
+            for existing in slug_dir.rglob("*"):
+                if existing.is_symlink() or not existing.is_file():
+                    continue
+                if existing.relative_to(slug_dir).as_posix() not in expected:
+                    existing.unlink(missing_ok=True)
         marker = agent_dir / ".connected"
         if iid in connected_ids:
             if not marker.exists():

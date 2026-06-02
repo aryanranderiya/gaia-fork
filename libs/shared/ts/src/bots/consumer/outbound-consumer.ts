@@ -14,7 +14,10 @@ import type { PlatformName } from "../types";
 import { renderForPlatform } from "../utils/formatters";
 import { type BotLogger, createBotLogger } from "../utils/logger";
 import { chunkResponse } from "../utils/text";
-import { outboundMessageEnvelopeSchema } from "./envelope";
+import {
+  type OutboundAttachment,
+  outboundMessageEnvelopeSchema,
+} from "./envelope";
 import {
   dlqName,
   OUTBOUND_DLX,
@@ -30,6 +33,12 @@ const RECONNECT_MAX_MS = 30_000;
 /** Sends one already-rendered message to a platform destination. */
 type DeliverFn = (destinationId: string, text: string) => Promise<void>;
 
+/** Sends one file attachment to a platform destination. */
+type DeliverFileFn = (
+  destinationId: string,
+  attachment: OutboundAttachment,
+) => Promise<void>;
+
 export class OutboundConsumer {
   private conn: Awaited<ReturnType<typeof connect>> | null = null;
   private channel: Channel | null = null;
@@ -42,6 +51,7 @@ export class OutboundConsumer {
     private readonly platform: PlatformName,
     private readonly url: string,
     private readonly deliver: DeliverFn,
+    private readonly deliverFile: DeliverFileFn,
   ) {
     this.logger = createBotLogger(platform, "outbound-consumer");
   }
@@ -177,18 +187,62 @@ export class OutboundConsumer {
       return;
     }
 
+    // File attachment: hand the artifact reference to the platform's file
+    // sender (it fetches the bytes and uploads them). No chunking/rendering.
+    if (env.attachment) {
+      try {
+        await this.deliverFile(env.destination_id, env.attachment);
+        this.settle(channel, () => channel.ack(msg));
+      } catch (err) {
+        this.logger.error(
+          "outbound_file_delivery_failed",
+          { id: env.id, redelivered: msg.fields.redelivered },
+          err,
+        );
+        // Never requeue a file: deliverFile fetches the bytes AND uploads +
+        // sends them, and a failure can surface AFTER the platform already
+        // accepted the upload (e.g. a timeout reading the response). We can't
+        // tell a pre-send fetch failure from a post-send one, so requeueing
+        // risks delivering the file to the user twice. Dead-letter it instead —
+        // the envelope is preserved in the DLQ for inspection/manual replay.
+        this.settle(channel, () => channel.nack(msg, false, false));
+      }
+      return;
+    }
+
+    // Text path. The schema's refine guarantees text when there is no
+    // attachment; narrow it here for the type checker.
+    if (!env.text) {
+      this.settle(channel, () => channel.nack(msg, false, false)); // nothing to send → DLQ
+      return;
+    }
+
     let delivered = 0;
     try {
       // Chunk the raw markdown by the platform limit, then render each chunk so
-      // every sent message is valid platform markdown.
-      for (const chunk of chunkResponse(env.text, this.platform)) {
-        const rendered = renderForPlatform(chunk, this.platform);
+      // every sent message is valid platform markdown. The renderer is passed
+      // into chunkResponse so chunks are sized by their RENDERED length —
+      // otherwise markdown that expands when rendered (e.g. Telegram tables
+      // padded into <pre> blocks) can overflow the platform's message limit and
+      // be rejected.
+      const render = (chunk: string): string =>
+        renderForPlatform(chunk, this.platform);
+      for (const chunk of chunkResponse(env.text, this.platform, render)) {
+        const rendered = render(chunk);
         // A chunk made up solely of strippable markup (e.g. a lone horizontal
         // rule) renders to nothing; platform send APIs reject empty text, so
         // skip it instead of throwing and dead-lettering the whole envelope.
         if (!rendered.trim()) continue;
         await this.deliver(env.destination_id, rendered);
         delivered += 1;
+      }
+      // Non-empty source text that rendered to nothing on every chunk: don't
+      // silently ack it away (the backend recorded it DELIVERED). Dead-letter
+      // it so the dropped message is visible for inspection.
+      if (delivered === 0) {
+        this.logger.warn("outbound_text_rendered_empty", { id: env.id });
+        this.settle(channel, () => channel.nack(msg, false, false));
+        return;
       }
       this.settle(channel, () => channel.ack(msg));
     } catch (err) {
