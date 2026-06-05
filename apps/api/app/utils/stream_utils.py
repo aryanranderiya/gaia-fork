@@ -1,26 +1,16 @@
-"""
-Stream Utilities - Shared helpers for LangGraph streaming.
+"""Shared helpers for processing LangGraph stream events and tool call data.
 
-This module provides reusable functions for processing LangGraph stream events,
-particularly for extracting and formatting tool call data.
-
-Used by:
-- execute_graph_streaming() in agent_helpers.py (main agent)
-- execute_subagent_stream() in subagent_runner.py (subagents via handoff/executor)
-- call_subagent() in subagent_runner.py (direct subagent calls for testing)
-- chat_service.py (SSE chunk processing)
+Used by agent_helpers, subagent_runner, and chat_service.
 """
 
-import asyncio
 from datetime import UTC, datetime
 import json
 from typing import Any
 
 from app.core.stream_manager import stream_manager
 from app.models.chat_models import ToolDataEntry, tool_fields
-from app.models.message_models import MessageRequestWithHistory
 from app.utils.agent_utils import IntegrationMetadata, format_tool_call_entry
-from shared.py.wide_events import ChatContext, log
+from shared.py.wide_events import log
 
 
 async def extract_tool_entries_from_update(
@@ -28,34 +18,12 @@ async def extract_tool_entries_from_update(
     emitted_tool_calls: set[str],
     integration_metadata: IntegrationMetadata | None = None,
 ) -> list[tuple[str, dict]]:
-    """
-    Extract tool_data entries from a LangGraph state update.
+    """Extract new tool_data entries from a LangGraph state update.
 
-    Processes the nested structure of state updates to find tool calls
-    and format them for frontend streaming. Handles deduplication via
-    the emitted_tool_calls set.
-
-    Args:
-        state_update: State update dict from LangGraph 'updates' stream.
-                      Expected structure: {"messages": [AIMessage with tool_calls, ...]}
-        emitted_tool_calls: Set of already-emitted tool_call_ids.
-                            Modified in place to track new emissions.
-        integration_metadata: Optional IntegrationMetadata with icon_url, integration_id, name
-                              for custom MCP integrations. If provided, applied
-                              to all tool entries.
-
-    Returns:
-        List of (tool_call_id, tool_entry) tuples for tool calls that haven't
-        been emitted yet. Each tool_entry is ready for streaming to frontend.
-
-    Example:
-        >>> entries = await extract_tool_entries_from_update(
-        ...     state_update={"messages": [ai_message_with_tools]},
-        ...     emitted_tool_calls=set(),
-        ...     integration_metadata={"icon_url": "...", "name": "Gmail"},
-        ... )
-        >>> for tc_id, entry in entries:
-        ...     stream_writer({"tool_data": entry})
+    Formats each tool call for frontend streaming, deduplicating against
+    ``emitted_tool_calls`` (mutated in place). ``integration_metadata``, if
+    given, is applied to every entry. Returns (tool_call_id, tool_entry) tuples
+    for tool calls not yet emitted.
     """
     entries: list[tuple[str, dict]] = []
 
@@ -280,33 +248,6 @@ async def process_data_chunk(
     return follow_up_actions, True
 
 
-def set_stream_log_context(
-    body: MessageRequestWithHistory,
-    user_id: str | None,
-    conversation_id: str,
-    stream_id: str,
-    is_new_conversation: bool,
-) -> None:
-    """Attach structured log context for a chat stream."""
-    log.set(
-        user={"id": str(user_id)} if user_id else {},
-        chat=ChatContext(
-            conversation_id=conversation_id,
-            stream_id=stream_id,
-            is_new_conversation=is_new_conversation,
-            message_count=len(body.messages) if body.messages else 0,
-            has_files=bool(body.fileIds or body.fileData),
-            file_count=len(body.fileIds or []) + len(body.fileData or []),
-            tool_category=body.toolCategory or "",
-            has_reply=bool(body.replyToMessage),
-            has_calendar_event=bool(body.selectedCalendarEvent),
-            selected_workflow_id=body.selectedWorkflow.id if body.selectedWorkflow else "",
-        ),
-        user_message_length=len(body.messages[-1]["content"]) if body.messages else 0,
-        selected_tool=body.selectedTool,
-    )
-
-
 def aggregate_usage_metadata(usage_metadata: dict[str, Any]) -> tuple[int, int, int]:
     """Sum input, output, and cache_read tokens across all model entries.
 
@@ -383,24 +324,6 @@ async def recover_stream_state(
         tool_data = progress_tool_data
     log.debug(f"Recovered {len(complete_message)} chars from Redis progress")
     return complete_message, tool_data
-
-
-async def publish_description_if_ready(
-    stream_id: str,
-    description_task: asyncio.Task | None,
-) -> asyncio.Task | None:
-    """Publish conversation description chunk if the task has completed. Returns None to clear it."""
-    if not description_task or not description_task.done():
-        return description_task
-    try:
-        description = description_task.result()
-        await stream_manager.publish_chunk(
-            stream_id,
-            f"""data: {json.dumps({"conversation_description": description})}\n\n""",
-        )
-    except Exception as e:
-        log.error(f"Failed to get conversation description: {e}")
-    return None  # Clear to prevent duplicate sends
 
 
 def absorb_collector_event(

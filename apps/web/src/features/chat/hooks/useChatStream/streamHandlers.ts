@@ -323,6 +323,9 @@ export const createStreamHandlers = (deps: StreamHandlerDeps) => {
 
   const handleMainResponseComplete = () => {
     setIsLoading(false);
+    // The comms agent has finished its initial response ("on it"), so unlock the
+    // composer — the user can now queue while any background executor runs.
+    useLoadingStore.getState().setMainResponseStreaming(false);
     resetLoadingText();
     updateBotMessage({ loading: false });
   };
@@ -438,6 +441,19 @@ export const createStreamHandlers = (deps: StreamHandlerDeps) => {
     parsed: ParsedStreamEvent,
     streamingData: Record<string, unknown>,
   ): Promise<string | undefined> => {
+    // Background executor tool/subagent events arrive after `main_response_complete`
+    // has hidden the spinner. They mean work is still in progress, so re-show the
+    // loading indicator — the same way `progress`/`response` already do. (See
+    // ensureSpinnerOn: it was built for exactly this "executor result" case.)
+    if (
+      parsed.type === "tool_data" ||
+      parsed.type === "tool_output" ||
+      parsed.type === "subagent_start" ||
+      parsed.type === "subagent_end" ||
+      parsed.type === "todo_progress"
+    ) {
+      ensureSpinnerOn();
+    }
     switch (parsed.type) {
       case "done":
       case "keepalive":

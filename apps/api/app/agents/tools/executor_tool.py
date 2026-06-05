@@ -15,7 +15,9 @@ from uuid import uuid4
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
-from app.agents.core.background.executor_runner import run_executor_background
+from app.agents.core.background.executor_runner import (
+    run_executor_background,
+)
 from app.agents.core.background.inbox import mark_executor_spawned
 from app.api.v1.middleware.tiered_rate_limiter import RateLimitExceededException
 from app.constants.cache import (
@@ -24,6 +26,7 @@ from app.constants.cache import (
     EXECUTOR_QUEUE_PREFIX,
     EXECUTOR_QUEUE_TTL,
 )
+from app.constants.general import CALL_EXECUTOR_NAME
 from app.core.stream_manager import StreamManager
 from app.db.redis import redis_cache
 from app.decorators.rate_limiting import LangChainRateLimitException
@@ -180,23 +183,28 @@ async def call_executor(
             conversation_id=conversation_id,
         )
     except (LangChainRateLimitException, RateLimitExceededException) as e:
-        if isinstance(e, LangChainRateLimitException):
-            feature = e.feature
-        else:
-            detail: dict[str, str] = e.detail if isinstance(e.detail, dict) else {}
-            feature = detail.get("feature", "")
-        log.warning("Rate limit exceeded for executor task", feature=feature)
-        return (
-            f"Rate limit exceeded for {feature or 'this feature'}. "
-            "The user has already been notified of this limit; "
-            "acknowledge briefly without repeating the limit details."
-        )
+        return _rate_limit_message(e)
     except Exception as e:  # noqa: BLE001
         log.error("Error dispatching executor", error=str(e))
         await redis_cache.delete(
             f"{EXECUTOR_BUSY_PREFIX}{conversation_id}",
         )
         return f"Error starting task: {e!s}"
+
+
+def _rate_limit_message(e: LangChainRateLimitException | RateLimitExceededException) -> str:
+    """Build the comms-facing message for an executor rate-limit hit."""
+    if isinstance(e, LangChainRateLimitException):
+        feature = e.feature
+    else:
+        detail: dict[str, str] = e.detail if isinstance(e.detail, dict) else {}
+        feature = detail.get("feature", "")
+    log.warning("Rate limit exceeded for executor task", feature=feature)
+    return (
+        f"Rate limit exceeded for {feature or 'this feature'}. "
+        "The user has already been notified of this limit; "
+        "acknowledge briefly without repeating the limit details."
+    )
 
 
 async def _dispatch_executor(
@@ -209,7 +217,7 @@ async def _dispatch_executor(
     """Core dispatch logic — acquire lock, queue if busy, or spawn."""
     log.set(
         tool={
-            "name": "call_executor",
+            "name": CALL_EXECUTOR_NAME,
             "action": "dispatch",
             "task_id": task_id,
         },
@@ -238,7 +246,8 @@ async def _dispatch_executor(
         )
         return (
             "I'm already working on a task for this conversation. "
-            "Your request has been queued and I'll handle it right after."
+            f"Your request has been queued (task_id: {task_id}) "
+            "and I'll handle it right after."
         )
 
     # MCP tools load lazily inside each subagent's first use — the old eager
@@ -270,7 +279,7 @@ async def _dispatch_executor(
         task_id=task_id,
         stream_id=stream_id,
     )
-    return "Task accepted. I'm on it — you'll get progress updates as I work."
+    return f"Task accepted (task_id: {task_id}). I'm on it — you'll get progress updates as I work."
 
 
 @tool
@@ -284,12 +293,13 @@ async def cancel_executor(
     """Cancel background executor tasks by their task_ids.
 
     task_ids behavior:
-    - Empty list [] (default) = cancel EVERYTHING running + queued for this
-      conversation. This is the right call for every generic stop request
-      ("stop that", "cancel it", "abort", "nevermind that") — task_ids are
-      not exposed in the chat, so you don't need to track them.
-    - Specific task_ids = cancel only those. Only use when the user
-      explicitly provides a task_id string (rare).
+    - Empty list [] = cancel EVERYTHING (running task + all queued).
+      Use for: "stop everything", "cancel all", or generic "stop that".
+    - Specific task_ids = cancel only those (running or queued), keep rest.
+      Use for: "cancel the search task" / "stop the second one".
+      Match user intent to task_ids from call_executor responses in
+      conversation history (e.g. "Task accepted (task_id: abc-123)"
+      or "queued (task_id: xyz-456)").
 
     CRITICAL: NEVER use this tool unless the user EXPLICITLY asks to stop,
     cancel, or abort. Valid triggers: "stop that", "cancel it", "abort",
