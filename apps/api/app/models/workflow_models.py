@@ -108,16 +108,9 @@ class TriggerConfig(BaseModel):
     def calculate_next_run(
         self, base_time: datetime | None = None, user_timezone: str | None = None
     ) -> datetime | None:
-        """
-        Calculate the next run time based on cron expression with timezone awareness.
+        """Calculate the next run time from the cron expression. Returns UTC.
 
-        Args:
-            base_time: Base time for calculation (defaults to current UTC)
-            user_timezone: User's timezone for cron calculation (defaults to trigger config timezone)
-                          Supports both IANA names (e.g., "America/New_York") and offset strings (e.g., "+05:30")
-
-        Returns:
-            Next run time in UTC
+        user_timezone accepts IANA names ("America/New_York") or offset strings ("+05:30").
         """
         if self.type != TriggerType.SCHEDULE or not self.cron_expression:
             return None
@@ -155,16 +148,7 @@ class TriggerConfig(BaseModel):
     def update_next_run(
         self, base_time: datetime | None = None, user_timezone: str | None = None
     ) -> bool:
-        """
-        Update the next_run field with timezone awareness and return True if changed.
-
-        Args:
-            base_time: Base time for calculation
-            user_timezone: User's timezone for cron calculation
-
-        Returns:
-            True if next_run was updated
-        """
+        """Update the next_run field; return True if it changed."""
         old_next_run = self.next_run
         self.next_run = self.calculate_next_run(base_time, user_timezone)
         return old_next_run != self.next_run
@@ -249,7 +233,6 @@ class Workflow(BaseScheduledTask):
         default=None,
         description="ID of the source todo if is_todo_workflow=True",
     )
-
     # System workflow flags (for auto-provisioned workflows created on integration connect)
     is_system_workflow: bool = Field(
         default=False,
@@ -314,10 +297,10 @@ class Workflow(BaseScheduledTask):
                 ):
                     data["repeat"] = trigger_config.cron_expression
 
-        # Set default scheduled_at if still not provided
-        if "scheduled_at" not in data:
-            data["scheduled_at"] = datetime.now(UTC)
-
+        # A workflow only has a scheduled_at when it is a schedule-triggered (cron)
+        # workflow with a next_run (mapped above). Manual / integration / todo
+        # workflows have no scheduled run — leave scheduled_at as None rather than
+        # fabricating "now", which would make them look due to the recovery scan.
         super().__init__(**data)
 
     @model_validator(mode="before")
@@ -474,18 +457,6 @@ class RegenerateStepsRequest(BaseModel):
         default=None,
         description="Integration slugs to bias regeneration; falls back to persisted selection.",
     )
-
-
-class PublishWorkflowRequest(BaseModel):
-    """Request model for publishing a workflow to the community."""
-
-    workflow_id: str = Field(description="ID of the workflow to publish")
-
-
-class UnpublishWorkflowRequest(BaseModel):
-    """Request model for unpublishing a workflow from the community."""
-
-    workflow_id: str = Field(description="ID of the workflow to unpublish")
 
 
 class PublicWorkflowsResponse(BaseModel):
