@@ -10,6 +10,12 @@ from typing import Any
 from app.core.stream_manager import stream_manager
 from app.models.chat_models import ToolDataEntry, tool_fields
 from app.utils.agent_utils import IntegrationMetadata, format_tool_call_entry
+from app.utils.stream_publishers import (
+    accumulate_todo_progress,
+    publish_other_data,
+    publish_tool_data,
+    publish_tool_output,
+)
 from shared.py.wide_events import log
 
 
@@ -168,84 +174,59 @@ async def process_data_chunk(
     except json.JSONDecodeError:
         chunk_json = None
 
-    # Forward subagent lifecycle events to the client and accumulate for persistence
     if chunk_json:
-        if "subagent_start" in chunk_json:
-            tool_data.setdefault("subagent_starts", {})[
-                chunk_json["subagent_start"]["subagent_id"]
-            ] = chunk_json["subagent_start"]
-            await stream_manager.publish_chunk(
-                stream_id,
-                f"data: {json.dumps({'subagent_start': chunk_json['subagent_start']})}\n\n",
-            )
-        if "subagent_end" in chunk_json:
-            tool_data.setdefault("subagent_ends", {})[chunk_json["subagent_end"]["subagent_id"]] = (
-                chunk_json["subagent_end"]
-            )
-            await stream_manager.publish_chunk(
-                stream_id,
-                f"data: {json.dumps({'subagent_end': chunk_json['subagent_end']})}\n\n",
-            )
-
-    if chunk_json and "todo_progress" in chunk_json:
-        snapshot = chunk_json["todo_progress"]
-        source = snapshot.get("source", "executor")
-        todo_progress_accumulated[source] = snapshot
+        await _forward_subagent_lifecycle(stream_id, chunk_json, tool_data)
+        accumulate_todo_progress(chunk_json, todo_progress_accumulated)
 
     new_data = extract_tool_data(chunk_payload)
-    if new_data:
-        if "other_data" in new_data:
-            other_data_dict = new_data["other_data"]
-            if "follow_up_actions" in other_data_dict:
-                follow_up_actions = other_data_dict["follow_up_actions"]
-                await stream_manager.publish_chunk(
-                    stream_id,
-                    f"data: {json.dumps({'follow_up_actions': follow_up_actions})}\n\n",
-                )
-
-        if "tool_data" in new_data:
-            for tool_entry in new_data["tool_data"]:
-                tool_data["tool_data"].append(tool_entry)
-                await stream_manager.publish_chunk(
-                    stream_id,
-                    f"data: {json.dumps({'tool_data': tool_entry})}\n\n",
-                )
-
-        if "tool_output" in new_data:
-            output_data = new_data["tool_output"]
-            tool_call_id = output_data.get("tool_call_id")
-            output = output_data.get("output")
-            if tool_call_id and output:
-                tool_outputs[tool_call_id] = output
-            await stream_manager.publish_chunk(
-                stream_id,
-                f"data: {json.dumps({'tool_output': output_data})}\n\n",
-            )
-
-        if chunk_json and "todo_progress" in chunk_json:
-            await stream_manager.publish_chunk(
-                stream_id,
-                f"data: {json.dumps({'todo_progress': chunk_json['todo_progress']})}\n\n",
-            )
-
+    if not new_data:
+        await stream_manager.publish_chunk(stream_id, chunk)
         response_text = _extract_response_text(chunk)
-        if response_text or new_data:
+        if response_text:
             await stream_manager.update_progress(
                 stream_id,
                 message_chunk=response_text,
-                tool_data=new_data,
+                tool_data=None,
             )
         return follow_up_actions, True
 
-    await stream_manager.publish_chunk(stream_id, chunk)
-    response_text = _extract_response_text(chunk)
-    if response_text:
-        await stream_manager.update_progress(
+    follow_up_actions = await publish_other_data(stream_id, new_data, follow_up_actions)
+    await publish_tool_data(stream_id, new_data, tool_data)
+    await publish_tool_output(stream_id, new_data, tool_outputs)
+
+    if chunk_json and "todo_progress" in chunk_json:
+        await stream_manager.publish_chunk(
             stream_id,
-            message_chunk=response_text,
-            tool_data=None,
+            f"data: {json.dumps({'todo_progress': chunk_json['todo_progress']})}\n\n",
         )
+
+    response_text = _extract_response_text(chunk)
+    await stream_manager.update_progress(
+        stream_id,
+        message_chunk=response_text,
+        tool_data=new_data,
+    )
     return follow_up_actions, True
+
+
+async def _forward_subagent_lifecycle(
+    stream_id: str, chunk_json: dict[str, Any], tool_data: dict[str, Any]
+) -> None:
+    """Forward subagent start/end events to the client and accumulate them."""
+    if "subagent_start" in chunk_json:
+        start = chunk_json["subagent_start"]
+        tool_data.setdefault("subagent_starts", {})[start["subagent_id"]] = start
+        await stream_manager.publish_chunk(
+            stream_id,
+            f"data: {json.dumps({'subagent_start': start})}\n\n",
+        )
+    if "subagent_end" in chunk_json:
+        end = chunk_json["subagent_end"]
+        tool_data.setdefault("subagent_ends", {})[end["subagent_id"]] = end
+        await stream_manager.publish_chunk(
+            stream_id,
+            f"data: {json.dumps({'subagent_end': end})}\n\n",
+        )
 
 
 def aggregate_usage_metadata(usage_metadata: dict[str, Any]) -> tuple[int, int, int]:
