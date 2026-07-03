@@ -124,6 +124,7 @@ async def save_conversation_async(
     user_message_id: str,
     bot_message_id: str,
     bot_timestamp: datetime | None = None,
+    error: str | None = None,
 ) -> None:
     """Persist the finished turn to Mongo and bill token usage.
 
@@ -169,6 +170,7 @@ async def save_conversation_async(
         date=bot_timestamp.isoformat(),
         fileIds=body.fileIds,
         metadata=metadata,
+        error=error,
     )
     bot_message.message_id = bot_message_id
 

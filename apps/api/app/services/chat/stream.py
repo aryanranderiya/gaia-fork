@@ -18,6 +18,7 @@ from typing import Any
 from uuid import uuid4
 
 from langchain_core.callbacks import UsageMetadataCallbackHandler
+from langgraph.errors import GraphRecursionError
 
 from app.agents.core.agent import call_agent
 from app.agents.core.background.executor_capture import (
@@ -97,6 +98,7 @@ class _StreamState:
     __slots__ = (
         "bot_message_id",
         "complete_message",
+        "error",
         "follow_up_actions",
         "is_cancelled",
         "saved",
@@ -116,6 +118,9 @@ class _StreamState:
         self.follow_up_actions: list[str] = []
         self.usage_metadata: dict[str, Any] = {}
         self.is_cancelled: bool = False
+        # Terminal error for this turn, persisted onto the bot message so a
+        # reload shows what happened instead of an empty bubble.
+        self.error: str = ""
         # Whether the turn was persisted in the try block (early save). When
         # False, the finally block does a fallback save.
         self.saved: bool = False
@@ -208,7 +213,9 @@ async def _run_chat_stream(
         await stream_manager.complete_stream(stream_id)
 
     except Exception as e:  # surface to client + flag the stream
-        await _handle_stream_error(stream_id, e)
+        # Persist the SAME user-facing text we stream (friendly for a recursion
+        # stop), not the raw exception — a reload shows what the user saw.
+        state.error = await _handle_stream_error(stream_id, e)
     finally:
         await _finalize_stream(stream_id, body, user, conversation_id, state, artifact_task)
 
@@ -342,10 +349,15 @@ async def _consume_agent_stream(
         bot_message_id=state.bot_message_id,
         source=source,
     ):
-        if await stream_manager.is_cancelled(stream_id):
+        # Cancellation is detected and terminated by the inner graph driver
+        # (execute_graph_streaming), which owns the checkpoint write that
+        # records the interruption for the model. Breaking here would abandon
+        # that generator mid-suspend and race the record away — note the flag
+        # for bookkeeping and keep consuming; the driver ends the stream with
+        # a `cancelled` nostream marker within one graph event.
+        if not state.is_cancelled and await stream_manager.is_cancelled(stream_id):
             state.is_cancelled = True
             log.info(f"{LogTag.CHAT} Stream {stream_id} cancelled by user")
-            break
 
         # Skip [DONE] marker — we send it after description generation.
         if chunk == "data: [DONE]\n\n":
@@ -354,8 +366,19 @@ async def _consume_agent_stream(
         description_task = await _publish_description_if_ready(stream_id, description_task)
 
         if chunk.startswith("nostream: "):
-            state.complete_message = _parse_complete_message(chunk)
+            state.complete_message, was_cancelled = _parse_complete_message(chunk)
+            state.is_cancelled = state.is_cancelled or was_cancelled
             continue
+
+        if chunk.startswith("data: ") and '"error"' in chunk:
+            # Errors reach this loop two ways: raised exceptions (caught by the
+            # orchestrator, which sets state.error) and error frames YIELDED by
+            # call_agent's setup guard. Record the latter so the persisted bot
+            # message carries the failure instead of an empty bubble.
+            with contextlib.suppress(json.JSONDecodeError):
+                payload = json.loads(chunk[len("data: ") :])
+                if isinstance(payload, dict) and payload.get("error"):
+                    state.error = str(payload["error"])
 
         if chunk.startswith("data: "):
             try:
@@ -375,12 +398,14 @@ async def _consume_agent_stream(
     return description_task
 
 
-def _parse_complete_message(chunk: str) -> str:
-    """Pull the ``complete_message`` field out of a ``nostream: {...}`` marker."""
-    nostream_json = json.loads(chunk.replace("nostream: ", ""))
-    if isinstance(nostream_json, dict) and "complete_message" in nostream_json:
-        return str(nostream_json["complete_message"])
-    return ""
+def _parse_complete_message(chunk: str) -> tuple[str, bool]:
+    """Pull ``(complete_message, cancelled)`` out of a ``nostream: {...}`` marker."""
+    nostream_json = json.loads(chunk.removeprefix("nostream: "))
+    if isinstance(nostream_json, dict):
+        return str(nostream_json.get("complete_message", "")), bool(
+            nostream_json.get("cancelled", False)
+        )
+    return "", False
 
 
 def _log_usage_summary(state: _StreamState) -> None:
@@ -434,17 +459,28 @@ async def _finalize_description(
 async def _handle_stream_error(
     stream_id: str,
     error: Exception,
-) -> None:
-    """Publish the error to the client and flag the stream as failed.
+) -> str:
+    """Publish the error to the client, flag the stream as failed, and return
+    the user-facing message so the caller can persist the SAME text.
 
     Order matters: ``set_error`` publishes the ``STREAM_ERROR_SIGNAL`` which
     breaks the subscriber loop, so the error chunk must go on the wire first.
     """
     log.error(f"{LogTag.CHAT} Background stream error for {stream_id}: {error}")
+    # A recursion-limit stop is an expected degradation, not an infrastructure
+    # failure - never show the raw "Recursion limit of N reached..." internals.
+    if isinstance(error, GraphRecursionError):
+        user_error = (
+            "I hit my step limit on this one before finishing. "
+            "Ask me to continue and I'll pick up where I left off."
+        )
+    else:
+        user_error = str(error)
     await stream_manager.publish_chunk(
-        stream_id, f"data: {json.dumps(ErrorFrame(error=str(error)).model_dump())}\n\n"
+        stream_id, f"data: {json.dumps(ErrorFrame(error=user_error).model_dump())}\n\n"
     )
-    await stream_manager.set_error(stream_id, str(error))
+    await stream_manager.set_error(stream_id, user_error)
+    return user_error
 
 
 async def _persist_turn(
@@ -476,6 +512,7 @@ async def _persist_turn(
         user_message_id=state.user_message_id,
         bot_message_id=state.bot_message_id,
         bot_timestamp=state.turn_completed_at,
+        error=state.error or None,
     )
     state.saved = True
 

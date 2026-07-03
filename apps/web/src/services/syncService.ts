@@ -104,6 +104,7 @@ const mapApiMessagesToStored = (
       follow_up_actions: message.follow_up_actions ?? null,
       image_data: message.image_data ?? null,
       isConvoSystemGenerated: message.isConvoSystemGenerated,
+      error: message.error ?? null,
       memory_data: message.memory_data ?? null,
       tool_data: message.tool_data ?? null,
       todo_progress: message.todo_progress ?? null,

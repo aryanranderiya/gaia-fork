@@ -50,6 +50,7 @@ export type ChatStreamEvent =
   | { type: "keepalive" }
   | { type: "main_response_complete" }
   | { type: "error"; error: string }
+  | { type: "model_fallback"; model?: string }
   | { type: "response"; chunk: string }
   | {
       type: "conversation_initialized";
@@ -155,6 +156,19 @@ export function parseChatStreamEvent(data: string): ChatStreamEvent[] {
 
   if (typeof payload.error === "string" && payload.error.length > 0) {
     events.push({ type: "error", error: payload.error });
+  }
+
+  // The backend emits `{"model_fallback": {"model": "..."}}` at most once per
+  // stream when the primary model failed and the backup answered. Modeled as a
+  // first-class event so it isn't treated as turn content by the `unknown` path.
+  if (isObject(payload.model_fallback)) {
+    events.push({
+      type: "model_fallback",
+      model:
+        typeof payload.model_fallback.model === "string"
+          ? payload.model_fallback.model
+          : undefined,
+    });
   }
 
   if (payload.main_response_complete === true) {

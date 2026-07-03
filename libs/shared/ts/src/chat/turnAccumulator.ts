@@ -379,6 +379,7 @@ export const applyStreamEvent = (
     case "done":
     case "keepalive":
     case "error":
+    case "model_fallback":
     case "parse_error":
     case "main_response_complete":
     case "progress":

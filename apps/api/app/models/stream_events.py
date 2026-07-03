@@ -145,6 +145,15 @@ class ErrorFrame(BaseModel):
     error: str
 
 
+class ModelFallbackFrame(BaseModel):
+    """One-time notice that the primary model failed and a backup answered.
+
+    Emitted at most once per stream; the frontend surfaces it as a quiet toast.
+    """
+
+    model_fallback: dict[str, str]
+
+
 class MainResponseCompleteFrame(BaseModel):
     """Marks the primary assistant response as finished."""
 

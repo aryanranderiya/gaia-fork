@@ -251,6 +251,15 @@ export class TurnSession {
         toast.error(event.error);
         return event.error;
 
+      case "model_fallback":
+        // Primary model failed and the backup answered. Reassure the user the
+        // result is complete; do NOT return an error string (the turn is fine).
+        toast.info("Answered with backup model", {
+          description:
+            "The primary model was unavailable, so a backup handled your request. Your answer is complete.",
+        });
+        return undefined;
+
       case "main_response_complete":
         this.handleMainResponseComplete();
         return undefined;

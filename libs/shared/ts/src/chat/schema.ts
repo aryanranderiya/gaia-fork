@@ -69,6 +69,9 @@ const DesktopToolRequestPayloadSchema = z.object({
 
 const ResponseFrameSchema = z.object({ response: z.string() });
 const ErrorFrameSchema = z.object({ error: z.string() });
+const ModelFallbackFrameSchema = z.object({
+  model_fallback: z.object({ model: z.string().optional() }).loose(),
+});
 const KeepaliveFrameSchema = z.object({ keepalive: z.literal(true) });
 const MainResponseCompleteFrameSchema = z.object({
   main_response_complete: z.literal(true),
@@ -121,6 +124,7 @@ const ConversationInitializedFrameSchema = z.object({
 export const ChatStreamFrameSchema = z.union([
   ResponseFrameSchema,
   ErrorFrameSchema,
+  ModelFallbackFrameSchema,
   KeepaliveFrameSchema,
   MainResponseCompleteFrameSchema,
   FollowUpActionsFrameSchema,
