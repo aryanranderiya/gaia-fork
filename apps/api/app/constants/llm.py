@@ -1,4 +1,7 @@
-DEFAULT_LLM_PROVIDER = "gemini"
+GEMINI_PROVIDER = "gemini"
+OPENROUTER_PROVIDER = "openrouter"
+
+DEFAULT_LLM_PROVIDER = GEMINI_PROVIDER
 
 # How often the messages DeltaChannel writes a full snapshot blob (every Nth
 # update). Between snapshots only per-step deltas are persisted, so checkpoint
@@ -85,8 +88,21 @@ SIM_STUB_MODEL_NAME = "gaia-sim-stub"
 # Per-plan model policy (hardcoded; not user-selectable). Free accounts run the
 # default Gemini model above; every paid (non-free) plan runs a more capable
 # model via OpenRouter.
-PAID_MODEL_PROVIDER = "openrouter"
+PAID_MODEL_PROVIDER = OPENROUTER_PROVIDER
 PAID_MODEL_NAME = "z-ai/glm-5.2"
+
+# Which OpenRouter models accept image input, straight from the live catalog's
+# `architecture.input_modalities` — so vision support needs no per-model
+# curation here. See app/agents/llm/model_catalog.py for the cache, and
+# app/agents/llm/vision/ for how each lane then receives the media.
+OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models"
+OPENROUTER_MODEL_CATALOG_TTL_SECONDS = 3600
+OPENROUTER_MODEL_CATALOG_TIMEOUT_SECONDS = 10
+# How long a failed catalog refresh is remembered. The catalog is consulted on
+# the pre-model hook, so without a backoff an OpenRouter outage would cost every
+# model call a full fetch timeout — turning a degraded dependency into an
+# unusable product.
+OPENROUTER_MODEL_CATALOG_RETRY_SECONDS = 300
 
 # GLM 5.2's first-party (z-ai) lane exposes a 1M-token context window and a 131k
 # output ceiling. Cap output well under that; the summarization / compaction
