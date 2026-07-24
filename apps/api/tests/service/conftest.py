@@ -5,8 +5,8 @@ The approach: patch the app's singletons to point at real test containers,
 then call production functions directly. No rewriting production logic.
 
 Root conftest.py globally patches _get_mongodb_instance to MagicMock.
-We work around that by patching the actual collection module attributes
-to point at real Motor collections, and by giving redis_cache a real
+We work around that by pointing the repository layer's collection accessor at a
+real per-test Motor client (see ``mongo_db``), and by giving redis_cache a real
 Redis connection.
 """
 
@@ -17,7 +17,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 import os
-import sys
 from unittest.mock import patch
 
 from bson import ObjectId
@@ -64,24 +63,16 @@ def postgres_url() -> str:
 
 
 @pytest.fixture
-async def mongo_db(mongodb_url: str):
+async def mongo_db(mongodb_url: str, monkeypatch):
     """
-    Real MongoDB database handle for tests that need arbitrary collections.
+    Real MongoDB database handle, with the repository layer pointed at it.
 
-    Creates a fresh Motor client per test to avoid event-loop cross-
-    contamination. Use this when you need to work with collections other
-    than 'conversations' (e.g., 'todos', 'reminders').
-    """
-    client: AsyncIOMotorClient = AsyncIOMotorClient(mongodb_url)
-    db = client["gaia_test"]
-    yield db
-    client.close()
-
-
-@pytest.fixture
-async def conversations_collection(mongodb_url: str, monkeypatch):
-    """
-    Real MongoDB conversations collection, patched into the app singleton.
+    Services no longer hold Mongo collections — every read and write goes through
+    ``app/db/repositories``, which resolves its handle via ``get_async_collection``
+    on *every* call. Patching that one symbol therefore redirects the whole
+    repository layer at this database, so production code called from a test
+    reads and writes the very collections the test seeds. This is the same seam
+    the repository contract suite uses (see ``tests/contracts/conftest.py``).
 
     Creates a fresh Motor client per test to avoid event-loop cross-
     contamination (session-scoped Motor clients are bound to the session
@@ -89,17 +80,25 @@ async def conversations_collection(mongodb_url: str, monkeypatch):
     asyncio_default_fixture_loop_scope is "function").
     """
     client: AsyncIOMotorClient = AsyncIOMotorClient(mongodb_url)
-    coll = client["gaia_test"]["conversations"]
+    db = client["gaia_test"]
+
+    monkeypatch.setattr("app.db.repositories.base.get_async_collection", lambda name: db[name])
+
+    yield db
+
+    client.close()
+
+
+@pytest.fixture
+async def conversations_collection(mongo_db):
+    """The real ``conversations`` collection production code will read, emptied
+    around each test so seeded documents can be asserted on exactly."""
+    coll = mongo_db["conversations"]
     await coll.delete_many({})
-
-    import app.services.conversation_service as conv_svc
-
-    monkeypatch.setattr(conv_svc, "conversations_collection", coll)
 
     yield coll
 
     await coll.delete_many({})
-    client.close()
 
 
 @pytest.fixture
@@ -126,55 +125,6 @@ async def real_redis(redis_url: str, monkeypatch):
     await client.aclose()  # type: ignore[attr-defined]
 
 
-@pytest.fixture
-async def real_integration_collections(
-    mongodb_url: str, monkeypatch: pytest.MonkeyPatch
-) -> AsyncIterator[None]:
-    """Rebind the integration Mongo collections to a fresh per-test Motor client.
-
-    ``integrations_collection`` / ``user_integrations_collection`` are process-
-    global Motor collections cached in ``app.db.mongodb.collections`` and pulled
-    into ~a dozen modules via ``from ... import`` (early binding). Under real-
-    services runs the global mongo mock is skipped, so those references stay
-    bound to whichever earlier test's now-closed function-scoped event loop first
-    created the client — and the device register path (insert_one, then
-    get_integration_details -> resolve -> find_one, then add_user_integration)
-    raises ``RuntimeError: Event loop is closed`` on the first Mongo call.
-
-    Mirror the conversations_collection fixture, but repoint EVERY importer at
-    once: a fresh client on THIS test's loop (DB "GAIA", matching ``init_mongodb``
-    so it agrees with the sync client and any un-repointed reference), swapped
-    into every module that early-bound either name. Targeting a hand-picked
-    subset is fragile — the register path alone spans device_service,
-    integration_resolver and user_integrations.
-
-    The sweep only reaches modules already in ``sys.modules``, which is why every
-    ``app.*`` import in this file is deliberately deferred into its function.
-    Hoisting them to module scope imports oauth_service / endpoints.integrations
-    (both early-bind ``integrations_collection``) before this fixture runs, so the
-    sweep repoints them at this test's client too and the device E2E test then
-    fails Mongo auth. Keep them function-local.
-    """
-    client: AsyncIOMotorClient = AsyncIOMotorClient(mongodb_url)
-    db = client["GAIA"]
-    fresh = {
-        "integrations_collection": db["integrations"],
-        "user_integrations_collection": db["user_integrations"],
-    }
-
-    for module in list(sys.modules.values()):
-        module_dict = getattr(module, "__dict__", None)
-        if not module_dict:
-            continue
-        for name, coll in fresh.items():
-            if name in module_dict:
-                monkeypatch.setattr(module, name, coll)
-
-    yield
-
-    client.close()
-
-
 @asynccontextmanager
 async def _device_bridge_lifespan(app: FastAPI) -> AsyncIterator[None]:
     """Real device-bridge listener startup, skipping the rest of unified_startup.
@@ -198,7 +148,6 @@ async def _device_bridge_lifespan(app: FastAPI) -> AsyncIterator[None]:
     this test's now-dead event loop (see ProviderRegistry.reset, "for testing
     only").
     """
-    # Deferred, not hoisted — see real_integration_collections.
     from app.core.lazy_loader import providers
     from app.core.provider_registration import register_lazy_providers
     from app.db.postgresql import close_postgresql_db
@@ -237,7 +186,6 @@ def _create_live_app() -> FastAPI:
         patch("app.core.app_factory.lifespan", _device_bridge_lifespan),
         patch("app.core.app_factory.configure_middleware", _cors_only_middleware),
     ):
-        # Deferred, not hoisted — see real_integration_collections.
         from app.core.app_factory import create_app
 
         app = create_app()
@@ -274,15 +222,19 @@ class LiveApiServer:
 
 
 @pytest.fixture
-async def live_api_server(
-    real_redis: Redis, real_integration_collections: None
-) -> AsyncIterator[LiveApiServer]:
+async def live_api_server(real_redis: Redis, mongo_db) -> AsyncIterator[LiveApiServer]:
     """A live, real GAIA API bound to a real localhost port.
 
     Depends on real_redis so redis_cache.redis is already patched to the
-    per-worker test Redis, and on real_integration_collections so the device
-    path's Mongo collections are bound to this test's event loop — both before
-    the app (and its listeners) start.
+    per-worker test Redis, and on mongo_db so the repository layer resolves its
+    collections through a Motor client created on THIS test's event loop — both
+    before the app (and its listeners) start.
+
+    The mongo_db dependency is load-bearing, not decoration: the client cached in
+    ``app.db.mongodb.collections`` is process-global and latches onto the first
+    event loop it is used from, so without the rebind the device register path
+    (create integration -> resolve -> add_user_integration) hits an earlier
+    test's closed loop and raises ``RuntimeError: Event loop is closed``.
     """
     app = _create_live_app()
     server = LiveApiServer(pick_free_port(), app)
@@ -321,16 +273,27 @@ async def clean_bridge_tables(live_api_server: LiveApiServer) -> AsyncIterator[N
 
 @pytest.fixture
 def make_conversation(conversations_collection):
-    """Factory to seed a conversation document in real MongoDB."""
+    """Factory to seed a conversation document in real MongoDB.
+
+    Writes the legacy camelCase timestamp pair exactly as production does —
+    ``createdAt`` an ISO string, ``updatedAt`` a BSON date (see
+    ``ConversationDocument``). Callers may pass a ``datetime`` for ``createdAt``
+    so they can do date arithmetic; it is normalized here. Seeding a raw
+    ``datetime`` would make the repository's read-boundary validation reject the
+    row, which is not a shape any production writer can produce.
+    """
 
     async def _make(user_id: str, conv_id: str | None = None, **overrides):
         conv_id = conv_id or f"conv_{ObjectId()}"
+        created_at = overrides.pop("createdAt", datetime.now(UTC))
+        if isinstance(created_at, datetime):
+            created_at = created_at.isoformat()
         doc = {
             "user_id": user_id,
             "conversation_id": conv_id,
             "messages": [],
             "description": "Test conversation",
-            "createdAt": datetime.now(UTC),
+            "createdAt": created_at,
             "updatedAt": datetime.now(UTC),
             **overrides,
         }
