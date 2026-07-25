@@ -11,9 +11,11 @@ from langchain_core.tools import BaseTool
 from app.agents.llm.client import get_default_llm
 from app.agents.middleware.accounting import LLMAccountingMiddleware
 from app.agents.middleware.compaction import WorkspaceCompactionMiddleware
+from app.agents.middleware.hil_approval import HILApprovalMiddleware
 from app.agents.middleware.loop_guard import LoopGuardMiddleware
 from app.agents.middleware.media import MediaDescriptionMiddleware
 from app.agents.middleware.subagent import SubagentMiddleware
+from app.agents.middleware.subagent_join import SubagentJoinMiddleware
 from app.agents.middleware.summarization import (
     WorkspaceArchivingSummarizationMiddleware,
 )
@@ -94,6 +96,7 @@ def create_middleware_stack(
     summarization_excluded_tools: set[str] | None = None,
     enable_loop_guard: bool = True,
     loop_guard_hard_stop: bool = LOOP_GUARD_HARD_STOP,
+    enable_subagent_join: bool = False,
 ) -> list[Any]:
     """
     Create the standard middleware stack for agents.
@@ -145,6 +148,13 @@ def create_middleware_stack(
             }
         )
 
+    # HIL approval gate — outermost tool-call wrapper (only accounting, a
+    # before/after_model hook, precedes it) so no other middleware runs a side
+    # effect before the user decides. A no-op unless the user's HIL preference is
+    # on, so it needs no build-time flag.
+    middleware.append(HILApprovalMiddleware())
+    log.debug(f"{LogTag.AGENT} HILApprovalMiddleware enabled for {agent_name}")
+
     # SubagentMiddleware - spawn_subagent tool for parallel/focused work
     if enable_subagent:
         subagent = SubagentMiddleware(
@@ -154,6 +164,9 @@ def create_middleware_stack(
             excluded_tool_names=subagent_excluded_tools,
             tool_space=subagent_tool_space,
             tool_runtime_config=subagent_tool_runtime_config,
+            spawn_middleware_factory=lambda space: create_subagent_middleware(
+                enable_subagent=False, subagent_tool_space=space
+            ),
         )
         middleware.append(subagent)
         log.debug(f"{LogTag.AGENT} SubagentMiddleware enabled with spawn_subagent tool")
@@ -205,6 +218,15 @@ def create_middleware_stack(
             f"hard_stop={loop_guard_hard_stop}"
         )
 
+    # Subagent-join enforcement (executor only) — after everything else so it
+    # sees the response other after_model hooks may have adjusted. Rewrites a
+    # turn-ending response into a wait_for_subagents call while background
+    # subagents are uncollected; collection must never depend on the model
+    # remembering to call the join.
+    if enable_subagent_join:
+        middleware.append(SubagentJoinMiddleware())
+        log.debug(f"{LogTag.AGENT} SubagentJoinMiddleware enabled for {agent_name}")
+
     return middleware
 
 
@@ -246,6 +268,7 @@ def create_executor_middleware(
         subagent_excluded_tools=subagent_excluded_tools,
         subagent_tool_runtime_config=subagent_tool_runtime_config,
         compaction_excluded_tools=CODING_TOOL_NAMES | SPAWN_SUBAGENT_TOOL,
+        enable_subagent_join=True,
     )
 
 
