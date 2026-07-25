@@ -34,6 +34,9 @@ _SYNC_FIELDS = {
     "createdAt",
     "updatedAt",
     "messages",
+    # The conversation-level artifact registry the web sync hydrates its
+    # artifact cards from (see services/chat/artifacts_registry.py).
+    "artifacts",
 }
 
 

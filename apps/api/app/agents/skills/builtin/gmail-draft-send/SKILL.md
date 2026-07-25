@@ -49,7 +49,7 @@ superseded draft before creating the revised one. Deletion is permanent.
 **Required parameters:**
 - `draft_id`: The ID of the draft to delete (from the GMAIL_CREATE_EMAIL_DRAFT response)
 
-### GMAIL_FETCH_EMAILS
+### GMAIL_FETCH_MESSAGES
 Search existing emails before composing.
 
 **Useful for:**

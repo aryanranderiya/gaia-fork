@@ -17,6 +17,7 @@ the base's auto-stamp.
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -59,6 +60,10 @@ class ConversationDocument(UserScopedDocument):
     is_onboarding_conversation: bool | None = None
     starred: bool | None = None
     messages: list[MessageModel] = Field(default_factory=list)
+    # Conversation-level artifact registry: one entry per agent-written file,
+    # deduped by path. Kept as raw dicts — the element shape is owned by
+    # services/chat/artifacts_registry.py and mirrored verbatim to the client.
+    artifacts: list[dict[str, Any]] = Field(default_factory=list)
     createdAt: str | None = None
     updatedAt: datetime | None = None
 

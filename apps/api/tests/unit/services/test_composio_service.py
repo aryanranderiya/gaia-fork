@@ -756,7 +756,9 @@ class TestRegisterGmailCustomTools:
         assert "GMAIL_GET_UNREAD_COUNT" in result
         assert "GMAIL_GET_CONTACT_LIST" in result
         assert "GMAIL_CUSTOM_GATHER_CONTEXT" in result
-        assert len(result) == 7
+        assert "GMAIL_FETCH_MESSAGES" in result
+        assert "GMAIL_FETCH_THREAD" in result
+        assert len(result) == 9
 
 
 # Behavior tests for MARK_AS_READ / STAR_EMAIL / GET_UNREAD_COUNT /

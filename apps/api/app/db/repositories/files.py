@@ -24,6 +24,29 @@ class FilesRepository(UserScopedRepository[FileDocument, FileUpdate]):
             return []
         return await self._find({"file_id": {"$in": file_ids}, "user_id": user_id})
 
+    async def find_for_conversation(self, conversation_id: str, user_id: str) -> list[FileDocument]:
+        return await self._find({"user_id": user_id, "conversation_id": conversation_id})
+
+    async def find_ids_for_conversation(self, conversation_id: str, user_id: str) -> list[str]:
+        """The user's ``file_id``s visible in one conversation.
+
+        Files uploaded before conversation scoping existed carry no
+        ``conversation_id`` (the old web client never sent one, and only new
+        conversations get backfilled), so they stay visible everywhere — do not
+        "simplify" this to an exact ``conversation_id`` match.
+        """
+        documents = await self._find(
+            {
+                "user_id": user_id,
+                "$or": [
+                    {"conversation_id": conversation_id},
+                    {"conversation_id": {"$exists": False}},
+                    {"conversation_id": None},
+                ],
+            }
+        )
+        return [document.file_id for document in documents]
+
     async def apply_metadata_update(
         self, file_id: str, *, user_id: str, update: FileUpdate
     ) -> FileDocument | None:

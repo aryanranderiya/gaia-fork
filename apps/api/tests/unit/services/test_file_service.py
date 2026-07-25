@@ -1,25 +1,24 @@
-"""Unit tests for file service operations."""
+"""Unit tests for the files service package.
 
+Covers the ``FileService`` upload/update/delete flows plus the store/summaries
+helpers they orchestrate. External boundaries (Cloudinary, Mongo, ChromaDB,
+the JuiceFS sandbox mirror, the summary LLM) are mocked at the same seams the
+production code uses.
+"""
+
+from collections.abc import Iterator
+import contextlib
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 import pytest
 
-from app.models.files_models import (
-    DocumentPageModel,
-    DocumentSummaryModel,
-    FileDocument,
-)
-from app.services.file_service import (
-    _process_file_summary,
-    _store_in_chromadb,
-    _store_in_mongodb,
-    delete_file_service,
-    update_file_in_chromadb,
-    update_file_service,
-    upload_file_service,
-)
+from app.models.files_models import DocumentPageModel, DocumentSummaryModel, FileDocument
+from app.services.files.service import FileService
+from app.services.files.store import index_file, insert_metadata, reindex_file
+from app.services.files.summaries import process_summary
+from app.utils.upload_validation import MAX_UPLOAD_BYTES
 
 
 def _file_doc(**overrides: object) -> FileDocument:
@@ -44,8 +43,25 @@ def _file_doc(**overrides: object) -> FileDocument:
 # The caching decorators import delete_cache/get_cache/set_cache from
 # app.decorators.caching, so patches must target that module.
 PATCH_DELETE_CACHE = "app.decorators.caching.delete_cache"
-PATCH_GET_CACHE = "app.decorators.caching.get_cache"
-PATCH_SET_CACHE = "app.decorators.caching.set_cache"
+
+# Valid magic bytes for the application/pdf allowlist entry.
+PDF_HEADER = b"%PDF-"
+
+
+def _pdf_bytes(total_size: int = 100) -> bytes:
+    return PDF_HEADER + b"x" * (total_size - len(PDF_HEADER))
+
+
+def _upload_file_mock(
+    filename: str | None = "report.pdf",
+    content_type: str | None = "application/pdf",
+    content: bytes | None = None,
+) -> MagicMock:
+    file = MagicMock()
+    file.filename = filename
+    file.content_type = content_type
+    file.read = AsyncMock(return_value=content if content is not None else _pdf_bytes())
+    return file
 
 
 # ---------------------------------------------------------------------------
@@ -54,35 +70,60 @@ PATCH_SET_CACHE = "app.decorators.caching.set_cache"
 
 
 @pytest.fixture
-def mock_file_repo():
-    """Patch the files repository seam (create/get/update/delete)."""
+def mock_file_repo() -> Iterator[AsyncMock]:
+    """One mock behind both module bindings of ``file_repository``.
+
+    ``store.py`` (insert_metadata) and ``service.py`` (get/update/delete) each
+    import the repository singleton directly, so both bindings must point at
+    the same mock.
+    """
     repo = AsyncMock()
-    with patch("app.services.file_service.file_repository", repo):
+    with (
+        patch("app.services.files.service.file_repository", repo),
+        patch("app.services.files.store.file_repository", repo),
+    ):
         yield repo
 
 
 @pytest.fixture
-def mock_cloudinary_upload():
-    with patch("app.services.file_service.cloudinary.uploader.upload") as mock_upload:
+def mock_cloudinary_upload() -> Iterator[MagicMock]:
+    with patch("app.services.files.store.cloudinary.uploader.upload") as mock_upload:
         yield mock_upload
 
 
 @pytest.fixture
-def mock_cloudinary_destroy():
-    with patch("app.services.file_service.cloudinary.uploader.destroy") as mock_destroy:
+def mock_cloudinary_destroy() -> Iterator[MagicMock]:
+    with patch("app.services.files.store.cloudinary.uploader.destroy") as mock_destroy:
         yield mock_destroy
 
 
 @pytest.fixture
-def mock_chroma_client():
-    with patch("app.services.file_service.ChromaClient") as mock_chroma:
+def mock_chroma_client() -> Iterator[tuple[MagicMock, AsyncMock]]:
+    with patch("app.services.files.store.ChromaClient") as mock_chroma:
         mock_collection = AsyncMock()
         mock_chroma.get_langchain_client = AsyncMock(return_value=mock_collection)
         yield mock_chroma, mock_collection
 
 
 @pytest.fixture
-def sample_document_summary_model():
+def mock_sandbox_mirror() -> Iterator[tuple[AsyncMock, AsyncMock]]:
+    """Mock the JuiceFS projection boundary used by ``FileService.upload``."""
+    with (
+        patch(
+            "app.services.files.service.mirror_upload",
+            new_callable=AsyncMock,
+            return_value="/workspace/user-uploaded/report.pdf",
+        ) as mock_mirror,
+        patch(
+            "app.services.files.service.write_summary_sidecar",
+            new_callable=AsyncMock,
+        ) as mock_sidecar,
+    ):
+        yield mock_mirror, mock_sidecar
+
+
+@pytest.fixture
+def sample_document_summary_model() -> DocumentSummaryModel:
     return DocumentSummaryModel(
         data=DocumentPageModel(page_number=1, content="Page 1 content"),
         summary="Summary of page 1",
@@ -90,7 +131,7 @@ def sample_document_summary_model():
 
 
 @pytest.fixture
-def sample_document_summary_list():
+def sample_document_summary_list() -> list[DocumentSummaryModel]:
     return [
         DocumentSummaryModel(
             data=DocumentPageModel(page_number=1, content="Page 1 content"),
@@ -103,13 +144,23 @@ def sample_document_summary_list():
     ]
 
 
+@contextlib.contextmanager
+def _summary(value: object) -> Iterator[AsyncMock]:
+    with patch(
+        "app.services.files.service.generate_file_summary",
+        new_callable=AsyncMock,
+        return_value=value,
+    ) as mock_summary:
+        yield mock_summary
+
+
 # ---------------------------------------------------------------------------
-# upload_file_service
+# FileService.upload
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestUploadFileService:
+class TestFileServiceUpload:
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
     async def test_success(
         self,
@@ -117,25 +168,16 @@ class TestUploadFileService:
         mock_file_repo,
         mock_cloudinary_upload,
         mock_chroma_client,
+        mock_sandbox_mirror,
     ):
         mock_cloudinary_upload.return_value = {
             "secure_url": "https://res.cloudinary.com/test/uploaded.pdf"
         }
-        _, mock_chroma_col = mock_chroma_client
+        mock_mirror, mock_sidecar = mock_sandbox_mirror
 
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="This is a summary",
-        ):
-            file = MagicMock()
-            file.filename = "report.pdf"
-            file.content_type = "application/pdf"
-            # PDF magic bytes required by validate_upload's verify_magic_bytes check
-            file.read = AsyncMock(return_value=b"%PDF-" + b"x" * 95)
-
-            result = await upload_file_service(
-                file=file,
+        with _summary("This is a summary"):
+            result = await FileService.upload(
+                file=_upload_file_mock(),
                 user_id="user-abc",
                 conversation_id="conv-1",
             )
@@ -144,58 +186,66 @@ class TestUploadFileService:
         assert result["filename"] == "report.pdf"
         assert result["description"] == "This is a summary"
         assert result["type"] == "application/pdf"
+        assert result["sandbox_path"] == "/workspace/user-uploaded/report.pdf"
         assert "file_id" in result
+        mock_mirror.assert_awaited_once()
+        mock_sidecar.assert_awaited_once()
 
     async def test_missing_filename_raises_400(self):
-        file = MagicMock()
-        file.filename = None
-        file.content_type = "application/pdf"
+        file = _upload_file_mock(filename=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await upload_file_service(file=file, user_id="user-abc")
+            await FileService.upload(file=file, user_id="user-abc")
         assert exc_info.value.status_code == 400
         assert "Filename is required" in exc_info.value.detail
 
     async def test_missing_filename_empty_string_raises_400(self):
-        file = MagicMock()
-        file.filename = ""
-        file.content_type = "application/pdf"
+        file = _upload_file_mock(filename="")
 
         with pytest.raises(HTTPException) as exc_info:
-            await upload_file_service(file=file, user_id="user-abc")
+            await FileService.upload(file=file, user_id="user-abc")
         assert exc_info.value.status_code == 400
 
     async def test_missing_content_type_raises_400(self):
-        file = MagicMock()
-        file.filename = "test.pdf"
-        file.content_type = None
+        file = _upload_file_mock(content_type=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await upload_file_service(file=file, user_id="user-abc")
+            await FileService.upload(file=file, user_id="user-abc")
         assert exc_info.value.status_code == 400
         assert "Content type is required" in exc_info.value.detail
 
     async def test_empty_content_type_raises_400(self):
-        file = MagicMock()
-        file.filename = "test.pdf"
-        file.content_type = ""
+        file = _upload_file_mock(content_type="")
 
         with pytest.raises(HTTPException) as exc_info:
-            await upload_file_service(file=file, user_id="user-abc")
+            await FileService.upload(file=file, user_id="user-abc")
         assert exc_info.value.status_code == 400
 
-    @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
-    async def test_file_too_large_raises_413(self, mock_del_cache):
-        file = MagicMock()
-        file.filename = "huge.pdf"
-        file.content_type = "application/pdf"
-        # 11 MB file — validate_upload raises HTTP 413 (not 400) via read_bounded
-        file.read = AsyncMock(return_value=b"x" * (11 * 1024 * 1024))
+    async def test_unsupported_content_type_raises_415(self):
+        file = _upload_file_mock(content_type="application/x-msdownload")
 
         with pytest.raises(HTTPException) as exc_info:
-            await upload_file_service(file=file, user_id="user-abc")
+            await FileService.upload(file=file, user_id="user-abc")
+        assert exc_info.value.status_code == 415
+
+    async def test_file_too_large_raises_413(self):
+        file = _upload_file_mock(filename="huge.pdf", content=_pdf_bytes(MAX_UPLOAD_BYTES + 1))
+
+        with pytest.raises(HTTPException) as exc_info:
+            await FileService.upload(file=file, user_id="user-abc")
         assert exc_info.value.status_code == 413
         assert "10 MB" in exc_info.value.detail
+
+    async def test_content_length_preflight_raises_413(self):
+        """Oversize Content-Length is rejected before reading any bytes."""
+        file = _upload_file_mock(filename="huge.pdf")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await FileService.upload(
+                file=file, user_id="user-abc", content_length=MAX_UPLOAD_BYTES + 1
+            )
+        assert exc_info.value.status_code == 413
+        file.read.assert_not_awaited()
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
     async def test_file_exactly_10mb_succeeds(
@@ -205,22 +255,14 @@ class TestUploadFileService:
         mock_cloudinary_upload,
         mock_chroma_client,
     ):
-        """File at exactly 10 MB boundary should pass the size check."""
+        """File at exactly the size boundary should pass the size check."""
         mock_cloudinary_upload.return_value = {
             "secure_url": "https://res.cloudinary.com/test/uploaded.pdf"
         }
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="summary",
-        ):
-            file = MagicMock()
-            file.filename = "big.pdf"
-            file.content_type = "application/pdf"
-            # Exactly 10 MB with PDF magic bytes so both size and magic-byte checks pass
-            file.read = AsyncMock(return_value=b"%PDF-" + b"x" * (10 * 1024 * 1024 - 5))
+        file = _upload_file_mock(filename="big.pdf", content=_pdf_bytes(MAX_UPLOAD_BYTES))
 
-            result = await upload_file_service(file=file, user_id="user-abc")
+        with _summary("summary"):
+            result = await FileService.upload(file=file, user_id="user-abc")
         assert "file_id" in result
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -231,19 +273,9 @@ class TestUploadFileService:
     ):
         mock_cloudinary_upload.return_value = {}  # No secure_url
 
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="summary",
-        ):
-            file = MagicMock()
-            file.filename = "test.pdf"
-            file.content_type = "application/pdf"
-            # PDF magic bytes required; content after prefix is arbitrary
-            file.read = AsyncMock(return_value=b"%PDF-small")
-
+        with _summary("summary"):
             with pytest.raises(HTTPException) as exc_info:
-                await upload_file_service(file=file, user_id="user-abc")
+                await FileService.upload(file=_upload_file_mock(), user_id="user-abc")
             assert exc_info.value.status_code == 500
             assert "Invalid response" in exc_info.value.detail
 
@@ -255,19 +287,9 @@ class TestUploadFileService:
     ):
         mock_cloudinary_upload.side_effect = Exception("Cloudinary connection error")
 
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="summary",
-        ):
-            file = MagicMock()
-            file.filename = "test.pdf"
-            file.content_type = "application/pdf"
-            # PDF magic bytes required so validate_upload passes before reaching Cloudinary
-            file.read = AsyncMock(return_value=b"%PDF-small")
-
+        with _summary("summary"):
             with pytest.raises(HTTPException) as exc_info:
-                await upload_file_service(file=file, user_id="user-abc")
+                await FileService.upload(file=_upload_file_mock(), user_id="user-abc")
             assert exc_info.value.status_code == 500
             assert "Failed to upload file" in exc_info.value.detail
 
@@ -284,52 +306,38 @@ class TestUploadFileService:
         }
         mock_file_repo.create = AsyncMock(side_effect=Exception("mongo write failed"))
 
-        _, mock_chroma_col = mock_chroma_client
-
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="summary",
-        ):
-            file = MagicMock()
-            file.filename = "test.pdf"
-            file.content_type = "application/pdf"
-            # PDF magic bytes required so validate_upload passes before DB insertion
-            file.read = AsyncMock(return_value=b"%PDF-content")
-
+        with _summary("summary"):
             with pytest.raises(HTTPException) as exc_info:
-                await upload_file_service(file=file, user_id="user-abc")
+                await FileService.upload(file=_upload_file_mock(), user_id="user-abc")
             assert exc_info.value.status_code == 500
+            assert "mongo write failed" in exc_info.value.detail
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
-    async def test_success_without_conversation_id(
+    async def test_success_without_conversation_id_skips_mirror(
         self,
         mock_del_cache,
         mock_file_repo,
         mock_cloudinary_upload,
         mock_chroma_client,
+        mock_sandbox_mirror,
     ):
         mock_cloudinary_upload.return_value = {
             "secure_url": "https://res.cloudinary.com/test/uploaded.pdf"
         }
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="This is a summary",
-        ):
-            file = MagicMock()
-            file.filename = "report.pdf"
-            file.content_type = "application/pdf"
-            file.read = AsyncMock(return_value=b"%PDF-" + b"x" * 95)
+        mock_mirror, mock_sidecar = mock_sandbox_mirror
 
-            result = await upload_file_service(
-                file=file,
+        with _summary("This is a summary"):
+            result = await FileService.upload(
+                file=_upload_file_mock(),
                 user_id="user-abc",
                 conversation_id=None,
             )
 
         assert result["filename"] == "report.pdf"
+        assert result["sandbox_path"] is None
         assert "file_id" in result
+        mock_mirror.assert_not_awaited()
+        mock_sidecar.assert_not_awaited()
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
     async def test_success_with_list_summary(
@@ -343,92 +351,82 @@ class TestUploadFileService:
         mock_cloudinary_upload.return_value = {
             "secure_url": "https://res.cloudinary.com/test/uploaded.pdf"
         }
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value=sample_document_summary_list,
-        ):
-            file = MagicMock()
-            file.filename = "multipage.pdf"
-            file.content_type = "application/pdf"
-            file.read = AsyncMock(return_value=b"%PDF-" + b"x" * 95)
+        file = _upload_file_mock(filename="multipage.pdf")
 
-            result = await upload_file_service(
-                file=file,
-                user_id="user-abc",
-            )
+        with _summary(sample_document_summary_list):
+            result = await FileService.upload(file=file, user_id="user-abc")
 
         assert "Summary of page 1" in result["description"]
         assert "Summary of page 2" in result["description"]
 
 
 # ---------------------------------------------------------------------------
-# _process_file_summary
+# process_summary
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestProcessFileSummary:
+class TestProcessSummary:
     def test_string_input(self):
-        summary, formatted = _process_file_summary("Simple text summary")
-        assert summary == "Simple text summary"
-        assert formatted is None
+        description, page_wise = process_summary("Simple text summary")
+        assert description == "Simple text summary"
+        assert page_wise is None
 
     def test_list_input(self, sample_document_summary_list):
-        summary, formatted = _process_file_summary(sample_document_summary_list)
-        assert "Summary of page 1" in summary
-        assert "Summary of page 2" in summary
-        assert isinstance(formatted, list)
-        assert len(formatted) == 2
-        assert formatted[0]["summary"] == "Summary of page 1. "
-        assert formatted[0]["data"]["page_number"] == 1
+        description, page_wise = process_summary(sample_document_summary_list)
+        assert "Summary of page 1" in description
+        assert "Summary of page 2" in description
+        assert isinstance(page_wise, list)
+        assert len(page_wise) == 2
+        assert page_wise[0]["summary"] == "Summary of page 1. "
+        assert page_wise[0]["data"]["page_number"] == 1
 
     def test_document_summary_model_input(self, sample_document_summary_model):
-        summary, formatted = _process_file_summary(sample_document_summary_model)
-        assert summary == "Summary of page 1"
-        assert isinstance(formatted, dict)
-        assert formatted["summary"] == "Summary of page 1"
-        assert formatted["data"]["page_number"] == 1
+        description, page_wise = process_summary(sample_document_summary_model)
+        assert description == "Summary of page 1"
+        assert isinstance(page_wise, dict)
+        assert page_wise["summary"] == "Summary of page 1"
+        assert page_wise["data"]["page_number"] == 1
 
     def test_invalid_type_raises_400(self):
         with pytest.raises(HTTPException) as exc_info:
-            _process_file_summary(12345)
+            process_summary(12345)
         assert exc_info.value.status_code == 400
         assert "Invalid file description format" in exc_info.value.detail
 
     def test_none_input_raises_400(self):
         with pytest.raises(HTTPException) as exc_info:
-            _process_file_summary(None)
+            process_summary(None)
         assert exc_info.value.status_code == 400
 
     def test_dict_input_raises_400(self):
         with pytest.raises(HTTPException) as exc_info:
-            _process_file_summary({"summary": "test"})
+            process_summary({"summary": "test"})
         assert exc_info.value.status_code == 400
 
     def test_empty_string_input(self):
-        summary, formatted = _process_file_summary("")
-        assert summary == ""
-        assert formatted is None
+        description, page_wise = process_summary("")
+        assert description == ""
+        assert page_wise is None
 
     def test_empty_list_input(self):
-        summary, formatted = _process_file_summary([])
-        assert summary == ""
-        assert isinstance(formatted, list)
-        assert len(formatted) == 0
+        description, page_wise = process_summary([])
+        assert description == ""
+        assert isinstance(page_wise, list)
+        assert len(page_wise) == 0
 
 
 # ---------------------------------------------------------------------------
-# _store_in_mongodb
+# insert_metadata
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestStoreInMongodb:
-    async def test_delegates_to_repository_create(self, mock_file_repo):
-        doc = _file_doc(file_id="f-1", filename="test.pdf")
+class TestInsertMetadata:
+    async def test_success(self, mock_file_repo):
+        doc = _file_doc()
 
-        await _store_in_mongodb(doc)
+        await insert_metadata(doc)
 
         mock_file_repo.create.assert_awaited_once_with(doc)
 
@@ -436,34 +434,32 @@ class TestStoreInMongodb:
         mock_file_repo.create = AsyncMock(side_effect=Exception("Connection lost"))
 
         with pytest.raises(Exception, match="Connection lost"):
-            await _store_in_mongodb(_file_doc(file_id="f-1"))
+            await insert_metadata(_file_doc())
 
 
 # ---------------------------------------------------------------------------
-# _store_in_chromadb
+# index_file
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestStoreInChromadb:
-    async def test_list_description_multi_page(
-        self, mock_chroma_client, sample_document_summary_list
-    ):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+class TestIndexFile:
+    async def test_list_summary_multi_page(self, mock_chroma_client, sample_document_summary_list):
+        _, mock_chroma_col = mock_chroma_client
 
-        await _store_in_chromadb(
+        await index_file(
             file_id="f-1",
             user_id="user-abc",
             filename="doc.pdf",
             content_type="application/pdf",
-            file_description=sample_document_summary_list,
+            summary=sample_document_summary_list,
             conversation_id="conv-1",
         )
 
         mock_chroma_col.aadd_documents.assert_awaited_once()
-        call_kwargs = mock_chroma_col.aadd_documents.call_args
-        documents = call_kwargs.kwargs.get("documents") or call_kwargs[1].get("documents")
-        ids = call_kwargs.kwargs.get("ids") or call_kwargs[1].get("ids")
+        call_kwargs = mock_chroma_col.aadd_documents.call_args.kwargs
+        documents = call_kwargs["documents"]
+        ids = call_kwargs["ids"]
         assert len(documents) == 2
         assert len(ids) == 2
         assert documents[0].page_content == "Summary of page 1. "
@@ -472,216 +468,190 @@ class TestStoreInChromadb:
         assert documents[1].page_content == "Summary of page 2. "
         assert documents[1].metadata["page_number"] == 2
 
-    async def test_string_description(self, mock_chroma_client):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+    async def test_string_summary(self, mock_chroma_client):
+        _, mock_chroma_col = mock_chroma_client
 
-        await _store_in_chromadb(
+        await index_file(
             file_id="f-1",
             user_id="user-abc",
             filename="doc.txt",
             content_type="text/plain",
-            file_description="A plain text description",
+            summary="A plain text description",
         )
 
         mock_chroma_col.aadd_documents.assert_awaited_once()
-        call_kwargs = mock_chroma_col.aadd_documents.call_args
-        documents = call_kwargs.kwargs.get("documents") or call_kwargs[1].get("documents")
-        ids = call_kwargs.kwargs.get("ids") or call_kwargs[1].get("ids")
+        call_kwargs = mock_chroma_col.aadd_documents.call_args.kwargs
+        documents = call_kwargs["documents"]
         assert len(documents) == 1
         assert documents[0].page_content == "A plain text description"
-        assert ids == ["f-1"]
+        assert call_kwargs["ids"] == ["f-1"]
         # No conversation_id when not provided
         assert "conversation_id" not in documents[0].metadata
 
-    async def test_document_summary_model_description(
-        self, mock_chroma_client, sample_document_summary_model
-    ):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+    async def test_document_summary_model(self, mock_chroma_client, sample_document_summary_model):
+        _, mock_chroma_col = mock_chroma_client
 
-        await _store_in_chromadb(
+        await index_file(
             file_id="f-1",
             user_id="user-abc",
             filename="doc.pdf",
             content_type="application/pdf",
-            file_description=sample_document_summary_model,
+            summary=sample_document_summary_model,
         )
 
         mock_chroma_col.aadd_documents.assert_awaited_once()
-        call_kwargs = mock_chroma_col.aadd_documents.call_args
-        documents = call_kwargs.kwargs.get("documents") or call_kwargs[1].get("documents")
+        call_kwargs = mock_chroma_col.aadd_documents.call_args.kwargs
+        documents = call_kwargs["documents"]
         assert len(documents) == 1
         assert documents[0].page_content == "Summary of page 1"
 
     async def test_chromadb_fails_logged_not_raised(self, mock_chroma_client):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+        _, mock_chroma_col = mock_chroma_client
         mock_chroma_col.aadd_documents = AsyncMock(side_effect=Exception("ChromaDB down"))
 
         # Should not raise
-        await _store_in_chromadb(
+        await index_file(
             file_id="f-1",
             user_id="user-abc",
             filename="doc.pdf",
             content_type="application/pdf",
-            file_description="summary",
+            summary="summary",
         )
 
     async def test_chromadb_client_init_fails_logged_not_raised(self):
         with patch(
-            "app.services.file_service.ChromaClient.get_langchain_client",
+            "app.services.files.store.ChromaClient.get_langchain_client",
             new_callable=AsyncMock,
             side_effect=Exception("ChromaDB init failed"),
         ):
             # Should not raise
-            await _store_in_chromadb(
+            await index_file(
                 file_id="f-1",
                 user_id="user-abc",
                 filename="doc.pdf",
                 content_type="application/pdf",
-                file_description="summary",
+                summary="summary",
             )
 
-    async def test_list_description_without_conversation_id(
+    async def test_list_summary_without_conversation_id(
         self, mock_chroma_client, sample_document_summary_list
     ):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+        _, mock_chroma_col = mock_chroma_client
 
-        await _store_in_chromadb(
+        await index_file(
             file_id="f-1",
             user_id="user-abc",
             filename="doc.pdf",
             content_type="application/pdf",
-            file_description=sample_document_summary_list,
+            summary=sample_document_summary_list,
             conversation_id=None,
         )
 
-        call_kwargs = mock_chroma_col.aadd_documents.call_args
-        documents = call_kwargs.kwargs.get("documents") or call_kwargs[1].get("documents")
+        documents = mock_chroma_col.aadd_documents.call_args.kwargs["documents"]
         for doc in documents:
             assert "conversation_id" not in doc.metadata
 
-    async def test_string_description_with_conversation_id(self, mock_chroma_client):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+    async def test_string_summary_with_conversation_id(self, mock_chroma_client):
+        _, mock_chroma_col = mock_chroma_client
 
-        await _store_in_chromadb(
+        await index_file(
             file_id="f-1",
             user_id="user-abc",
             filename="doc.txt",
             content_type="text/plain",
-            file_description="A description",
+            summary="A description",
             conversation_id="conv-99",
         )
 
-        call_kwargs = mock_chroma_col.aadd_documents.call_args
-        documents = call_kwargs.kwargs.get("documents") or call_kwargs[1].get("documents")
+        documents = mock_chroma_col.aadd_documents.call_args.kwargs["documents"]
         assert documents[0].metadata["conversation_id"] == "conv-99"
 
 
 # ---------------------------------------------------------------------------
-# update_file_in_chromadb
+# reindex_file
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestUpdateFileInChromadb:
-    async def test_delete_and_store_success(self, mock_chroma_client):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+class TestReindexFile:
+    async def test_delete_then_index_success(self, mock_chroma_client):
+        _, mock_chroma_col = mock_chroma_client
 
-        with patch(
-            "app.services.file_service._store_in_chromadb",
-            new_callable=AsyncMock,
-        ) as mock_store:
-            await update_file_in_chromadb(
-                file_id="f-1",
-                user_id="user-abc",
-                filename="doc.pdf",
-                content_type="application/pdf",
-                file_description="updated summary",
-                conversation_id="conv-1",
-            )
+        await reindex_file(
+            file_id="f-1",
+            user_id="user-abc",
+            filename="doc.pdf",
+            content_type="application/pdf",
+            summary="updated summary",
+            conversation_id="conv-1",
+        )
 
-            mock_chroma_col.adelete.assert_awaited_once_with(ids=["f-1"])
-            mock_store.assert_awaited_once_with(
-                file_id="f-1",
-                user_id="user-abc",
-                filename="doc.pdf",
-                content_type="application/pdf",
-                file_description="updated summary",
-                conversation_id="conv-1",
-            )
+        mock_chroma_col.adelete.assert_awaited_once_with(ids=["f-1"])
+        mock_chroma_col.aadd_documents.assert_awaited_once()
+        call_kwargs = mock_chroma_col.aadd_documents.call_args.kwargs
+        assert call_kwargs["ids"] == ["f-1"]
+        assert call_kwargs["documents"][0].page_content == "updated summary"
+        assert call_kwargs["documents"][0].metadata["conversation_id"] == "conv-1"
 
-    async def test_delete_fails_continues_to_store(self, mock_chroma_client):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+    async def test_delete_fails_continues_to_index(self, mock_chroma_client):
+        _, mock_chroma_col = mock_chroma_client
         mock_chroma_col.adelete = AsyncMock(side_effect=Exception("Delete error"))
 
-        with patch(
-            "app.services.file_service._store_in_chromadb",
-            new_callable=AsyncMock,
-        ) as mock_store:
-            await update_file_in_chromadb(
-                file_id="f-1",
-                user_id="user-abc",
-                filename="doc.pdf",
-                content_type="application/pdf",
-                file_description="updated summary",
-            )
+        await reindex_file(
+            file_id="f-1",
+            user_id="user-abc",
+            filename="doc.pdf",
+            content_type="application/pdf",
+            summary="updated summary",
+        )
 
-            # Store should still be called even though delete failed
-            mock_store.assert_awaited_once()
+        # Indexing still runs even though the delete failed
+        mock_chroma_col.aadd_documents.assert_awaited_once()
 
-    async def test_store_fails_logged_not_raised(self, mock_chroma_client):
-        mock_chroma_cls, mock_chroma_col = mock_chroma_client
+    async def test_index_fails_logged_not_raised(self, mock_chroma_client):
+        _, mock_chroma_col = mock_chroma_client
+        mock_chroma_col.aadd_documents = AsyncMock(side_effect=Exception("Store error"))
 
-        with patch(
-            "app.services.file_service._store_in_chromadb",
-            new_callable=AsyncMock,
-            side_effect=Exception("Store error"),
-        ):
-            # Should not raise
-            await update_file_in_chromadb(
-                file_id="f-1",
-                user_id="user-abc",
-                filename="doc.pdf",
-                content_type="application/pdf",
-                file_description="updated summary",
-            )
+        # Should not raise
+        await reindex_file(
+            file_id="f-1",
+            user_id="user-abc",
+            filename="doc.pdf",
+            content_type="application/pdf",
+            summary="updated summary",
+        )
 
-    async def test_chroma_client_init_fails_still_calls_store(self):
-        """When get_langchain_client fails in the inner try, the delete is
-        skipped but _store_in_chromadb is still called because the inner
-        except only catches the delete failure."""
-        with patch(
-            "app.services.file_service.ChromaClient.get_langchain_client",
-            new_callable=AsyncMock,
-            side_effect=Exception("ChromaDB unavailable"),
-        ):
-            with patch(
-                "app.services.file_service._store_in_chromadb",
+    async def test_chroma_client_init_fails_still_calls_index(self):
+        """When the client is unavailable, delete_from_index swallows its error
+        and index_file is still attempted."""
+        with (
+            patch(
+                "app.services.files.store.ChromaClient.get_langchain_client",
                 new_callable=AsyncMock,
-            ) as mock_store:
-                await update_file_in_chromadb(
-                    file_id="f-1",
-                    user_id="user-abc",
-                    filename="doc.pdf",
-                    content_type="application/pdf",
-                    file_description="summary",
-                )
-                # _store_in_chromadb IS called because the inner try/except
-                # catches the get_langchain_client error and continues.
-                mock_store.assert_awaited_once()
+                side_effect=Exception("ChromaDB unavailable"),
+            ),
+            patch(
+                "app.services.files.store.index_file",
+                new_callable=AsyncMock,
+            ) as mock_index,
+        ):
+            await reindex_file(
+                file_id="f-1",
+                user_id="user-abc",
+                filename="doc.pdf",
+                content_type="application/pdf",
+                summary="summary",
+            )
+            mock_index.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------
-# fetch_files
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# delete_file_service
+# FileService.delete
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestDeleteFileService:
+class TestFileServiceDelete:
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
     async def test_success(
         self,
@@ -698,7 +668,7 @@ class TestDeleteFileService:
 
         _, mock_chroma_col = mock_chroma_client
 
-        result = await delete_file_service(file_id="f-1", user_id="user-abc")
+        result = await FileService.delete(file_id="f-1", user_id="user-abc")
 
         assert result["message"] == "File deleted successfully"
         assert result["file_id"] == "f-1"
@@ -709,7 +679,7 @@ class TestDeleteFileService:
 
     async def test_user_id_none_raises_400(self):
         with pytest.raises(HTTPException) as exc_info:
-            await delete_file_service(file_id="f-1", user_id=None)
+            await FileService.delete(file_id="f-1", user_id=None)
         assert exc_info.value.status_code == 400
         assert "User ID is required" in exc_info.value.detail
 
@@ -718,7 +688,7 @@ class TestDeleteFileService:
         mock_file_repo.get_by_file_id = AsyncMock(return_value=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_file_service(file_id="f-nonexistent", user_id="user-abc")
+            await FileService.delete(file_id="f-nonexistent", user_id="user-abc")
         assert exc_info.value.status_code == 404
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -727,7 +697,7 @@ class TestDeleteFileService:
         mock_file_repo.delete_by_file_id = AsyncMock(return_value=False)
 
         with pytest.raises(HTTPException) as exc_info:
-            await delete_file_service(file_id="f-1", user_id="user-abc")
+            await FileService.delete(file_id="f-1", user_id="user-abc")
         assert exc_info.value.status_code == 404
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -742,10 +712,8 @@ class TestDeleteFileService:
         mock_file_repo.delete_by_file_id = AsyncMock(return_value=True)
         mock_cloudinary_destroy.side_effect = Exception("Cloudinary error")
 
-        _, mock_chroma_col = mock_chroma_client
-
         # Should NOT raise
-        result = await delete_file_service(file_id="f-1", user_id="user-abc")
+        result = await FileService.delete(file_id="f-1", user_id="user-abc")
         assert result["message"] == "File deleted successfully"
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -760,9 +728,7 @@ class TestDeleteFileService:
         mock_file_repo.delete_by_file_id = AsyncMock(return_value=True)
         mock_cloudinary_destroy.return_value = {"result": "not found"}
 
-        _, mock_chroma_col = mock_chroma_client
-
-        result = await delete_file_service(file_id="f-1", user_id="user-abc")
+        result = await FileService.delete(file_id="f-1", user_id="user-abc")
         assert result["message"] == "File deleted successfully"
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -780,7 +746,7 @@ class TestDeleteFileService:
         _, mock_chroma_col = mock_chroma_client
         mock_chroma_col.adelete = AsyncMock(side_effect=Exception("ChromaDB error"))
 
-        result = await delete_file_service(file_id="f-1", user_id="user-abc")
+        result = await FileService.delete(file_id="f-1", user_id="user-abc")
         assert result["message"] == "File deleted successfully"
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -794,26 +760,39 @@ class TestDeleteFileService:
         mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc(public_id=None))
         mock_file_repo.delete_by_file_id = AsyncMock(return_value=True)
 
-        _, mock_chroma_col = mock_chroma_client
+        result = await FileService.delete(file_id="f-1", user_id="user-abc")
+        assert result["message"] == "File deleted successfully"
+        mock_cloudinary_destroy.assert_not_called()
 
-        result = await delete_file_service(file_id="f-1", user_id="user-abc")
+    @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
+    async def test_missing_public_id_key_skips_cloudinary(
+        self,
+        mock_del_cache,
+        mock_file_repo,
+        mock_cloudinary_destroy,
+        mock_chroma_client,
+    ):
+        mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc(public_id=None))
+        mock_file_repo.delete_by_file_id = AsyncMock(return_value=True)
+
+        result = await FileService.delete(file_id="f-1", user_id="user-abc")
         assert result["message"] == "File deleted successfully"
         mock_cloudinary_destroy.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
-# update_file_service
+# FileService.update
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.unit
-class TestUpdateFileService:
+class TestFileServiceUpdate:
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
     async def test_file_not_found_raises_404(self, mock_del_cache, mock_file_repo):
         mock_file_repo.get_by_file_id = AsyncMock(return_value=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_file_service(
+            await FileService.update(
                 file_id="f-missing",
                 user_id="user-abc",
                 update_data={"filename": "new.pdf"},
@@ -825,7 +804,7 @@ class TestUpdateFileService:
         mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc(filename="old.pdf"))
         mock_file_repo.apply_metadata_update = AsyncMock(return_value=_file_doc(filename="new.pdf"))
 
-        result = await update_file_service(
+        result = await FileService.update(
             file_id="f-1",
             user_id="user-abc",
             update_data={"filename": "new.pdf"},
@@ -841,7 +820,7 @@ class TestUpdateFileService:
         mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc(filename="old.pdf"))
         mock_file_repo.apply_metadata_update = AsyncMock(return_value=_file_doc())
 
-        await update_file_service(
+        await FileService.update(
             file_id="f-1",
             user_id="user-abc",
             update_data={
@@ -864,9 +843,7 @@ class TestUpdateFileService:
         assert set_fields == {"filename": "new.pdf"}
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
-    async def test_with_file_content_regenerates_description(
-        self, mock_del_cache, mock_file_repo, mock_chroma_client
-    ):
+    async def test_with_file_content_regenerates_description(self, mock_del_cache, mock_file_repo):
         mock_file_repo.get_by_file_id = AsyncMock(
             return_value=_file_doc(conversation_id="conv-1", description="Old description")
         )
@@ -874,37 +851,35 @@ class TestUpdateFileService:
             return_value=_file_doc(description="New summary from content")
         )
 
-        with patch(
-            "app.services.file_service.generate_file_summary",
-            new_callable=AsyncMock,
-            return_value="New summary from content",
-        ):
-            with patch(
-                "app.services.file_service.update_file_in_chromadb",
+        with (
+            _summary("New summary from content"),
+            patch(
+                "app.services.files.service.reindex_file",
                 new_callable=AsyncMock,
-            ) as mock_chroma_update:
-                result = await update_file_service(
-                    file_id="f-1",
-                    user_id="user-abc",
-                    update_data={},
-                    file_content=b"new file bytes",
-                    conversation_id="conv-1",
-                )
+            ) as mock_reindex,
+        ):
+            result = await FileService.update(
+                file_id="f-1",
+                user_id="user-abc",
+                update_data={},
+                file_content=b"new file bytes",
+                conversation_id="conv-1",
+            )
 
         assert result["description"] == "New summary from content"
-        mock_chroma_update.assert_awaited_once()
+        mock_reindex.assert_awaited_once()
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
     async def test_file_content_generation_fails_raises_500(self, mock_del_cache, mock_file_repo):
         mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc())
 
         with patch(
-            "app.services.file_service.generate_file_summary",
+            "app.services.files.service.generate_file_summary",
             new_callable=AsyncMock,
             side_effect=Exception("LLM unavailable"),
         ):
             with pytest.raises(HTTPException) as exc_info:
-                await update_file_service(
+                await FileService.update(
                     file_id="f-1",
                     user_id="user-abc",
                     update_data={},
@@ -914,19 +889,19 @@ class TestUpdateFileService:
             assert "Failed to process file" in exc_info.value.detail
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
-    async def test_chromadb_update_fails_continues(self, mock_del_cache, mock_file_repo):
+    async def test_chromadb_reindex_fails_continues(self, mock_del_cache, mock_file_repo):
         mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc(description="old"))
         mock_file_repo.apply_metadata_update = AsyncMock(
             return_value=_file_doc(description="new desc")
         )
 
         with patch(
-            "app.services.file_service.update_file_in_chromadb",
+            "app.services.files.store.ChromaClient.get_langchain_client",
             new_callable=AsyncMock,
             side_effect=Exception("ChromaDB down"),
         ):
-            # Should NOT raise
-            result = await update_file_service(
+            # Should NOT raise — the vector index is best-effort
+            result = await FileService.update(
                 file_id="f-1",
                 user_id="user-abc",
                 update_data={"description": "new desc"},
@@ -940,7 +915,7 @@ class TestUpdateFileService:
         mock_file_repo.apply_metadata_update = AsyncMock(return_value=None)
 
         with pytest.raises(HTTPException) as exc_info:
-            await update_file_service(
+            await FileService.update(
                 file_id="f-1",
                 user_id="user-abc",
                 update_data={"filename": "new.pdf"},
@@ -958,19 +933,19 @@ class TestUpdateFileService:
         )
 
         with patch(
-            "app.services.file_service.update_file_in_chromadb",
+            "app.services.files.service.reindex_file",
             new_callable=AsyncMock,
-        ) as mock_chroma_update:
-            await update_file_service(
+        ) as mock_reindex:
+            await FileService.update(
                 file_id="f-1",
                 user_id="user-abc",
                 update_data={"description": "updated desc"},
                 conversation_id=None,
             )
 
-        # Verify chromadb was called with existing conversation_id
-        mock_chroma_update.assert_awaited_once()
-        call_kwargs = mock_chroma_update.call_args.kwargs
+        # Verify the reindex was scoped to the file's existing conversation
+        mock_reindex.assert_awaited_once()
+        call_kwargs = mock_reindex.call_args.kwargs
         assert call_kwargs["conversation_id"] == "conv-existing"
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
@@ -979,7 +954,7 @@ class TestUpdateFileService:
         mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc())
         mock_file_repo.apply_metadata_update = AsyncMock(return_value=_file_doc())
 
-        result = await update_file_service(
+        result = await FileService.update(
             file_id="f-1",
             user_id="user-abc",
             update_data={"filename": "doc.pdf"},  # same name
@@ -987,31 +962,21 @@ class TestUpdateFileService:
         assert result is not None
 
     @patch(PATCH_DELETE_CACHE, new_callable=AsyncMock)
-    async def test_description_not_updated_skips_chromadb(self, mock_del_cache, mock_file_repo):
-        """When description is not in update_data, ChromaDB should not be updated."""
-        mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc())
+    async def test_description_not_updated_skips_reindex(self, mock_del_cache, mock_file_repo):
+        """When description is not in update_data, the vector index is untouched."""
+        mock_file_repo.get_by_file_id = AsyncMock(return_value=_file_doc(description=None))
         mock_file_repo.apply_metadata_update = AsyncMock(
-            return_value=_file_doc(filename="renamed.pdf")
+            return_value=_file_doc(filename="renamed.pdf", description=None)
         )
 
         with patch(
-            "app.services.file_service.update_file_in_chromadb",
+            "app.services.files.service.reindex_file",
             new_callable=AsyncMock,
-        ) as mock_chroma_update:
-            await update_file_service(
+        ) as mock_reindex:
+            await FileService.update(
                 file_id="f-1",
                 user_id="user-abc",
                 update_data={"filename": "renamed.pdf"},
             )
 
-        mock_chroma_update.assert_not_awaited()
-
-
-# ---------------------------------------------------------------------------
-# get_files
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# deserialize_file
-# ---------------------------------------------------------------------------
+        mock_reindex.assert_not_awaited()

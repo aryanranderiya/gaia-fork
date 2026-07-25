@@ -27,6 +27,7 @@ from app.agents.core.background.executor_capture import (
     register_executor_capture,
     teardown_executor_capture,
 )
+from app.constants.artifacts import ARTIFACT_FORWARDER_SUBSCRIBE_TIMEOUT
 from app.constants.cache import EXECUTOR_WAIT_TIMEOUT, VOICE_EXECUTOR_RESULT_TIMEOUT_S
 from app.constants.hil import HIL_ACK_APPROVED, HIL_ACK_DENIED, HIL_CLASSIFIER_HISTORY_TURNS
 from app.constants.log_tags import LogTag
@@ -39,6 +40,7 @@ from app.models.stream_events import (
     ErrorFrame,
     MainResponseCompleteFrame,
 )
+from app.services.chat.artifact_forwarder import forward_artifact_events
 from app.services.chat.chunks import process_data_chunk
 from app.services.chat.persistence import (
     initialize_new_conversation,
@@ -51,10 +53,8 @@ from app.services.chat.state import (
     merge_tool_outputs,
     recover_stream_state,
 )
-from app.services.chat.workspace import (
-    forward_artifact_events,
-    schedule_last_active_touch,
-)
+from app.services.chat.workspace import schedule_last_active_touch
+from app.services.files import FileService
 from app.services.hil.conversational import resolve_pending_from_message
 from app.services.platform_message_service import is_bot_platform
 from app.services.storage import flush_fs_metrics
@@ -185,22 +185,37 @@ async def _run_chat_stream(
         ):
             return
 
+        forwarder_subscribed = asyncio.Event()
+        if user_id:
+            # Keep the session alive for idle-prune (fire-and-forget) and bridge
+            # the executor's artifact events to this stream. The forwarder starts
+            # BEFORE any upload seeding: pubsub has no replay, so its subscription
+            # must be live when seed_uploads publishes its 'upload' events.
+            schedule_last_active_touch(user_id, conversation_id)
+            artifact_task = asyncio.create_task(
+                forward_artifact_events(
+                    user_id,
+                    conversation_id,
+                    stream_id,
+                    state.bot_message_id,
+                    source,
+                    subscribed=forwarder_subscribed,
+                )
+            )
+
+        # For new conversations, files were uploaded without a conversation_id
+        # so they only landed in Cloudinary — not JuiceFS. Seed them now, before
+        # the agent runs, so they're on disk at the expected user-uploaded/ path.
+        if is_new_conversation and user_id and body.fileData:
+            await _wait_for_artifact_forwarder(forwarder_subscribed, stream_id)
+            await FileService.seed_uploads(body.fileData, user_id, conversation_id)
+
         # Start description generation only after the conversation row exists
         # (created in ``_publish_init_chunk``). Starting it earlier races the
         # row insert: the title LLM can finish first and the ``$set`` description
         # update would silently match zero documents, leaving the title stuck at
         # "New Chat" after a refresh.
         description_task = _start_description_task(is_new_conversation, body, conversation_id, user)
-
-        if user_id:
-            # Keep the session alive for idle-prune (fire-and-forget) and bridge
-            # the executor's artifact events to this stream.
-            schedule_last_active_touch(user_id, conversation_id)
-            artifact_task = asyncio.create_task(
-                forward_artifact_events(
-                    user_id, conversation_id, stream_id, state.bot_message_id, source
-                )
-            )
 
         usage_callback = UsageMetadataCallbackHandler()
         description_task = await _consume_agent_stream(
@@ -391,6 +406,19 @@ async def _publish_description_if_ready(
     except Exception as e:  # description is non-critical
         log.error(f"{LogTag.CHAT} Failed to get conversation description: {e}")
     return None
+
+
+async def _wait_for_artifact_forwarder(subscribed: asyncio.Event, stream_id: str) -> None:
+    """Block until the artifact forwarder's pub/sub subscription is live (or
+    timeout). Seeded uploads publish artifact events with no replay — publishing
+    before the subscription exists would silently drop them."""
+    try:
+        await asyncio.wait_for(subscribed.wait(), timeout=ARTIFACT_FORWARDER_SUBSCRIBE_TIMEOUT)
+    except TimeoutError:
+        log.warning(
+            f"{LogTag.CHAT} Stream {stream_id} artifact forwarder subscribe timeout, "
+            "seeding uploads anyway"
+        )
 
 
 async def _publish_init_chunk(

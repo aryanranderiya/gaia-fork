@@ -312,7 +312,7 @@ class ToolRegistry:
 
         self._add_category(
             "documents",
-            tools=[file_tools.query_file],
+            tools=[file_tools.search_uploaded_files],
             destructive_tools=set(),
         )
 
@@ -411,6 +411,7 @@ class ToolRegistry:
         toolkit_name: str,
         space_name: str,
         specific_tools: list[str] | None = None,
+        exclude_tools: list[str] | None = None,
     ):
         """
         Register provider tools on-demand when subagent is created.
@@ -427,8 +428,12 @@ class ToolRegistry:
 
         if specific_tools:
             tools = await composio_service.get_tools_by_name(specific_tools)
+            if exclude_tools:
+                tools = [t for t in tools if t.name not in exclude_tools]
         else:
-            tools = await composio_service.get_tools(tool_kit=toolkit_name)
+            tools = await composio_service.get_tools(
+                tool_kit=toolkit_name, exclude_tools=exclude_tools
+            )
 
         self._add_category(
             name=toolkit_name,
@@ -488,6 +493,7 @@ class ToolRegistry:
             toolkit = integration.composio_config.toolkit
             space = integration.subagent_config.tool_space
             specific = integration.subagent_config.specific_tools
+            exclude = set(integration.subagent_config.exclude_tools or [])
             try:
                 raw_tools = await composio_service.get_raw_tools_metadata(
                     tool_kit=toolkit, specific_tools=specific
@@ -499,6 +505,7 @@ class ToolRegistry:
             metas = [
                 _CatalogToolMeta(name=t.slug, description=getattr(t, "description", "") or "")
                 for t in raw_tools
+                if t.slug not in exclude
             ]
             if not metas:
                 return

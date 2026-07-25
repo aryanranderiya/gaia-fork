@@ -22,7 +22,7 @@ from app.agents.core.nodes.adapt_media import adapt_media_node
 from app.agents.core.nodes.filter_messages import filter_messages_node
 from app.agents.core.subagents.spawn_agent import get_spawn_graph
 from app.agents.middleware import SubagentMiddleware, create_subagent_middleware
-from app.agents.tools.coding import bash, read
+from app.agents.tools.coding import bash, grep, query_json, read
 from app.agents.tools.core.registry import get_tool_registry
 from app.agents.tools.core.store import get_tools_store
 from app.agents.tools.core.tool_runtime_config import (
@@ -85,6 +85,11 @@ def _build_scoped_tool_dict(
         scoped_tool_dict[search_memory.name] = search_memory
         scoped_tool_dict[read.name] = read
         scoped_tool_dict[bash.name] = bash
+        # Resolvable for every subagent (retrieve-on-demand); gmail additionally
+        # binds these two into its initial set below, since it always offloads
+        # large inboxes and must mine them sandbox-free.
+        scoped_tool_dict[query_json.name] = query_json
+        scoped_tool_dict[grep.name] = grep
         scoped_tool_dict[web_search_tool.name] = web_search_tool
         scoped_tool_dict[fetch_webpages.name] = fetch_webpages
         scoped_tool_dict[deep_research.name] = deep_research
@@ -112,6 +117,7 @@ class SubAgentFactory:
         use_direct_tools: bool = False,
         disable_retrieve_tools: bool = False,
         auto_bind_tools: list[str] | None = None,
+        extra_initial_tools: list[str] | None = None,
         include_finish_task: bool = True,
         mcp_tools: list[BaseTool] | None = None,
         source_label: str | None = None,
@@ -215,6 +221,17 @@ class SubAgentFactory:
             if auto_bind_tools
             else None
         )
+
+        # Config-declared extra initial tools (SubAgentConfig.extra_initial_tools):
+        # local/general tools this subagent always needs bound up front — for the
+        # agent AND the chunk-reader children it spawns. E.g. gmail declares
+        # query_json/grep so triage mines an offloaded inbox directly instead of
+        # falling back to read-whole-file + bash. Kept per-integration in config
+        # (not branched on provider) so it scales to any subagent that offloads.
+        extra_initial = [name for name in (extra_initial_tools or []) if name in scoped_tool_dict]
+        if extra_initial:
+            valid_auto_bind = [*(valid_auto_bind or []), *extra_initial]
+
         if valid_auto_bind:
             log.info(
                 f"{LogTag.AGENT} Auto-binding {len(valid_auto_bind)} tools for {provider}: {valid_auto_bind}"
@@ -241,6 +258,7 @@ class SubAgentFactory:
             parent_tool_runtime,
             use_direct_tools=use_direct_tools,
             disable_retrieve_tools=disable_retrieve_tools,
+            extra_initial_tool_names=extra_initial,
         )
         spawn_seed_tools = [
             scoped_tool_dict[name]

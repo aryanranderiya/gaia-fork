@@ -58,3 +58,6 @@ class FileUpdate(BaseModel):
     filename: str | None = None
     description: str | None = None
     page_wise_summary: PageWiseSummary = None
+    # Server-set only: stamped when a pre-conversation upload is seeded into the
+    # session that adopted it. Never accepted from a client update payload.
+    conversation_id: str | None = None

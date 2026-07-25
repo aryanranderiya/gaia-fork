@@ -64,6 +64,8 @@ MOUNT_SCRIPT_PATH = "/etc/gaia/mount.sh"  # template-baked copy (runtime-ship fa
 # mount-readiness poll (primary + skills + system, ~105s worst case) plus margin.
 MOUNT_SCRIPT_FILE = Path(__file__).resolve().parents[3] / "scripts" / "mount_juicefs.sh"
 MOUNT_SCRIPT_TIMEOUT_SECONDS = 120
+# Graceful JuiceFS unmount before a hard kill — short, best-effort.
+JFS_UNMOUNT_TIMEOUT_SECONDS = 15
 SANDBOX_CREATION_FEATURE_KEY = "sandbox_creation"
 
 
@@ -290,14 +292,23 @@ async def _run_silent(sbx: Any, cmd: str, *, timeout: int = 10) -> tuple[int, st
 
 
 async def _ensure_mounted(sbx: Any, mount_env: dict[str, str]) -> None:
-    """No-op if /workspace is mounted, else re-run mount script.
+    """No-op if /workspace is a HEALTHY mount, else re-run mount script.
 
-    Handles stale FUSE mounts after pause/resume. ``mount_env`` is required
-    because the credentials are no longer sandbox-wide — every call site
-    that may re-run the script must supply them (see ``_mount_env``).
+    Handles stale FUSE mounts after pause/resume. A wedged JuiceFS endpoint
+    (dead/stuck daemon, or a mount that came up against a misconfigured meta/R2)
+    still passes ``mountpoint -q`` but returns EIO on every I/O, so we probe real
+    I/O (``stat``, ``timeout``-bounded) rather than just the mount-table entry —
+    otherwise a wedged ``/workspace`` is never re-mounted and keeps erroring.
+    ``mount.sh`` tears the stale mount down and remounts when re-run.
+
+    ``mount_env`` is required because the credentials are no longer sandbox-wide
+    — every call site that may re-run the script must supply them (see
+    ``_mount_env``).
     """
     async with fs_timer(FsOps.SBX_ENSURE_MOUNTED):
-        exit_code, _, _ = await _run_silent(sbx, "mountpoint -q /workspace", timeout=5)
+        exit_code, _, _ = await _run_silent(
+            sbx, "mountpoint -q /workspace && timeout 5 stat /workspace", timeout=8
+        )
         if exit_code != 0:
             await _run_mount_script(sbx, mount_env)
 
@@ -599,12 +610,39 @@ def _schedule_pause(user_id: str, entry: PooledSandbox) -> None:
     entry.pause_task = asyncio.create_task(_pause_after_delay())
 
 
+async def _release_juicefs_sessions(sbx: Any) -> None:
+    """Unmount the in-sandbox JuiceFS daemons so they deregister their metadata
+    sessions before the sandbox is killed.
+
+    A hard ``sandbox.kill()`` SIGKILLs the juicefs daemons without a clean
+    unmount, so their sessions stay registered in the metadata engine until the
+    stale-session timeout — and the volume's GC owner keeps re-scanning those
+    dead sessions (``SMEMBERS``/``ZSCORE`` per session) the whole time. A clean
+    ``juicefs umount`` lets each daemon close its session immediately. Bind
+    mounts are detached first so the underlying FUSE mounts aren't busy.
+
+    Best-effort: any failure just defers cleanup to the GC owner's stale reaper,
+    so this never blocks or fails eviction.
+    """
+    cmd = (
+        "for m in /workspace/skills /workspace/.system /workspace; do "
+        'umount -l "$m" 2>/dev/null || true; done; '
+        "for m in /mnt/jfs-skills /mnt/jfs-system /mnt/jfs; do "
+        'juicefs umount "$m" 2>/dev/null || true; done'
+    )
+    with contextlib.suppress(Exception):
+        await sbx.commands.run(cmd, timeout=JFS_UNMOUNT_TIMEOUT_SECONDS, user="root")
+
+
 async def _hard_evict(user_id: str, entry: PooledSandbox) -> None:
     """Drop a sandbox from the pool and best-effort kill it."""
     log.info(f"{LogTag.SANDBOX} evicting sandbox user={user_id}")
     get_sandbox_pool().evict(user_id)
     await _cancel_pause_task(entry)
     await _stop_watcher(entry)
+    # Let the JuiceFS daemons close their metadata sessions before the kill so
+    # dead sessions don't linger and get re-scanned by the volume's GC owner.
+    await _release_juicefs_sessions(entry.sandbox)
     # `kill()` returns False (never raises) if the sandbox is already gone.
     with contextlib.suppress(Exception):
         await entry.sandbox.kill()

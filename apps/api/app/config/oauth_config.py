@@ -493,17 +493,30 @@ OAUTH_INTEGRATIONS: list[OAuthIntegration] = [
             tool_space="gmail",
             handoff_tool_name="call_gmail_agent",
             domain="email",
-            capabilities="composing emails, sending messages, reading inbox, organizing with labels, managing drafts, handling attachments, searching emails, and automating email workflows",
+            capabilities="composing emails, sending messages, reading inbox, organizing with labels, managing drafts, handling attachments, searching emails, server-side paginating inbox scans with timeframe shortcuts (today/7d/this_week), and automating email workflows",
             use_cases="any email-related task including sending, reading, organizing, or automating email operations",
             system_prompt=GMAIL_AGENT_SYSTEM_PROMPT,
             auto_bind_tools=[
                 "GMAIL_CUSTOM_GATHER_CONTEXT",
-                "GMAIL_FETCH_EMAILS",
+                "GMAIL_FETCH_MESSAGES",
+                "GMAIL_FETCH_THREAD",
                 "GMAIL_CREATE_EMAIL_DRAFT",
                 "GMAIL_FETCH_MESSAGE_BY_MESSAGE_ID",
-                "GMAIL_FETCH_MESSAGE_BY_THREAD_ID",
                 "GMAIL_GET_CONTACT_LIST",
             ],
+            # A large inbox scan offloads to a JSONL file; bind the sandbox-free
+            # miners into the agent AND its spawned chunk-readers so triage mines
+            # the offload with query_json/grep instead of read-whole-file + bash.
+            extra_initial_tools=["query_json", "grep"],
+            # Custom read tools supersede the stock ones and are the agent's
+            # single canonical path: GMAIL_FETCH_MESSAGES (paginating, renders
+            # the card) replaces GMAIL_FETCH_EMAILS, whose fixed page size
+            # silently capped inbox reads; GMAIL_FETCH_THREAD (normalized,
+            # offloading) replaces GMAIL_FETCH_MESSAGE_BY_THREAD_ID's raw,
+            # unshaped thread view. Exclude the stock tools so they are neither
+            # bound nor retrievable by the agent. (The REST mail layer still
+            # invokes them by name — exclude_tools gates agent retrieval only.)
+            exclude_tools=["GMAIL_FETCH_EMAILS", "GMAIL_FETCH_MESSAGE_BY_THREAD_ID"],
             memory_prompt=GMAIL_MEMORY_PROMPT,
         ),
         metadata_config=ProviderMetadataConfig(
