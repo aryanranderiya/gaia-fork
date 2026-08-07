@@ -194,7 +194,7 @@ async def workos_mobile_callback(
 
     try:
         if not code:
-            log.error(f"{LogTag.OAUTH} No authorization code received from WorkOS (mobile)")
+            log.warning(f"{LogTag.OAUTH} No authorization code received from WorkOS (mobile)")
             return RedirectResponse(url=f"{mobile_redirect}?error=missing_code")
 
         auth_response = workos.user_management.authenticate_with_code(
@@ -277,7 +277,7 @@ async def workos_desktop_callback(
     try:
         # Validate code parameter
         if not code:
-            log.error(f"{LogTag.OAUTH} No authorization code received from WorkOS (desktop)")
+            log.warning(f"{LogTag.OAUTH} No authorization code received from WorkOS (desktop)")
             return RedirectResponse(url=f"{DESKTOP_DEEP_LINK}?error=missing_code")
 
         auth_response = workos.user_management.authenticate_with_code(
@@ -353,7 +353,7 @@ async def workos_callback(
     try:
         # Validate code parameter
         if not code:
-            log.error(f"{LogTag.OAUTH} No authorization code received from WorkOS")
+            log.warning(f"{LogTag.OAUTH} No authorization code received from WorkOS")
             return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=missing_code")
 
         auth_response = workos.user_management.authenticate_with_code(
