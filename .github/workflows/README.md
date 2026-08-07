@@ -21,6 +21,9 @@ flowchart TD
   DEV_MERGED -- "No" --> STOP1["Stop"]:::terminal
   DEV_MERGED -- "Yes" --> PR_MASTER["PR develop -> master"]:::event
 
+  HOTFIX["hotfix/* cut from master<br/>(production defect, skips the develop backlog)"]:::event --> PR_MASTER
+  HOTFIX --> BACKPORT["Land on develop too<br/>(else the next develop -> master merge regresses it)"]:::event
+
   PR_MASTER --> PR_TITLE
   PR_MASTER --> MAIN_PR_MASTER["main.yml<br/>quality-checks (PR + master source policy)"]:::ci
   MAIN_PR_MASTER --> MASTER_MERGED{"Merged to master?"}:::decision
@@ -100,7 +103,7 @@ flowchart TD
 ## Per-Workflow Steps
 ### `.github/workflows/main.yml`
 1. Enter from PRs targeting `develop`/`master` and pushes to `master`.
-2. Run master promotion policy guard (`develop` or `release-please--*` to `master`).
+2. Run master promotion policy guard (`develop`, `release-please--*`, or `hotfix/*` to `master`).
 3. Delegate the full quality gate to the Dagger module via `dagger call quality-checks`. All toolchain setup, dependency installation, linting, type-checking, building, testing, dead code detection, and release manifest validation run inside the Dagger container. No host-level pre-flight steps.
 4. If run is a successful push on `master`, call `build.yml`.
 
