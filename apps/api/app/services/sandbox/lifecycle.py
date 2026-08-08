@@ -436,7 +436,7 @@ async def _reuse_cached_entry(user_id: str, mount_env: dict[str, str]) -> Pooled
     if not await _health_probe(entry.sandbox):
         _record(cache_evicted="unhealthy")
         log.info(f"{LogTag.SANDBOX} cached sandbox unhealthy user={user_id}; evicting")
-        await _hard_evict(user_id, entry)
+        await mark_sandbox_dead(user_id)
         return None
 
     # Running commands does NOT reset E2B's server-side kill timer — only
@@ -453,7 +453,7 @@ async def _reuse_cached_entry(user_id: str, mount_env: dict[str, str]) -> Pooled
     if not await _verify_canary_or_die(entry):
         _record(cache_evicted="canary_stale")
         log.warning(f"{LogTag.SANDBOX} canary stale user={user_id}; recreating sandbox")
-        await _hard_evict(user_id, entry)
+        await mark_sandbox_dead(user_id)
         return None
 
     await _ensure_watcher(user_id, entry)
@@ -504,7 +504,7 @@ async def _acquire_or_create(user_id: str) -> PooledSandbox:
     workspace_version = 0
     source = "create"
 
-    if doc and doc.get("sandbox_id"):
+    if doc and doc.get("sandbox_id") and doc.get("state") != "dead":
         sbx = await _resume_existing_sandbox(doc, mount_env)
         workspace_version = doc.get("workspace_version", 0)
         if sbx is not None:
