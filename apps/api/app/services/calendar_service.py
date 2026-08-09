@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from typing import Any, Union
+from urllib.parse import quote
 
 from fastapi import HTTPException
 
@@ -123,7 +124,7 @@ def fetch_calendar_events(
 
     return _proxy(
         user_id,
-        endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events",
+        endpoint=f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}/events",
         method="GET",
         query=query,
     )
@@ -589,7 +590,7 @@ def create_calendar_event(
 
     response_data = _proxy(
         user_id,
-        endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events",
+        endpoint=f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}/events",
         method="POST",
         body=event_payload,
         query=query_params or None,
@@ -736,7 +737,7 @@ def search_events_in_calendar(
     log.info(f"Searching calendar {calendar_id} with query '{query}' and params: {params}")
     result = _proxy(
         user_id,
-        endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events",
+        endpoint=f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}/events",
         method="GET",
         query=params,
     )
