@@ -3,9 +3,14 @@
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "root": "apps/api",
   "sourceRoot": "apps/api/app",
-  "implicitDependencies": ["docker", "shared-python"],
+  "implicitDependencies": [
+    "docker",
+    "shared-python"
+  ],
   "projectType": "application",
-  "tags": ["scope:python"],
+  "tags": [
+    "scope:python"
+  ],
   "release": {
     "docker": {
       "repositoryName": "theexperiencecompany/gaia"
@@ -15,7 +20,9 @@
     "build": {
       "executor": "nx:noop",
       "cache": true,
-      "inputs": ["production"],
+      "inputs": [
+        "production"
+      ],
       "outputs": []
     },
     "docker:build": {
@@ -34,8 +41,13 @@
         "cwd": "{projectRoot}"
       },
       "cache": true,
-      "inputs": ["{projectRoot}/pyproject.toml", "{projectRoot}/uv.lock"],
-      "outputs": ["{projectRoot}/.venv"]
+      "inputs": [
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock"
+      ],
+      "outputs": [
+        "{projectRoot}/.venv"
+      ]
     },
     "dev": {
       "executor": "nx:run-commands",
@@ -100,7 +112,9 @@
         "{workspaceRoot}/apps/api/pyproject.toml",
         "^production"
       ],
-      "outputs": ["{projectRoot}/.mypy_cache"]
+      "outputs": [
+        "{projectRoot}/.mypy_cache"
+      ]
     },
     "worker": {
       "executor": "nx:run-commands",
@@ -112,7 +126,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "uv run --group backend --group dev pytest tests --ignore=tests/e2e --ignore=tests/composio -v --tb=short",
+        "command": "uv run --group backend --group dev pytest -v --tb=short",
         "cwd": "{projectRoot}"
       },
       "cache": true,
@@ -121,6 +135,57 @@
         "{projectRoot}/tests/**/*",
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/pytest.ini"
+      ]
+    },
+    "test:real": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "USE_REAL_SERVICES=1 uv run --group backend --group dev pytest tests/integration/real tests/contracts tests/e2e/test_hil_barrier_e2e.py tests/e2e/test_hil_spawn_e2e.py -v --tb=short",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },
+    "test:contracts": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run --group backend --group dev pytest tests/contracts -v --tb=short",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/app/**/*",
+        "{projectRoot}/tests/contracts/**/*",
+        "{projectRoot}/tests/conftest.py",
+        "{projectRoot}/tests/factories.py",
+        "{projectRoot}/tests/helpers.py"
+      ]
+    },
+    "test:composio": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run --group backend --group dev pytest tests/composio -v --tb=short",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },
+    "test:stress": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run --group backend --group dev pytest tests/stress -v --tb=short",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
+    },
+    "test:meta": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run --group backend --group dev pytest tests/meta -v --tb=short",
+        "cwd": "{projectRoot}"
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/tests/meta/**/*",
+        "{projectRoot}/tests/conftest.py"
       ]
     },
     "test:unit": {
@@ -141,7 +206,7 @@
     "test:integration": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "uv run --group backend --group dev pytest tests/integration -v --tb=short",
+        "command": "uv run --group backend --group dev pytest tests/integration --ignore=tests/integration/real -v --tb=short",
         "cwd": "{projectRoot}"
       },
       "cache": true,
@@ -164,7 +229,7 @@
     "test:coverage": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "uv run --group backend --group dev pytest tests/unit tests/integration --cov=app --cov-report=html --cov-report=term-missing",
+        "command": "uv run --group backend --group dev pytest --cov=app --cov-report=html --cov-report=term-missing",
         "cwd": "{projectRoot}"
       },
       "cache": false
@@ -175,6 +240,14 @@
         "command": "find . -type d -name '__pycache__' -exec rm -rf {} + && find . -type f -name '*.pyc' -delete",
         "cwd": "{projectRoot}"
       }
+    },
+    "test:schemathesis": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "uv run --group backend --group dev pytest tests/integration/real/test_schemathesis.py -v --tb=short -m schemathesis --override-ini=addopts=--strict-markers --timeout=600",
+        "cwd": "{projectRoot}"
+      },
+      "cache": false
     }
   }
 }

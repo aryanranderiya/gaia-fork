@@ -55,7 +55,6 @@ def _make_llm_provider(name: str) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestGetAvailableProviders:
     @patch("app.agents.llm.client.providers")
     def test_all_providers_available(self, mock_providers: MagicMock) -> None:
@@ -105,7 +104,6 @@ class TestGetAvailableProviders:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestGetOrderedProviders:
     def test_default_priority_order(self) -> None:
         available: dict[str, Any] = {
@@ -207,7 +205,6 @@ class TestGetOrderedProviders:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestCreateConfigurableLlm:
     def test_no_alternatives_returns_primary_instance(self) -> None:
         primary = _make_llm_provider("gemini")
@@ -237,7 +234,6 @@ class TestCreateConfigurableLlm:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestInitLlm:
     @patch("app.agents.llm.client.log")
     @patch("app.agents.llm.client._create_configurable_llm")
@@ -360,7 +356,6 @@ class TestInitLlm:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestGetDefaultLlm:
     @pytest.fixture(autouse=True)
     def _fresh_cache(self):
@@ -424,7 +419,6 @@ class TestGetDefaultLlm:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestAinvokeLlm:
     @staticmethod
     def _runnable(side_effect: Any = None, result: Any = None) -> NonCallableMagicMock:
@@ -493,7 +487,6 @@ class TestAinvokeLlm:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestRegisterLlmProviders:
     @patch("app.agents.llm.client.init_custom_llm")
     @patch("app.agents.llm.client.init_openrouter_llm")
@@ -534,7 +527,6 @@ class TestRegisterLlmProviders:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestConstants:
     def test_provider_models_keys(self) -> None:
         assert set(PROVIDER_MODELS.keys()) == {"gemini", "openrouter", "custom"}
@@ -583,7 +575,6 @@ class TestConstants:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestChatbot:
     @patch("app.agents.llm.chatbot.ainvoke_llm")
     @patch("app.agents.llm.chatbot.get_default_llm")
