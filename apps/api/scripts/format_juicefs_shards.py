@@ -36,13 +36,8 @@ import subprocess
 import sys
 import tempfile
 
-# Must precede the `app.*` import so the script works from any cwd.
+# Must precede any `app.*` import so the script works from any cwd.
 sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from app.config.secrets import (  # noqa: E402
-    InfisicalConfigError,
-    inject_infisical_secrets,
-)
 
 
 def required(name: str) -> str:
@@ -152,7 +147,13 @@ def main() -> int:
 
     # Not fatal on its own: the env may already be populated from a .env or
     # explicit exports. `required()` below is the real gate and names precisely
-    # what is missing.
+    # what is missing. Imported here (after the sys.path bootstrap above) so
+    # the script works from any cwd without a module-level E402.
+    from app.config.secrets import (
+        InfisicalConfigError,
+        inject_infisical_secrets,
+    )
+
     try:
         inject_infisical_secrets()
     except InfisicalConfigError as exc:
