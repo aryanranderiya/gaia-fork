@@ -1,4 +1,5 @@
-"""The vision fallback's own model must be able to see.
+"""The vision fallback's own model must be able to see, and the fallback's
+behavior must degrade gracefully.
 
 ``describe_image`` is what a blind lane falls back to, and it fails SILENTLY —
 a failed call returns ``None`` and every caller degrades to "couldn't look". So
@@ -6,10 +7,15 @@ pointing it at a text-only model does not raise anywhere; images simply stop
 being understood. These tests pin the invariant that makes the fallback work at
 all, separately from ``test_vision_tool_media``, which pins the other half (a
 lane that CAN see never pays for a description).
+
+Plus the call contract: the image is attached as an inline block, the text is
+flattened, and provider failure or an empty completion degrades to ``None``
+instead of failing the whole tool.
 """
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from langchain_core.messages import AIMessage
 import pytest
 
 from app.agents.llm.vision.capability import model_can_view_images
@@ -19,8 +25,13 @@ from app.constants.llm import (
     VISION_MODEL_NAME,
     VISION_MODEL_PROVIDER,
 )
+from app.utils.multimodal import image_content_block
 
 _MOD = "app.agents.llm.vision.describe"
+
+IMAGE_B64 = "aW1hZ2UtYnl0ZXM="
+MIME = "image/png"
+PROMPT = "Describe what is in this screenshot."
 
 
 @pytest.mark.unit
@@ -61,6 +72,40 @@ class TestTheDescriberCanSee:
                 "VISION_MODEL_NAME tracks DEFAULT_MODEL_NAME — the describer will "
                 "follow the default model wherever it goes, including text-only."
             )
+
+
+@pytest.mark.unit
+class TestDescribeImage:
+    @patch(f"{_MOD}.get_vision_llm")
+    @patch(f"{_MOD}.ainvoke_llm", new_callable=AsyncMock)
+    async def test_happy_path_returns_trimmed_text(
+        self, mock_ainvoke: AsyncMock, mock_llm: AsyncMock
+    ) -> None:
+        mock_ainvoke.return_value = AIMessage(content="A sunny field with a red barn.\n\n")
+
+        result = await describe_image(IMAGE_B64, MIME, PROMPT)
+
+        assert result == "A sunny field with a red barn."
+        mock_llm.assert_called_once()
+        messages = mock_ainvoke.await_args.args[1]
+        assert messages[0]["role"] == "user"
+        assert messages[0]["content"][0] == {"type": "text", "text": PROMPT}
+        assert messages[0]["content"][1] == image_content_block(IMAGE_B64, MIME)
+        assert mock_ainvoke.await_args.kwargs["label"] == "vision_fallback"
+
+    async def test_provider_failure_returns_none(self) -> None:
+        with (
+            patch(f"{_MOD}.get_vision_llm"),
+            patch(f"{_MOD}.ainvoke_llm", AsyncMock(side_effect=RuntimeError("provider down"))),
+        ):
+            assert await describe_image(IMAGE_B64, MIME, PROMPT) is None
+
+    async def test_empty_completion_returns_none(self) -> None:
+        with (
+            patch(f"{_MOD}.get_vision_llm"),
+            patch(f"{_MOD}.ainvoke_llm", AsyncMock(return_value=AIMessage(content="   "))),
+        ):
+            assert await describe_image(IMAGE_B64, MIME, PROMPT) is None
 
 
 @pytest.mark.unit

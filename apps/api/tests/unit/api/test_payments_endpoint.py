@@ -11,7 +11,6 @@ Tests cover:
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from httpx import AsyncClient
-import pytest
 
 from app.models.payment_models import (
     CreateSubscriptionResponse,
@@ -67,7 +66,6 @@ def _make_subscription_status(**overrides) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestGetPlans:
     """Tests for the get plans endpoint."""
 
@@ -119,7 +117,6 @@ class TestGetPlans:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestCreateSubscription:
     """Tests for the create subscription endpoint."""
 
@@ -188,7 +185,6 @@ class TestCreateSubscription:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestCancelSubscription:
     """Tests for the cancel subscription endpoint."""
 
@@ -244,7 +240,6 @@ class TestCancelSubscription:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestVerifyPayment:
     """Tests for the verify payment endpoint."""
 
@@ -298,7 +293,6 @@ class TestVerifyPayment:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestGetSubscriptionStatus:
     """Tests for the get subscription status endpoint."""
 
@@ -341,7 +335,6 @@ class TestGetSubscriptionStatus:
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.unit
 class TestDodoWebhook:
     """Tests for the Dodo webhook endpoint."""
 

@@ -27,9 +27,6 @@ from app.constants.llm import AGENT_RECURSION_LIMIT, RECURSION_HWM_FRACTION
 from app.services import llm_metering
 from shared.py.wide_events import log
 
-pytestmark = pytest.mark.unit
-
-
 CONFIG: dict[str, Any] = {
     "configurable": {
         "thread_id": "conv-1",

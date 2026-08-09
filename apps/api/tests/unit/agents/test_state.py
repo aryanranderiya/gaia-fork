@@ -1,11 +1,9 @@
 from langchain_core.messages import AIMessage, HumanMessage, RemoveMessage
 from langgraph.graph.message import REMOVE_ALL_MESSAGES, add_messages
-import pytest
 
 from app.override.langgraph_bigtool.utils import State, messages_delta_reducer
 
 
-@pytest.mark.unit
 class TestState:
     """Tests for the override State used by the compiled agent graph.
 
@@ -63,7 +61,6 @@ class TestState:
         assert _replace_todos(left, right) == ["task-3"]
 
 
-@pytest.mark.unit
 class TestMessagesDeltaReducer:
     """Tests for the messages channel reducer.
 
