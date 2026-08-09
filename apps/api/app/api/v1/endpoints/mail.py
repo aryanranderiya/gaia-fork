@@ -408,7 +408,7 @@ async def send_email_json(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to send email: {e!s}")
+        raise HTTPException(status_code=500, detail=f"Failed to send email: {e!s}") from e
 
 
 @router.post("/gmail/mark-as-read", summary="Mark emails as read")
