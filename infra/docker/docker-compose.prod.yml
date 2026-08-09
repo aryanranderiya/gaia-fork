@@ -46,6 +46,17 @@ secrets:
   gaia_jfs_redis_password:
     external: true
     name: gaia_jfs_redis_password_v1
+  # Same password, JSON-encoded for redis_exporter: v1.66+ requires
+  # REDIS_PASSWORD_FILE to be a JSON {addr: password} map, while jfs-meta-redis
+  # and the JuiceFS volume metaurl need the shared secret as plaintext.
+  # Create once on the box:
+  #   docker exec $(docker ps -q --filter name=jfs-meta-redis) \
+  #     cat /run/secrets/gaia_jfs_redis_password \
+  #     | awk '{print "{\"rediss://jfs-meta-redis:6379\":\"" $0 "\"}"}' \
+  #     | docker secret create gaia_jfs_redis_exporter_pass_v1 -
+  gaia_jfs_redis_exporter_pass:
+    external: true
+    name: gaia_jfs_redis_exporter_pass_v1
 
 services:
   # ---------------------------------------------------------------------------
@@ -709,9 +720,9 @@ services:
       # api.heygaia.io and can't match the alias, hence skip-verify.
       REDIS_ADDR: "rediss://jfs-meta-redis:6379"
       REDIS_EXPORTER_SKIP_TLS_VERIFICATION: "true"
-      REDIS_PASSWORD_FILE: /run/secrets/gaia_jfs_redis_password
+      REDIS_PASSWORD_FILE: /run/secrets/gaia_jfs_redis_exporter_pass
     secrets:
-      - gaia_jfs_redis_password
+      - gaia_jfs_redis_exporter_pass
     networks:
       - gaia-prod-shared
     deploy:
