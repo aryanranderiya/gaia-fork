@@ -237,6 +237,26 @@ def main() -> int:
     failures: list[str] = []
     for module in changed:
         rel = module.removeprefix("apps/api/")
+        # A comment-only diff has zero possible mutants — checked before the
+        # test-file lookup, and regardless of whether a test file exists.
+        # This isn't just about the "no test file" failure: even a module
+        # WITH a test file pays a real cost here — mutmut's `# pragma: no
+        # mutate` line-scoping only suppresses mutants ON that exact line,
+        # so a single-line comment change inside a large, weakly-covered
+        # function still leaves the rest of that function's body fully
+        # mutable and can run mutmut's full per-mutant test battery across
+        # it. That's how a one-line noqa removal produced 157 mutants and
+        # blew the per-module timeout in practice. Enforcing test coverage —
+        # or even attempting it — for a diff that changed no code proves
+        # nothing either way, so skip it before the expensive test-file
+        # search and the mutation run even start. Printed, never silent.
+        if merge_base and _is_comment_only_change(module, merge_base):
+            print(
+                f"::notice::mutation gate: {rel}'s diff vs {merge_base[:12]} is "
+                "comment-only (no mutable code changed) — skipping",
+                file=sys.stderr,
+            )
+            continue
         rel_py = rel.removeprefix("app/")
         rel_py = rel_py.removesuffix(".py")
         unit_mirror = f"tests/unit/{Path(rel_py).parent}/test_{Path(rel_py).stem}.py"
@@ -246,19 +266,6 @@ def main() -> int:
         hits = _test_files_for(rel_py)
         if hits:
             matrix.append(_entry(rel, hits[0].removeprefix("apps/api/"), merge_base))
-            continue
-        # A module with zero test files is normally a hard failure ("changed
-        # code must ship tests"). But a diff that touches only comments has
-        # zero possible mutants — enforcing test coverage on it proves
-        # nothing, so it is a gate bug, not a real gap. Skip it instead, out
-        # loud: this is a correctness fix to what the gate measures, not an
-        # exemption from it.
-        if merge_base and _is_comment_only_change(module, merge_base):
-            print(
-                f"::notice::mutation gate: {rel} has no test file, but its diff vs "
-                f"{merge_base[:12]} is comment-only (no mutable code changed) — skipping",
-                file=sys.stderr,
-            )
             continue
         failures.append(
             f"changed module {rel} has no test file anywhere (looked for {unit_mirror} "
