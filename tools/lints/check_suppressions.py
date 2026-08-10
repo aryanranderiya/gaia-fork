@@ -17,11 +17,12 @@ no base ref, no merge-base. It counts three suppression kinds per tracked file:
 Only directives in actual comments count, never ones that merely appear inside
 a string or docstring (this module's own docstring, right here, is proof —
 ``tokenize`` is what tells the two apart for Python). TS/JS has no stdlib
-parser, so it uses a pragmatic heuristic instead: quoted spans are blanked
-out per line, and multi-line template literals are tracked by backtick
-parity across lines. Remaining accepted imprecision (no stdlib TS/JS parser
-exists): a backtick inside a ``${...}`` expression or inside a ``//`` comment
-flips the parity wrongly.
+parser, so it uses a pragmatic heuristic instead: quote spans are blanked
+per line, then a left-to-right walk tracks template-literal state across
+lines and recognizes ``//`` comments before backticks can toggle state (a
+backtick inside a comment is inert). Remaining accepted imprecision (no
+stdlib TS/JS parser exists): a backtick inside a ``${...}`` expression, or a
+template body line whose paired quotes surround the closing backtick.
 
 and compares the counts against ``config/suppressions-baseline.json``, one entry
 per (path, kind). The baseline is line-number-free, so reordering lines within a
@@ -77,11 +78,10 @@ _TYPE_IGNORE_RE = re.compile(r"#\s*type:\s*ignore\b")
 _BIOME_IGNORE_RE = re.compile(r"//\s*biome-ignore\b")
 _PY_COMMENT_PATTERNS = (("noqa", _NOQA_RE), ("type-ignore", _TYPE_IGNORE_RE))
 
-# Matches a single/double/backtick-quoted span on one line, so it can be
-# blanked out before matching `// biome-ignore` — see the module docstring
-# for the multi-line-template-literal limitation this heuristic accepts.
-_QUOTED_SPAN_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
-_UNESCAPED_BACKTICK_RE = re.compile(r"(?<!\\)`")
+# Matches a single/double-quoted span on one line, blanked before the
+# backtick walk so quote contents can't toggle template state. Backticks are
+# handled exclusively by _split_comment, which carries state across lines.
+_QUOTED_SPAN_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'')
 
 
 @dataclass(frozen=True)
@@ -139,15 +139,43 @@ def _scan_python_comments(path: Path) -> list[Hit]:
     return hits
 
 
-def _scan_ts_comments(path: Path) -> list[Hit]:
-    """``// biome-ignore`` on a line, with string contents blanked out first so a
-    directive inside a string literal doesn't count.
+def _split_comment(line: str, in_template: bool) -> tuple[str, bool]:
+    """The ``//`` comment portion of a TS/JS line (or ``""``), plus the
+    template-literal state carried into the next line.
 
-    Same-line quote spans are blanked by regex; multi-line template literals are
-    handled by tracking backtick parity across lines — a line whose start is
-    inside an unterminated template body is skipped entirely. Remaining accepted
-    imprecision: a backtick inside a ``${...}`` expression or inside a ``//``
-    comment can flip the parity wrongly (see module docstring).
+    Left-to-right walk over a line whose same-line quote spans are already
+    blanked: in code, ``//`` starts a comment (the rest of the line, including
+    any backticks in it, is inert) and an unescaped backtick enters a template;
+    in a template, an unescaped backtick exits it. Escapes are counted, so
+    ``\\\\``` (escaped backslash, real backtick) toggles and ``\\``` does not.
+    Remaining accepted imprecision: a backtick inside ``${...}`` (see module
+    docstring).
+    """
+    i = 0
+    n = len(line)
+    while i < n:
+        ch = line[i]
+        if ch == "\\":
+            i += 2  # the escaped character never toggles anything
+            continue
+        if in_template:
+            if ch == "`":
+                in_template = False
+            i += 1
+            continue
+        if ch == "`":
+            in_template = True
+            i += 1
+            continue
+        if ch == "/" and i + 1 < n and line[i + 1] == "/":
+            return line[i:], in_template
+        i += 1
+    return "", in_template
+
+
+def _scan_ts_comments(path: Path) -> list[Hit]:
+    """``// biome-ignore`` in real ``//`` comments only — never inside a string
+    literal, including multi-line template literals (see ``_split_comment``).
     """
     text = _read_text(path)
     if text is None:
@@ -156,18 +184,9 @@ def _scan_ts_comments(path: Path) -> list[Hit]:
     in_template = False
     for lineno, line in enumerate(text.splitlines(), start=1):
         blanked = _QUOTED_SPAN_RE.sub(lambda m: " " * len(m.group()), line)
-        # Backticks surviving the regex open or close template literals that
-        # span lines. Split on them and keep only the code segments: with the
-        # line's starting state s and segments seg[0..n], seg[i] is code iff
-        # (i even) == (not s) — each backtick toggles string/code.
-        segments = _UNESCAPED_BACKTICK_RE.split(blanked)
-        code = "".join(
-            seg if (i % 2 == 0) != in_template else " " * len(seg) for i, seg in enumerate(segments)
-        )
-        if _BIOME_IGNORE_RE.search(code):
+        comment, in_template = _split_comment(blanked, in_template)
+        if comment and _BIOME_IGNORE_RE.search(comment):
             hits.append(Hit("biome-ignore", lineno, line.strip()))
-        if len(segments) % 2 == 0:  # odd number of backticks -> state flips
-            in_template = not in_template
     return hits
 
 

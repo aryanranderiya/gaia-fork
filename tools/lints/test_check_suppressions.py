@@ -221,3 +221,24 @@ def test_biome_ignore_after_a_template_closes_is_counted(repo: Path) -> None:
     r = run(repo, "--update")
     assert r.returncode == 0
     assert "1 suppression" in r.stdout
+
+
+def test_backtick_inside_a_comment_does_not_mask_later_directives(repo: Path) -> None:
+    """A `` ` `` in an ordinary // comment must not toggle template state —
+    otherwise every later directive in the file silently bypasses the check."""
+    (repo / "a.ts").write_text(
+        "// wrap it in `code` spans\nconst a = 1;\n// biome-ignore lint: x\n"
+    )
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "1 suppression" in r.stdout
+
+
+def test_directive_in_comment_on_template_close_line_is_counted(repo: Path) -> None:
+    """The comment after a closing backtick on the same line is real code-side text."""
+    (repo / "a.ts").write_text("const t = `\nbody\n`; // biome-ignore lint: x\n")
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "1 suppression" in r.stdout
