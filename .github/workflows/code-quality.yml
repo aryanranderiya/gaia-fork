@@ -796,46 +796,25 @@ jobs:
           echo "::endgroup::"
           echo "promtool: OK (all per-rule firing + quiet tests pass)"
 
-  # --- Suppression ratchet (no NEW inline lint-suppression comments) ------
-  # Diff-based, not a repo-wide sweep: suppressions already on the base
-  # branch are grandfathered (removed/renamed files never re-trip this) —
-  # only lines ADDED by this diff are checked. No legacy baseline to burn
-  # down, so this lane is enforced from day one (see quality-gate below).
+  # --- Suppression baseline (no NEW inline lint-suppression comments) -----
+  # Checked-in baseline, not a git-history diff: config/suppressions-baseline.json
+  # records a count per (file, kind) and the tree may only ever match or shrink
+  # it. No fetch-depth, no base ref, no merge-base needed — the whole check is a
+  # working-tree scan, so it is reproducible locally with the exact command below.
   suppression-ratchet:
-    name: "Suppression ratchet (no new # noqa / # type: ignore / biome-ignore)"
+    name: "Suppression baseline (no new # noqa / # type: ignore / biome-ignore)"
     needs: [changes]
     if: needs.changes.outputs.has_typescript == 'true' || needs.changes.outputs.has_python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Diff vs base for newly introduced inline suppression comments
-        env:
-          # Push events have no PR base ref; diff against the pre-push SHA
-          # instead so a direct push to master is ratcheted too. Every commit
-          # in that range arrived via a PR that was itself ratcheted, so no
-          # promotion-range exemption is needed under master-only flow.
-          # Through env, not inline ${{ }}, per this file's injection-safety
-          # convention (see the type-check / build.yml AFFECTED_* comments).
-          EVENT_BEFORE: ${{ github.event.before }}
+      - name: Scan the tree for suppressions not covered by the checked-in baseline
         run: |
-          echo "::group::suppression ratchet"
-          if [ -n "${GITHUB_BASE_REF:-}" ]; then
-            timeout 60 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 \
-              fetch --no-tags origin "$GITHUB_BASE_REF"
-            BASE="origin/$GITHUB_BASE_REF"
-          else
-            BASE="$EVENT_BEFORE"
-          fi
-          if [ -z "$BASE" ] || [[ "$BASE" =~ ^0+$ ]]; then
-            echo "No prior commit to diff against (new branch ref, or workflow_dispatch) — skipping."
-          else
-            scripts/ci/check-suppression-ratchet.sh "$BASE"
-          fi
+          echo "::group::suppression baseline"
+          python3 tools/lints/check_suppressions.py
           echo "::endgroup::"
-          echo "Suppression ratchet: OK (no new inline suppression comments)"
+          echo "Suppression baseline: OK (no new inline suppression comments; baseline is tight)"
 
   # --- Secret scanning (gitleaks, diff-scoped) -----------------------------
   # gitleaks-action is free for personal-account repos but requires a (free,
