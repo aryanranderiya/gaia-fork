@@ -112,7 +112,7 @@ Python 3.11+: use modern syntax (`X | Y` unions, `match` statements).
 
 One domain per file. Never let a file span multiple domains.
 
-**New helpers go in the module that owns the concept, never in the caller's file by convenience.** A hook utility belongs in `hooks.py`, a helper for a constant belongs next to that constant, a message util belongs in the messages module. Appending module-level helpers to an already-large file (500+ lines) because "that's where they're used" is how monoliths grow — put them where a reader would look for them and import.
+**New code goes in the module that owns the concept, never in the caller's file by convenience.** Before adding a function, ask where a reader would look for it — put it there and import it. Adding to an already-large file because "that's where it's used" is how monoliths grow.
 
 - `app/models/` — SQLAlchemy / MongoDB document models, one file per domain (`todo_models.py`).
 - `app/schemas/` — Pydantic request/response schemas, one file per domain. Separate `CreateRequest`, `UpdateRequest`, `Response`.
@@ -395,7 +395,7 @@ If a parameter is unused by one implementation but required by a framework's cal
 
 Prefer `cast(RealType, value)` over `isinstance(value, RealType)` when you already know the value is correct by construction (a lazy-provider registry lookup, a well-known dict's `.get()` result, a value a framework's own contract guarantees). `cast()` only changes what the type checker believes; `isinstance()` changes what the code actually *does* at runtime, and can reject a structurally-compatible object — a mock, a duck-typed wrapper, a different concrete implementation of a `Protocol` — that was working fine before.
 
-Never `cast("dict[str, Any]", ...)` to bypass a TypedDict or reach an undeclared key — that re-introduces `Any` through the back door. Cast to `dict[str, object]` (the honest type) and validate/narrow what you pull out.
+Never cast through `Any` (or an `Any`-parametrized container) to bypass a declared type — that re-introduces `Any` through the back door. Cast to the honest narrow type and validate/narrow what you pull out.
 
 ### 13. Never change behavior to satisfy a type checker
 
