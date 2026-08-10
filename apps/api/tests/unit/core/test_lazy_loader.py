@@ -1,6 +1,7 @@
 """Tests for app/core/lazy_loader.py — LazyLoader, ProviderRegistry, lazy_provider."""
 
 import asyncio
+from collections.abc import Callable
 import threading
 from unittest.mock import patch
 import uuid
@@ -51,6 +52,69 @@ class _AcquireSignalingLock:
 
     def __exit__(self, *exc_info: object) -> None:
         self.release()
+
+
+def _run_two_threaded_lock_race(
+    second_call: Callable[[LazyLoader], bool | None],
+) -> tuple[bool | None, bool | None, int]:
+    """Run the double-checked-locking race deterministically and report both
+    callers' results plus how many times the loader actually ran.
+
+    Thread A holds `loader._lock` blocked inside the loader function; thread
+    B is proven (via `_AcquireSignalingLock`) to have reached `with
+    self._lock:` before A's `_is_configured` flip is released — so `B`'s
+    result and the loader call count prove whether B took the inner
+    double-check fast path or wastefully re-ran the loader.
+
+    `second_call` is B's actual call (`loader.get()` or
+    `asyncio.run(loader.aget())`), so the same race harness proves the fast
+    path for both the sync `get()` double-check and the
+    `aget()`-on-a-sync-loader double-check without duplicating the
+    coordination.
+    """
+    call_count = 0
+    entered_loader = threading.Event()
+    release_loader = threading.Event()
+
+    def blocking_loader() -> None:
+        nonlocal call_count
+        call_count += 1
+        entered_loader.set()
+        assert release_loader.wait(timeout=5)
+
+    loader = LazyLoader(
+        blocking_loader,
+        is_global_context=True,
+        strategy=MissingKeyStrategy.SILENT,
+    )
+    b_about_to_acquire = threading.Event()
+    loader._lock = _AcquireSignalingLock(b_about_to_acquire)  # type: ignore[assignment]
+
+    first_result: list[bool | None] = []
+    second_result: list[bool | None] = []
+
+    def call_first() -> None:
+        first_result.append(loader.get())
+
+    def call_second() -> None:
+        second_result.append(second_call(loader))
+
+    thread_a = threading.Thread(target=call_first)
+    thread_a.start()
+    assert entered_loader.wait(timeout=5)  # A holds the lock, blocked in the loader
+    # A's own acquire() already fired the shared event above; clear it so the
+    # next wait genuinely observes thread B's (not thread A's) acquire.
+    b_about_to_acquire.clear()
+
+    thread_b = threading.Thread(target=call_second)
+    thread_b.start()
+    assert b_about_to_acquire.wait(timeout=5)  # B is now blocked trying to acquire
+
+    release_loader.set()
+    thread_a.join(timeout=5)
+    thread_b.join(timeout=5)
+
+    return first_result[0], second_result[0], call_count
 
 
 # ---------------------------------------------------------------------------
@@ -253,60 +317,12 @@ class TestLazyLoaderSyncGet:
         """A caller that loses the race and blocks on the lock sees
         `_is_configured` already flipped to True by the time it acquires the
         lock, and must take the inner double-check fast path instead of
-        calling the loader again.
+        calling the loader again. See `_run_two_threaded_lock_race` for how
+        the race is made deterministic."""
+        first, second, call_count = _run_two_threaded_lock_race(lambda loader: loader.get())
 
-        Coordinated deterministically (no sleeps/wall-clock races): thread A
-        holds `_lock` while blocked inside the loader function. `_lock` is
-        swapped for `_AcquireSignalingLock`, which fires an event the instant
-        `acquire()` is *called* (before it blocks) — so waiting on that event
-        proves thread B has already evaluated the outer quick-check as False
-        and reached `with self._lock:`, before thread A (and therefore
-        `_is_configured`) is ever released.
-        """
-        call_count = 0
-        entered_loader = threading.Event()
-        release_loader = threading.Event()
-
-        def blocking_loader():
-            nonlocal call_count
-            call_count += 1
-            entered_loader.set()
-            assert release_loader.wait(timeout=5)
-
-        loader = LazyLoader(
-            blocking_loader,
-            is_global_context=True,
-            strategy=MissingKeyStrategy.SILENT,
-        )
-        b_about_to_acquire = threading.Event()
-        loader._lock = _AcquireSignalingLock(b_about_to_acquire)  # type: ignore[assignment]
-
-        first_result: list[bool | None] = []
-        second_result: list[bool | None] = []
-
-        def call_first() -> None:
-            first_result.append(loader.get())
-
-        def call_second() -> None:
-            second_result.append(loader.get())
-
-        thread_a = threading.Thread(target=call_first)
-        thread_a.start()
-        assert entered_loader.wait(timeout=5)  # A holds the lock, blocked in the loader
-        # A's own acquire() already fired the shared event above; clear it so
-        # the next wait genuinely observes thread B's (not thread A's) acquire.
-        b_about_to_acquire.clear()
-
-        thread_b = threading.Thread(target=call_second)
-        thread_b.start()
-        assert b_about_to_acquire.wait(timeout=5)  # B is now blocked trying to acquire
-
-        release_loader.set()
-        thread_a.join(timeout=5)
-        thread_b.join(timeout=5)
-
-        assert first_result == [True]
-        assert second_result == [True]
+        assert first is True
+        assert second is True
         assert call_count == 1  # B never re-ran the loader
 
 
@@ -460,60 +476,17 @@ class TestLazyLoaderAsyncGet:
         """A sync loader accessed only via `aget()`: a second caller that
         blocks on `self._lock` (the branch at line ~213-222, taken when
         `is_async` is False) must see `_is_configured` already True on the
-        inner double-check and skip re-initialization.
-
-        Same `_AcquireSignalingLock` coordination as the sync `get()`
-        double-check test — both `get()` and this branch of `aget()` share
-        `self._lock`. `asyncio.run()`'s event-loop bootstrap adds enough
-        latency that a plain "thread started" event is not sufficient proof
-        thread B has reached the lock statement before thread A is released
-        — the signaling lock closes that gap by firing only once `acquire()`
-        is actually called.
-        """
-        call_count = 0
-        entered_loader = threading.Event()
-        release_loader = threading.Event()
-
-        def blocking_loader():
-            nonlocal call_count
-            call_count += 1
-            entered_loader.set()
-            assert release_loader.wait(timeout=5)
-
-        loader = LazyLoader(
-            blocking_loader,
-            is_global_context=True,
-            strategy=MissingKeyStrategy.SILENT,
+        inner double-check and skip re-initialization. Same
+        `_AcquireSignalingLock`-coordinated race as the sync `get()`
+        double-check test (both share `self._lock`) — see
+        `_run_two_threaded_lock_race`; only B's call differs here
+        (`asyncio.run(loader.aget())` instead of `loader.get()`)."""
+        first, second, call_count = _run_two_threaded_lock_race(
+            lambda loader: asyncio.run(loader.aget())
         )
-        b_about_to_acquire = threading.Event()
-        loader._lock = _AcquireSignalingLock(b_about_to_acquire)  # type: ignore[assignment]
 
-        first_result: list[bool | None] = []
-        second_result: list[bool | None] = []
-
-        def call_first() -> None:
-            first_result.append(loader.get())
-
-        def call_second() -> None:
-            second_result.append(asyncio.run(loader.aget()))
-
-        thread_a = threading.Thread(target=call_first)
-        thread_a.start()
-        assert entered_loader.wait(timeout=5)  # A holds the lock, blocked in the loader
-        # A's own acquire() already fired the shared event above; clear it so
-        # the next wait genuinely observes thread B's (not thread A's) acquire.
-        b_about_to_acquire.clear()
-
-        thread_b = threading.Thread(target=call_second)
-        thread_b.start()
-        assert b_about_to_acquire.wait(timeout=5)  # B is now blocked trying to acquire
-
-        release_loader.set()
-        thread_a.join(timeout=5)
-        thread_b.join(timeout=5)
-
-        assert first_result == [True]
-        assert second_result == [True]
+        assert first is True
+        assert second is True
         assert call_count == 1  # B never re-ran the loader
 
 
