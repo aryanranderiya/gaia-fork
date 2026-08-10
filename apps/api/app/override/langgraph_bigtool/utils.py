@@ -110,14 +110,22 @@ class State(_BigtoolState):
     remaining_steps: RemainingSteps
 
 
-# In-memory relay from `manage_system_prompts_node` to the model node: ids of
-# slot-stale messages (old system prompts / clock lines) the hook dropped from
-# the per-call view. The model node turns them into RemoveMessage tombstones in
-# its own channel update so the pruning also reaches the CHECKPOINT — without
-# this, every run's prompt stack stays in the thread forever (a production
-# workflow thread accumulated 39 copies, ~4.8 MB of checkpoint writes per run).
-# Never a state channel: the model node pops it before returning its update.
+# In-memory relay from `manage_system_prompts_node` to the model node, which
+# tombstones the relayed ids out of the checkpoint. Overwritten each hook pass
+# and popped before the node's update — never a state channel.
 PRUNED_MESSAGE_IDS_KEY = "_pruned_message_ids"
+
+
+def pop_pruned_tombstones(state: State) -> list[RemoveMessage]:
+    """Pop ``PRUNED_MESSAGE_IDS_KEY`` and return its ids as RemoveMessage tombstones."""
+    raw = cast("dict[str, object]", state).pop(PRUNED_MESSAGE_IDS_KEY, None)
+    if raw is None:
+        # Absent is fine: the hook may not have run this call.
+        return []
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise TypeError(f"{PRUNED_MESSAGE_IDS_KEY} must be list[str], got {type(raw).__name__}")
+    pruned_ids = cast("list[str]", raw)
+    return [RemoveMessage(id=message_id) for message_id in pruned_ids]
 
 
 class RetrieveToolsResult(TypedDict):

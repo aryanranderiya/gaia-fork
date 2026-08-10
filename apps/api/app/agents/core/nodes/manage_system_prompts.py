@@ -194,10 +194,8 @@ def manage_system_prompts_node(state: State, config: RunnableConfig, store: Base
         # clock line differs turn-to-turn.
         dropped_system = 0
         dropped_time = 0
-        # Ids of the dropped copies, relayed via PRUNED_MESSAGE_IDS_KEY so the
-        # model node also tombstones them out of the checkpointed thread —
-        # otherwise this filtering is per-request only and state grows by one
-        # full prompt stack per run, forever.
+        # Relayed via PRUNED_MESSAGE_IDS_KEY so the model node tombstones the
+        # stale copies out of the checkpoint, not just the per-call view.
         pruned_ids: list[str] = []
         static_msg: AnyMessage | None = None
         dynamic_msg: AnyMessage | None = None
