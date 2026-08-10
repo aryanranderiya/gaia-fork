@@ -25,6 +25,10 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      # nx-set-shas queries the Actions API for the last successful master
+      # run; without this it silently falls back to HEAD~1 on every push —
+      # correct today only because the ruleset forces merge commits.
+      actions: read
     outputs:
       has_python: ${{ steps.affected.outputs.has_python }}
       has_typescript: ${{ steps.affected.outputs.has_typescript }}
@@ -364,6 +368,7 @@ jobs:
       - build
       - test-python
       - test-typescript
+      - test-fast
       - test-harness-tools
       - regression-proof
       # static checks + dead-code live in code-quality.yml (its own gate)
@@ -381,6 +386,7 @@ jobs:
           echo "  build:              ${{ needs.build.result }}"
           echo "  test-python:        ${{ needs.test-python.result }}"
           echo "  test-typescript:    ${{ needs.test-typescript.result }}"
+          echo "  test-fast:          ${{ needs.test-fast.result }}"
           echo "  test-harness-tools: ${{ needs.test-harness-tools.result }}"
           echo "  regression-proof:   ${{ needs.regression-proof.result }}"
 
@@ -389,6 +395,7 @@ jobs:
             "${{ needs.build.result }}" \
             "${{ needs.test-python.result }}" \
             "${{ needs.test-typescript.result }}" \
+            "${{ needs.test-fast.result }}" \
             "${{ needs.test-harness-tools.result }}" \
             "${{ needs.regression-proof.result }}"; do
             if [[ "$r" == "failure" || "$r" == "cancelled" ]]; then
