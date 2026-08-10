@@ -56,6 +56,7 @@ def _commit(repo: Path, message: str = "change") -> None:
 
 
 def run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Invoke the scanner in `repo` and capture its output."""
     return subprocess.run(
         ["python3", "tools/lints/check_suppressions.py", *args],
         cwd=repo,

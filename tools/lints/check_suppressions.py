@@ -41,6 +41,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -76,8 +77,11 @@ class Hit:
 
 def _tracked_files() -> list[Path]:
     """Every git-tracked source file the scan cares about (skips untracked/ignored)."""
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("git not found on PATH — the scanner needs `git ls-files`")
     out = subprocess.run(
-        ["git", "ls-files", "-z", "--", *_TRACKED_GLOBS],
+        [git, "ls-files", "-z", "--", *_TRACKED_GLOBS],
         cwd=REPO_ROOT,
         check=True,
         capture_output=True,
@@ -140,6 +144,7 @@ def load_baseline() -> tuple[dict[tuple[str, str], int], dict[str, str]]:
 
 
 def write_baseline(grouped: dict[tuple[str, str], list[Hit]], hashes: dict[str, str]) -> None:
+    """Regenerate the baseline file from the current tree (sorted, stable)."""
     entries = [
         {"path": path, "kind": kind, "count": len(hits), "hash": hashes[path]}
         for (path, kind), hits in grouped.items()
@@ -182,6 +187,7 @@ def _locate_baseline_line(path: str, kind: str) -> int:
 
 
 def main(argv: list[str]) -> int:
+    """Compare the tree against the baseline; --update regenerates it."""
     grouped, current_hashes = scan_tree()
     current_counts = {key: len(hits) for key, hits in grouped.items()}
 

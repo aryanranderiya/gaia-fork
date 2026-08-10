@@ -737,7 +737,9 @@ exclude_dirs = [
 # - B101: assert used (legitimate in pydantic validators / dev guards)
 # - B311: random module for non-crypto (sampling, jitter)
 # - B404: subprocess import (we run trusted commands)
-skips = ["B101", "B311", "B404"]
+# - B603: subprocess call without shell=True (same rationale as B404 — argv is
+#   always a constant list of trusted args; B607 stays on to force absolute paths)
+skips = ["B101", "B311", "B404", "B603"]
 
 # ---------------------------------------------------------------------------
 # interrogate — docstring coverage (strict for public surface).
