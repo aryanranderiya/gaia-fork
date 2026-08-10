@@ -1213,30 +1213,6 @@
       "hash": "c165d760342f6888ce522fe1573a201f100b0d3661aae3c47e0fcfc4565c8dde"
     },
     {
-      "path": "tools/lints/check_suppressions.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "4b64399fe3edcaba545568524ee5fdef556ab9307310ff024a4df6aad2df1234"
-    },
-    {
-      "path": "tools/lints/check_suppressions.py",
-      "kind": "type-ignore",
-      "count": 2,
-      "hash": "4b64399fe3edcaba545568524ee5fdef556ab9307310ff024a4df6aad2df1234"
-    },
-    {
-      "path": "tools/lints/test_check_suppressions.py",
-      "kind": "noqa",
-      "count": 6,
-      "hash": "869918dc2d2728637c21494d8838fa6e8b88ed398f7d173f7bfa5cc10a43fb4f"
-    },
-    {
-      "path": "tools/lints/test_check_suppressions.py",
-      "kind": "type-ignore",
-      "count": 1,
-      "hash": "869918dc2d2728637c21494d8838fa6e8b88ed398f7d173f7bfa5cc10a43fb4f"
-    },
-    {
       "path": "tools/lints/test_lints.py",
       "kind": "noqa",
       "count": 4,

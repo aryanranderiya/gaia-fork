@@ -14,6 +14,15 @@ no base ref, no merge-base. It counts three suppression kinds per tracked file:
     type-ignore    -- ``# type: ignore`` in *.py
     biome-ignore   -- ``// biome-ignore`` in ts/tsx/js/jsx/mjs/cjs
 
+Only directives in actual comments count, never ones that merely appear inside
+a string or docstring (this module's own docstring, right here, is proof —
+``tokenize`` is what tells the two apart for Python). TS/JS has no stdlib
+parser, so it uses a pragmatic heuristic instead: quoted spans (single,
+double, and backtick strings) are blanked out before matching ``//
+biome-ignore`` on each line. This is line-based, so a ``//`` sitting inside a
+*multi-line* template literal can still be misread as a comment — a known,
+accepted gap given no stdlib TS/JS parser exists.
+
 and compares the counts against ``config/suppressions-baseline.json``, one entry
 per (path, kind). The baseline is line-number-free, so reordering lines within a
 file is always free. A ``(path, kind)`` whose count grew beyond the baseline fails
@@ -38,12 +47,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import io
 import json
 from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
+import tokenize
 
 from _common import Violation, report_rule
 
@@ -64,6 +75,12 @@ _TRACKED_GLOBS = ("*.py", "*.ts", "*.tsx", "*.js", "*.jsx", "*.mjs", "*.cjs")
 _NOQA_RE = re.compile(r"#\s*noqa\b")
 _TYPE_IGNORE_RE = re.compile(r"#\s*type:\s*ignore\b")
 _BIOME_IGNORE_RE = re.compile(r"//\s*biome-ignore\b")
+_PY_COMMENT_PATTERNS = (("noqa", _NOQA_RE), ("type-ignore", _TYPE_IGNORE_RE))
+
+# Matches a single/double/backtick-quoted span on one line, so it can be
+# blanked out before matching `// biome-ignore` — see the module docstring
+# for the multi-line-template-literal limitation this heuristic accepts.
+_QUOTED_SPAN_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
 
 
 @dataclass(frozen=True)
@@ -80,7 +97,10 @@ def _tracked_files() -> list[Path]:
     git = shutil.which("git")
     if git is None:
         raise RuntimeError("git not found on PATH — the scanner needs `git ls-files`")
-    out = subprocess.run(
+    # argv is a constant list plus a fixed glob tuple (no user input), and
+    # `git` is resolved to an absolute path via shutil.which above, so
+    # shell=False is safe here.
+    out = subprocess.run(  # nosec B603
         [git, "ls-files", "-z", "--", *_TRACKED_GLOBS],
         cwd=REPO_ROOT,
         check=True,
@@ -89,28 +109,57 @@ def _tracked_files() -> list[Path]:
     return [REPO_ROOT / p for p in out.decode().split("\0") if p]
 
 
-def _patterns_for(path: Path) -> tuple[tuple[str, re.Pattern[str]], ...]:
-    if path.suffix == ".py":
-        return (("noqa", _NOQA_RE), ("type-ignore", _TYPE_IGNORE_RE))
-    if path.suffix in _TS_SUFFIXES:
-        return (("biome-ignore", _BIOME_IGNORE_RE),)
-    return ()
-
-
-def _scan_file(path: Path) -> list[Hit]:
-    patterns = _patterns_for(path)
-    if not patterns:
-        return []
+def _read_text(path: Path) -> str | None:
     try:
-        text = path.read_text(encoding="utf-8")
+        return path.read_text(encoding="utf-8")
     except (UnicodeDecodeError, OSError):
+        return None
+
+
+def _scan_python_comments(path: Path) -> list[Hit]:
+    """Directives that appear in real ``#`` comments only — never ones that
+    merely appear inside a string or docstring literal.
+    """
+    text = _read_text(path)
+    if text is None:
+        return []
+    hits: list[Hit] = []
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(text).readline):
+            if tok.type != tokenize.COMMENT:
+                continue
+            for kind, pattern in _PY_COMMENT_PATTERNS:
+                if pattern.search(tok.string):
+                    hits.append(Hit(kind, tok.start[0], tok.string.strip()))
+    except (tokenize.TokenError, SyntaxError) as exc:
+        raise RuntimeError(
+            f"suppression scan: failed to tokenize {path.relative_to(REPO_ROOT)} — {exc}"
+        ) from exc
+    return hits
+
+
+def _scan_ts_comments(path: Path) -> list[Hit]:
+    """``// biome-ignore`` on a line, with quoted spans blanked out first so a
+    directive inside a string literal doesn't count (see module docstring for
+    the multi-line-template-literal limitation this heuristic accepts).
+    """
+    text = _read_text(path)
+    if text is None:
         return []
     hits: list[Hit] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
-        for kind, pattern in patterns:
-            if pattern.search(line):
-                hits.append(Hit(kind, lineno, line.strip()))
+        blanked = _QUOTED_SPAN_RE.sub(lambda m: " " * len(m.group()), line)
+        if _BIOME_IGNORE_RE.search(blanked):
+            hits.append(Hit("biome-ignore", lineno, line.strip()))
     return hits
+
+
+def _scan_file(path: Path) -> list[Hit]:
+    if path.suffix == ".py":
+        return _scan_python_comments(path)
+    if path.suffix in _TS_SUFFIXES:
+        return _scan_ts_comments(path)
+    return []
 
 
 def scan_tree() -> tuple[dict[tuple[str, str], list[Hit]], dict[str, str]]:
@@ -163,13 +212,33 @@ def resolve_renames(
     byte-identical content — a pure rename, the one thing this check makes free
     across files (the old script's "pure renames false-fail" bug, fixed without
     touching git history: it's a content hash, not a diff).
+
+    Only remaps when the hash is unambiguous: exactly one current file has that
+    content, and exactly one vanished baseline path had it. Two files sharing
+    identical content (a hash collision across multiple paths on either side)
+    is not a rename — it's left alone for normal new/stale reporting instead
+    of guessing which vanished path maps to which current one.
     """
-    current_by_hash = {h: p for p, h in current_hashes.items()}
+    current_by_hash: dict[str, list[str]] = {}
+    for p, h in current_hashes.items():
+        current_by_hash.setdefault(h, []).append(p)
+
+    vanished_by_hash: dict[str, list[str]] = {}
+    for p in baseline_hashes:
+        if p not in current_hashes:
+            vanished_by_hash.setdefault(baseline_hashes[p], []).append(p)
+
     remapped = dict(baseline_counts)
-    for old_path in [p for p in baseline_hashes if p not in current_hashes]:
-        new_path = current_by_hash.get(baseline_hashes[old_path])
-        if new_path is None or new_path in baseline_hashes:
-            continue  # no unambiguous match — fall through to stale/new reporting
+    for content_hash, vanished_paths in vanished_by_hash.items():
+        if len(vanished_paths) != 1:
+            continue  # ambiguous on the baseline side — not a rename
+        current_paths = current_by_hash.get(content_hash, [])
+        if len(current_paths) != 1:
+            continue  # ambiguous on the current-tree side — not a rename
+        old_path = vanished_paths[0]
+        new_path = current_paths[0]
+        if new_path in baseline_hashes:
+            continue  # new_path already has its own baseline entry
         for key in [k for k in remapped if k[0] == old_path]:
             remapped[(new_path, key[1])] = remapped.pop(key)
     return remapped
