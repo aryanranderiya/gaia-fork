@@ -6,8 +6,17 @@
 # Consumed by the `deployment-plan` job, which runs with `if: always()` so a
 # failed/cancelled lane (docker-release, docker-web, docker-grafana) never
 # skips planning outright -- each lane's result is evaluated explicitly here
-# instead of relying on implicit all-success gating. A failed docker-web must
-# never block a ready backend deploy, and vice versa.
+# instead of relying on implicit all-success gating.
+#
+# Coupling rule: a push that touches ONLY backend or ONLY web deploys that
+# side independently -- a failed docker-web must never block a ready backend
+# deploy, and vice versa (the original incident this fixes). But a push that
+# touches BOTH backend and web is a single coupled unit: if either lane
+# failed, deploy NEITHER, rather than shipping (say) a new frontend against
+# a still-old backend it wasn't built against. The old implicit
+# all-or-nothing gate accidentally provided this protection for coupled
+# pushes -- this preserves that property while still fixing the
+# single-side-failure incident.
 #
 # Writes backend_deploy / frontend_deploy / backend_orphaned /
 # frontend_orphaned to $GITHUB_OUTPUT. trigger-deploy and trigger-web consume
@@ -19,7 +28,10 @@ set -euo pipefail
 : "${EVENT_NAME:?EVENT_NAME is required}"
 : "${API_AFFECTED:=false}"
 : "${BOTS_AFFECTED:=false}"
-# Job .result values: success | failure | cancelled | skipped.
+: "${WEB_AFFECTED:=false}"
+# Job .result values: success | failure | cancelled | skipped. A 'skipped'
+# lane means "not affected", never a failure -- it must not trigger the
+# coupling hold below.
 : "${DOCKER_RELEASE_RESULT:?DOCKER_RELEASE_RESULT is required}"
 : "${DOCKER_WEB_RESULT:?DOCKER_WEB_RESULT is required}"
 # Set by docker-release right after its push steps, independent of later
@@ -31,8 +43,47 @@ set -euo pipefail
 : "${MANUAL_MODE_INPUT:=}"
 : "${MANUAL_MODE_EVENT:=}"
 
+release_failed=false
+[ "$DOCKER_RELEASE_RESULT" = "failure" ] || [ "$DOCKER_RELEASE_RESULT" = "cancelled" ] && release_failed=true
+web_failed=false
+[ "$DOCKER_WEB_RESULT" = "failure" ] || [ "$DOCKER_WEB_RESULT" = "cancelled" ] && web_failed=true
+
+backend_affected=false
+[ "$API_AFFECTED" = "true" ] || [ "$BOTS_AFFECTED" = "true" ] && backend_affected=true
+
+both_touched=false
+[ "$backend_affected" = "true" ] && [ "$WEB_AFFECTED" = "true" ] && both_touched=true
+
 backend_deploy=false
 frontend_deploy=false
+coupled_hold=false
+
+# Shared by the automatic push plan and workflow_dispatch's `auto` mode --
+# both derive the plan from affected-detection + lane results the same way.
+compute_auto_plan() {
+  if [ "$both_touched" = "true" ]; then
+    if [ "$release_failed" = "true" ] || [ "$web_failed" = "true" ]; then
+      # Coupled push, one side red: hold both back rather than deploy a
+      # frontend/backend pair that was never actually tested together.
+      coupled_hold=true
+    elif [ "$DOCKER_RELEASE_RESULT" = "success" ] && [ "$DOCKER_WEB_RESULT" = "success" ]; then
+      backend_deploy=true
+      frontend_deploy=true
+    fi
+    # Neither failed nor both-succeeded (e.g. a hypothetical 'skipped' on an
+    # affected lane) -- no verified success on both sides, so don't deploy,
+    # but this isn't a failure either, so don't badge it as a coupled hold.
+  else
+    if [ "$backend_affected" = "true" ] && [ "$DOCKER_RELEASE_RESULT" = "success" ]; then
+      backend_deploy=true
+    fi
+    # Single-side push: frontend syncs from source, not docker-web's image,
+    # and isn't coupled to a backend change this time -- keep it decoupled
+    # from docker-web's result, same as before this change.
+    frontend_deploy=true
+  fi
+}
+
 manual_mode="${MANUAL_MODE_INPUT:-}"
 if [ -z "$manual_mode" ]; then
   manual_mode="${MANUAL_MODE_EVENT:-}"
@@ -47,22 +98,15 @@ on_master=false
 if [ "$on_master" = "false" ]; then
   echo "Not on master; deploy jobs disabled."
 elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-  # Manual overrides are an explicit operator decision -- they intentionally
-  # bypass affected-detection AND lane-result gating. This is the documented
-  # self-heal remedy for drift: `deployment_mode=both` (or backend-only /
-  # frontend-only) redeploys whatever is currently tagged :latest in GHCR,
-  # regardless of what this run's affected-detection or build lanes decided.
   case "$manual_mode" in
     auto)
-      if [ "$API_AFFECTED" = "true" ] || [ "$BOTS_AFFECTED" = "true" ]; then
-        if [ "$DOCKER_RELEASE_RESULT" = "success" ]; then
-          backend_deploy=true
-        fi
-      fi
-      # Frontend sync to the Vercel source repo builds from source, not from
-      # docker-web's image, so it is not gated on docker-web's result.
-      frontend_deploy=true
+      compute_auto_plan
       ;;
+    # Explicit operator overrides bypass affected-detection, lane-result
+    # gating, AND the coupling rule -- this is the documented self-heal
+    # remedy for drift: `deployment_mode=both` (or backend-only /
+    # frontend-only) redeploys whatever is currently tagged :latest in
+    # GHCR, regardless of what this run's build lanes decided.
     backend-only)
       backend_deploy=true
       ;;
@@ -81,21 +125,15 @@ elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
       ;;
   esac
 else
-  # Automatic push-triggered plan: a failed/cancelled docker-release means no
-  # verified new backend image for this run, so never deploy on a guess.
-  if [ "$API_AFFECTED" = "true" ] || [ "$BOTS_AFFECTED" = "true" ]; then
-    if [ "$DOCKER_RELEASE_RESULT" = "success" ]; then
-      backend_deploy=true
-    fi
-  fi
-  frontend_deploy=true
+  # Automatic push-triggered plan.
+  compute_auto_plan
 fi
 
 # Orphan detection: images landed in GHCR tagged :latest but the deploy that
 # would roll them out did not run this time, for ANY reason (lane failure,
-# cancellation, or the plan above simply deciding not to deploy). Scoped to
-# master: off-master manual builds intentionally never deploy and must not be
-# reported as drift.
+# cancellation, the plan deciding not to deploy, or a coupling hold).
+# Scoped to master: off-master manual builds intentionally never deploy and
+# must not be reported as drift.
 backend_orphaned=false
 frontend_orphaned=false
 if [ "$on_master" = "true" ]; then
@@ -105,6 +143,13 @@ if [ "$on_master" = "true" ]; then
   if [ "$DOCKER_WEB_RESULT" = "success" ] && [ "$frontend_deploy" != "true" ]; then
     frontend_orphaned=true
   fi
+  # A coupling hold strands BOTH sides together even when only one lane
+  # actually failed -- e.g. web failed, backend published fine but is held
+  # back anyway. Flag both explicitly so the healthy side isn't missed.
+  if [ "$coupled_hold" = "true" ]; then
+    backend_orphaned=true
+    frontend_orphaned=true
+  fi
 fi
 
 {
@@ -112,10 +157,11 @@ fi
   echo "frontend_deploy=$frontend_deploy"
   echo "backend_orphaned=$backend_orphaned"
   echo "frontend_orphaned=$frontend_orphaned"
+  echo "coupled_hold=$coupled_hold"
   echo "docker_release_result=$DOCKER_RELEASE_RESULT"
   echo "docker_web_result=$DOCKER_WEB_RESULT"
 } >> "$GITHUB_OUTPUT"
 
-echo "Deploy plan => backend: $backend_deploy, frontend: $frontend_deploy"
+echo "Deploy plan => backend: $backend_deploy, frontend: $frontend_deploy, coupled_hold: $coupled_hold"
 echo "Orphan check => backend_orphaned: $backend_orphaned, frontend_orphaned: $frontend_orphaned"
-echo "  docker-release result: $DOCKER_RELEASE_RESULT (images_published=$BACKEND_IMAGES_PUBLISHED), docker-web result: $DOCKER_WEB_RESULT"
+echo "  both_touched: $both_touched, docker-release result: $DOCKER_RELEASE_RESULT (images_published=$BACKEND_IMAGES_PUBLISHED), docker-web result: $DOCKER_WEB_RESULT"

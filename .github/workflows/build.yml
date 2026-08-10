@@ -219,6 +219,10 @@ jobs:
       contents: read
       packages: write
       actions: read
+    outputs:
+      # Feeds deployment-plan's coupling rule: a push that touches both
+      # backend and web must deploy them together, not independently.
+      web_affected: ${{ steps.web-affected.outputs.web }}
 
     steps:
       # Prepare repository + tooling for affected check and optional image build.
@@ -359,12 +363,14 @@ jobs:
       frontend_deploy: ${{ steps.plan.outputs.frontend_deploy }}
       backend_orphaned: ${{ steps.plan.outputs.backend_orphaned }}
       frontend_orphaned: ${{ steps.plan.outputs.frontend_orphaned }}
+      coupled_hold: ${{ steps.plan.outputs.coupled_hold }}
       docker_release_result: ${{ steps.plan.outputs.docker_release_result }}
       docker_web_result: ${{ steps.plan.outputs.docker_web_result }}
     steps:
       - uses: actions/checkout@v4
       # Single decision point that translates lane results + affected +
-      # manual mode into deploy booleans, and flags any image lane that
+      # manual mode into deploy booleans, applies the backend/web coupling
+      # rule for pushes that touch both, and flags any image lane that
       # published without its deploy running.
       - name: Compute deploy plan
         id: plan
@@ -375,6 +381,7 @@ jobs:
           MANUAL_MODE_EVENT: ${{ github.event.inputs.deployment_mode || '' }}
           API_AFFECTED: ${{ needs.docker-release.outputs.api_affected || 'false' }}
           BOTS_AFFECTED: ${{ needs.docker-release.outputs.bots_affected || 'false' }}
+          WEB_AFFECTED: ${{ needs.docker-web.outputs.web_affected || 'false' }}
           DOCKER_RELEASE_RESULT: ${{ needs.docker-release.result }}
           DOCKER_WEB_RESULT: ${{ needs.docker-web.result }}
           BACKEND_IMAGES_PUBLISHED: ${{ needs.docker-release.outputs.images_published || 'false' }}
@@ -402,10 +409,11 @@ jobs:
             **Commit:** `${{ github.sha }}`
             **Branch:** ${{ github.ref_name }}
             **Actor:** ${{ github.actor }}
-            ${{ needs.deployment-plan.outputs.backend_orphaned == 'true' && format('**Backend images (api/voice-agent/bots) were published to GHCR as `:latest` but the backend deploy did NOT run.** docker-release result: `{0}`.', needs.deployment-plan.outputs.docker_release_result) || '' }}
-            ${{ needs.deployment-plan.outputs.frontend_orphaned == 'true' && format('**Web image (gaia-web) was published to GHCR as `:latest` but the frontend deploy did NOT run.** docker-web result: `{0}`.', needs.deployment-plan.outputs.docker_web_result) || '' }}
+            ${{ needs.deployment-plan.outputs.coupled_hold == 'true' && format('**This commit changes both backend and web, so their deploys are coupled — one lane failed (docker-release: `{0}`, docker-web: `{1}`), so BOTH deploys were held back together rather than shipping one half against a stale other half.**', needs.deployment-plan.outputs.docker_release_result, needs.deployment-plan.outputs.docker_web_result) || '' }}
+            ${{ needs.deployment-plan.outputs.coupled_hold != 'true' && needs.deployment-plan.outputs.backend_orphaned == 'true' && format('**Backend images (api/voice-agent/bots) were published to GHCR as `:latest` but the backend deploy did NOT run.** docker-release result: `{0}`.', needs.deployment-plan.outputs.docker_release_result) || '' }}
+            ${{ needs.deployment-plan.outputs.coupled_hold != 'true' && needs.deployment-plan.outputs.frontend_orphaned == 'true' && format('**Web image (gaia-web) was published to GHCR as `:latest` but the frontend deploy did NOT run.** docker-web result: `{0}`.', needs.deployment-plan.outputs.docker_web_result) || '' }}
             Production may now be running a stale image while a newer one sits in GHCR tagged `:latest`. Any container restart on the Swarm host will silently pick up the undeployed build.
-            **To deploy the published image(s) now:** run `gh workflow run build.yml --ref master -f deployment_mode=both` (or `backend-only` / `frontend-only`) — this redeploys whatever is currently tagged `:latest` in GHCR regardless of this run's affected-detection or lane results.
+            **To deploy now:** fix the red lane, then run `gh workflow run build.yml --ref master -f deployment_mode=both` (or `backend-only` / `frontend-only` for a non-coupled case) — this redeploys whatever is currently tagged `:latest` in GHCR regardless of this run's affected-detection or lane results.
 
   # Trigger backend production deploy only when deploy plan allows it.
   trigger-deploy:
