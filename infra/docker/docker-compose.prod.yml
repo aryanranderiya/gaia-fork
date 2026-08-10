@@ -171,6 +171,11 @@ services:
           nocopy: true
     environment:
       WORKER_TYPE: arq_worker
+      # Wide-event identity. Must equal this service's Promtail label; without
+      # it, any import-time log line primes the cached envelope with the API
+      # default before the worker's own setdefault runs, and every event from
+      # this container claims service="gaia-backend".
+      GAIA_SERVICE_NAME: arq_worker
       PYTHONPATH: /app/apps/api
       LOG_FORMAT: json
       LOG_COLORIZE: "false"
@@ -245,6 +250,8 @@ services:
     command: python -m uvicorn app.services.embedding_sidecar.server:app --host 0.0.0.0 --port 8200 --workers 1
     environment:
       WORKER_TYPE: embedding_sidecar
+      # Wide-event identity — same reason as arq_worker above.
+      GAIA_SERVICE_NAME: embedding-sidecar
       PYTHONPATH: /app/apps/api
       LOG_FORMAT: json
       LOG_COLORIZE: "false"
