@@ -41,7 +41,7 @@ resolve_group() {
   shift 2
   local repos=("$@")
 
-  if [ "$outcome" != "success" ]; then
+  if [[ "$outcome" != "success" ]]; then
     echo "resolve-image-tags: $group not released this run (outcome: $outcome)" >&2
     echo ""
     return 0
@@ -50,17 +50,17 @@ resolve_group() {
   local tag="" repo candidates
   for repo in "${repos[@]}"; do
     candidates=$(docker image ls --format '{{.Tag}}' "$GHCR_NAMESPACE/$repo" | grep -E "$TAG_RE" || true)
-    if [ -z "$candidates" ]; then
+    if [[ -z "$candidates" ]]; then
       echo "::error::resolve-image-tags: $group released but $GHCR_NAMESPACE/$repo has no local production tag matching $TAG_RE" >&2
       return 1
     fi
-    if [ "$(echo "$candidates" | wc -l)" -ne 1 ]; then
+    if [[ "$(echo "$candidates" | wc -l)" -ne 1 ]]; then
       echo "::error::resolve-image-tags: $GHCR_NAMESPACE/$repo has multiple production tags locally: $(echo "$candidates" | tr '\n' ' ')" >&2
       return 1
     fi
-    if [ -z "$tag" ]; then
+    if [[ -z "$tag" ]]; then
       tag="$candidates"
-    elif [ "$tag" != "$candidates" ]; then
+    elif [[ "$tag" != "$candidates" ]]; then
       echo "::error::resolve-image-tags: $group repos disagree on the tag ($tag vs $candidates on $repo)" >&2
       return 1
     fi
@@ -87,7 +87,7 @@ resolve_group() {
 
 apps_tag=""
 bots_tag=""
-if [ "$VERSION_SCHEME" = "production" ]; then
+if [[ "$VERSION_SCHEME" = "production" ]]; then
   apps_tag=$(resolve_group apps "$APPS_RELEASE_OUTCOME" "${APPS_IMAGE_REPOS[@]}")
   bots_tag=$(resolve_group bots "$BOTS_RELEASE_OUTCOME" "${BOTS_IMAGE_REPOS[@]}")
 else

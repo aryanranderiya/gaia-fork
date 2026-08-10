@@ -43,23 +43,23 @@ retag() {
 case "$MODE" in
   from-env)
     retagged=false
-    if [ -n "${APPS_IMAGE_TAG:-}" ]; then
+    if [[ -n "${APPS_IMAGE_TAG:-}" ]]; then
       for repo in "${APPS_IMAGE_REPOS[@]}"; do
         retag "$GHCR_NAMESPACE/$repo:$APPS_IMAGE_TAG"
       done
       retagged=true
     fi
-    if [ -n "${BOTS_IMAGE_TAG:-}" ]; then
+    if [[ -n "${BOTS_IMAGE_TAG:-}" ]]; then
       for repo in "${BOTS_IMAGE_REPOS[@]}"; do
         retag "$GHCR_NAMESPACE/$repo:$BOTS_IMAGE_TAG"
       done
       retagged=true
     fi
-    if [ -n "${GRAFANA_IMAGE_TAG:-}" ]; then
+    if [[ -n "${GRAFANA_IMAGE_TAG:-}" ]]; then
       retag "$GHCR_NAMESPACE/$GRAFANA_IMAGE_REPO:$GRAFANA_IMAGE_TAG"
       retagged=true
     fi
-    if [ "$retagged" = "false" ]; then
+    if [[ "$retagged" = "false" ]]; then
       echo "No concrete tags were passed — stack was deployed from :latest, alias already correct."
     fi
     ;;
@@ -71,7 +71,7 @@ case "$MODE" in
     : "${ROLLBACK_MODE:?ROLLBACK_MODE is required}"
     : "${DOCKER_CONTEXT:?DOCKER_CONTEXT is required}"
     : "${STACK:?STACK is required}"
-    if [ "$ROLLBACK_MODE" = "digest" ]; then
+    if [[ "$ROLLBACK_MODE" = "digest" ]]; then
       # Digest rollback only touches gaia-backend/arq_worker, both on the gaia
       # repo — re-point exactly that repo's :latest at the pinned ref.
       : "${IMAGE_DIGEST:?IMAGE_DIGEST is required for digest mode}"
@@ -86,7 +86,7 @@ case "$MODE" in
           docker --context "$DOCKER_CONTEXT" service inspect "$svc" \
             --format '{{.Spec.TaskTemplate.ContainerSpec.Image}}'
         done | sort -u)
-      if [ -z "$refs" ]; then
+      if [[ -z "$refs" ]]; then
         echo "::error::rolled-back retag: no matching services found in stack $STACK"
         exit 1
       fi

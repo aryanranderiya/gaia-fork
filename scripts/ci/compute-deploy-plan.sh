@@ -44,15 +44,15 @@ set -euo pipefail
 : "${MANUAL_MODE_EVENT:=}"
 
 release_failed=false
-[ "$DOCKER_RELEASE_RESULT" = "failure" ] || [ "$DOCKER_RELEASE_RESULT" = "cancelled" ] && release_failed=true
+[[ "$DOCKER_RELEASE_RESULT" = "failure" ]] || [[ "$DOCKER_RELEASE_RESULT" = "cancelled" ]] && release_failed=true
 web_failed=false
-[ "$DOCKER_WEB_RESULT" = "failure" ] || [ "$DOCKER_WEB_RESULT" = "cancelled" ] && web_failed=true
+[[ "$DOCKER_WEB_RESULT" = "failure" ]] || [[ "$DOCKER_WEB_RESULT" = "cancelled" ]] && web_failed=true
 
 backend_affected=false
-[ "$API_AFFECTED" = "true" ] || [ "$BOTS_AFFECTED" = "true" ] && backend_affected=true
+[[ "$API_AFFECTED" = "true" ]] || [[ "$BOTS_AFFECTED" = "true" ]] && backend_affected=true
 
 both_touched=false
-[ "$backend_affected" = "true" ] && [ "$WEB_AFFECTED" = "true" ] && both_touched=true
+[[ "$backend_affected" = "true" ]] && [[ "$WEB_AFFECTED" = "true" ]] && both_touched=true
 
 backend_deploy=false
 frontend_deploy=false
@@ -68,12 +68,12 @@ deliberate_frontend_skip=false
 # Shared by the automatic push plan and workflow_dispatch's `auto` mode --
 # both derive the plan from affected-detection + lane results the same way.
 compute_auto_plan() {
-  if [ "$both_touched" = "true" ]; then
-    if [ "$release_failed" = "true" ] || [ "$web_failed" = "true" ]; then
+  if [[ "$both_touched" = "true" ]]; then
+    if [[ "$release_failed" = "true" ]] || [[ "$web_failed" = "true" ]]; then
       # Coupled push, one side red: hold both back rather than deploy a
       # frontend/backend pair that was never actually tested together.
       coupled_hold=true
-    elif [ "$DOCKER_RELEASE_RESULT" = "success" ] && [ "$DOCKER_WEB_RESULT" = "success" ]; then
+    elif [[ "$DOCKER_RELEASE_RESULT" = "success" ]] && [[ "$DOCKER_WEB_RESULT" = "success" ]]; then
       backend_deploy=true
       frontend_deploy=true
     fi
@@ -81,7 +81,7 @@ compute_auto_plan() {
     # affected lane) -- no verified success on both sides, so don't deploy,
     # but this isn't a failure either, so don't badge it as a coupled hold.
   else
-    if [ "$backend_affected" = "true" ] && [ "$DOCKER_RELEASE_RESULT" = "success" ]; then
+    if [[ "$backend_affected" = "true" ]] && [[ "$DOCKER_RELEASE_RESULT" = "success" ]]; then
       backend_deploy=true
     fi
     # Single-side push: frontend syncs from source, not docker-web's image,
@@ -92,19 +92,19 @@ compute_auto_plan() {
 }
 
 manual_mode="${MANUAL_MODE_INPUT:-}"
-if [ -z "$manual_mode" ]; then
+if [[ -z "$manual_mode" ]]; then
   manual_mode="${MANUAL_MODE_EVENT:-}"
 fi
-if [ -z "$manual_mode" ]; then
+if [[ -z "$manual_mode" ]]; then
   manual_mode="auto"
 fi
 
 on_master=false
-[ "$REF" = "refs/heads/master" ] && on_master=true
+[[ "$REF" = "refs/heads/master" ]] && on_master=true
 
-if [ "$on_master" = "false" ]; then
+if [[ "$on_master" = "false" ]]; then
   echo "Not on master; deploy jobs disabled."
-elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+elif [[ "$EVENT_NAME" = "workflow_dispatch" ]]; then
   case "$manual_mode" in
     auto)
       compute_auto_plan
@@ -153,11 +153,11 @@ fi
 # was published" on a run that never built a web image.
 backend_orphaned=false
 frontend_orphaned=false
-if [ "$on_master" = "true" ]; then
-  if [ "$BACKEND_IMAGES_PUBLISHED" = "true" ] && [ "$backend_deploy" != "true" ] && [ "$deliberate_backend_skip" != "true" ]; then
+if [[ "$on_master" = "true" ]]; then
+  if [[ "$BACKEND_IMAGES_PUBLISHED" = "true" ]] && [[ "$backend_deploy" != "true" ]] && [[ "$deliberate_backend_skip" != "true" ]]; then
     backend_orphaned=true
   fi
-  if [ "$WEB_AFFECTED" = "true" ] && [ "$DOCKER_WEB_RESULT" = "success" ] && [ "$frontend_deploy" != "true" ] && [ "$deliberate_frontend_skip" != "true" ]; then
+  if [[ "$WEB_AFFECTED" = "true" ]] && [[ "$DOCKER_WEB_RESULT" = "success" ]] && [[ "$frontend_deploy" != "true" ]] && [[ "$deliberate_frontend_skip" != "true" ]]; then
     frontend_orphaned=true
   fi
   # A coupling hold strands BOTH sides together even when only one lane
@@ -165,7 +165,7 @@ if [ "$on_master" = "true" ]; then
   # back anyway. Flag both explicitly so the healthy side isn't missed.
   # (Coupling holds only occur in auto plans, never in the explicit manual
   # modes, so the deliberate-skip suppression can't apply here.)
-  if [ "$coupled_hold" = "true" ]; then
+  if [[ "$coupled_hold" = "true" ]]; then
     backend_orphaned=true
     frontend_orphaned=true
   fi

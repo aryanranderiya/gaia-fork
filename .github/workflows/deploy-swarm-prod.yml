@@ -133,8 +133,22 @@ jobs:
 
       - name: Wait for convergence
         id: converge
+        env:
+          BOTS_IMAGE_TAG: ${{ inputs.bots_image_tag }}
+          GRAFANA_IMAGE_TAG: ${{ inputs.grafana_image_tag }}
         run: |
-          SERVICES="gaia-backend arq_worker voice-agent-worker"
+          # Every consumer of the apps image group — the :latest retag below
+          # moves the whole group's alias, so every service that will pull it
+          # on a future restart must be proven healthy first.
+          SERVICES="gaia-backend arq_worker embedding-sidecar voice-agent-worker"
+          # Bot/grafana aliases only move when their tags were deployed this
+          # run — extend the health gate to match exactly what will be retagged.
+          if [[ -n "${BOTS_IMAGE_TAG}" ]]; then
+            SERVICES="${SERVICES} discord-bot slack-bot telegram-bot whatsapp-bot"
+          fi
+          if [[ -n "${GRAFANA_IMAGE_TAG}" ]]; then
+            SERVICES="${SERVICES} grafana"
+          fi
           echo "Waiting for ${SERVICES} to converge (up to 5 minutes)..."
           DEADLINE=$(( $(date +%s) + 300 ))
 
@@ -304,14 +318,17 @@ jobs:
         run: |
           if [ "$ROLLBACK_MODE" = "last" ]; then
             for svc in $(docker --context prod stack services gaia-prod --format '{{.Name}}' \
-              | grep -E 'gaia-backend|arq_worker|voice-agent-worker|discord-bot|slack-bot|telegram-bot|whatsapp-bot'); do
+              | grep -E 'gaia-backend|arq_worker|embedding-sidecar|voice-agent-worker|discord-bot|slack-bot|telegram-bot|whatsapp-bot'); do
               echo "Rolling back $svc..."
               docker --context prod service rollback "$svc"
             done
           elif [ "$ROLLBACK_MODE" = "digest" ]; then
             [ -z "$IMAGE_DIGEST" ] && echo "image_digest required for digest mode" && exit 1
+            # Every service running the gaia image — a partial pin would leave
+            # the remainder on a different build than the :latest alias claims.
             docker --context prod service update --image "$IMAGE_DIGEST" gaia-prod_gaia-backend
             docker --context prod service update --image "$IMAGE_DIGEST" gaia-prod_arq_worker
+            docker --context prod service update --image "$IMAGE_DIGEST" gaia-prod_embedding-sidecar
           fi
 
       - name: Wait for rollback convergence
@@ -321,9 +338,9 @@ jobs:
         run: |
           if [ "$ROLLBACK_MODE" = "last" ]; then
             SERVICES=$(docker --context prod stack services gaia-prod --format '{{.Name}}' \
-              | grep -E 'gaia-backend|arq_worker|voice-agent-worker|discord-bot|slack-bot|telegram-bot|whatsapp-bot')
+              | grep -E 'gaia-backend|arq_worker|embedding-sidecar|voice-agent-worker|discord-bot|slack-bot|telegram-bot|whatsapp-bot')
           else
-            SERVICES="gaia-prod_gaia-backend gaia-prod_arq_worker"
+            SERVICES="gaia-prod_gaia-backend gaia-prod_arq_worker gaia-prod_embedding-sidecar"
           fi
           echo "Waiting for services to stabilise (up to 3 minutes): $SERVICES"
           DEADLINE=$(( $(date +%s) + 180 ))
@@ -352,7 +369,10 @@ jobs:
       # otherwise :latest keeps naming the bad build and any container
       # restart (or tag-less redeploy) would re-pull it.
       - name: Re-point :latest at the rolled-back images
-        if: success()
+        # timed_out guard: a rollback that did not stabilise proves nothing
+        # about what prod runs — moving the alias then would re-introduce the
+        # exact lie this mechanism exists to kill.
+        if: success() && steps.converge.outputs.timed_out != 'true'
         env:
           ROLLBACK_MODE: ${{ inputs.rollback_mode }}
           IMAGE_DIGEST: ${{ inputs.image_digest }}

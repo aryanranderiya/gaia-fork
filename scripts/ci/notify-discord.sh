@@ -29,7 +29,7 @@ color_int=$((16#${COLOR#\#}))
 
 # Discord caps embed descriptions at 4096 chars — truncate instead of 400ing.
 message="$MESSAGE"
-if [ "${#message}" -gt 4000 ]; then
+if [[ "${#message}" -gt 4000 ]]; then
   message="${message:0:4000}"$'\n'"…(truncated)"
 fi
 
@@ -37,10 +37,14 @@ payload=$(jq -n --arg u "$USERNAME" --arg d "$message" --argjson c "$color_int" 
   '{username: $u, embeds: [{description: $d, color: $c}]}')
 
 response_file=$(mktemp)
-status=$(curl -sS -o "$response_file" -w '%{http_code}' \
+trap 'rm -f "$response_file"' EXIT
+
+# Bounded: a stuck DNS lookup or socket must not hold a deploy workflow
+# hostage for a notification that is non-blocking by design.
+status=$(curl -sS --connect-timeout 5 --max-time 20 -o "$response_file" -w '%{http_code}' \
   -H 'Content-Type: application/json' -d "$payload" "$DISCORD_WEBHOOK")
 
-if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
   echo "::error::Discord webhook returned HTTP $status: $(cat "$response_file")"
   exit 1
 fi
