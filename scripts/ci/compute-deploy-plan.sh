@@ -57,6 +57,13 @@ both_touched=false
 backend_deploy=false
 frontend_deploy=false
 coupled_hold=false
+# Explicit operator modes deliberately skip a side. A side the operator chose
+# not to deploy is NOT drift — flagging it as an orphan turns every routine
+# `deployment_mode=backend-only` run into a false alarm (which is exactly what
+# happened: both backend-only dispatches on 2026-08-10 fired the orphan alert
+# for the deliberately-skipped frontend).
+deliberate_backend_skip=false
+deliberate_frontend_skip=false
 
 # Shared by the automatic push plan and workflow_dispatch's `auto` mode --
 # both derive the plan from affected-detection + lane results the same way.
@@ -109,15 +116,19 @@ elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
     # GHCR, regardless of what this run's build lanes decided.
     backend-only)
       backend_deploy=true
+      deliberate_frontend_skip=true
       ;;
     frontend-only)
       frontend_deploy=true
+      deliberate_backend_skip=true
       ;;
     both)
       backend_deploy=true
       frontend_deploy=true
       ;;
     none)
+      deliberate_backend_skip=true
+      deliberate_frontend_skip=true
       ;;
     *)
       echo "::error::Invalid deployment_mode '$manual_mode'. Use auto, backend-only, frontend-only, both, or none."
@@ -133,19 +144,27 @@ fi
 # would roll them out did not run this time, for ANY reason (lane failure,
 # cancellation, the plan deciding not to deploy, or a coupling hold).
 # Scoped to master: off-master manual builds intentionally never deploy and
-# must not be reported as drift.
+# must not be reported as drift. A side the operator explicitly excluded via
+# a manual mode is not drift either.
+#
+# The frontend check needs BOTH web-affected and lane success: docker-web
+# succeeds even when web isn't affected (it just skips the build/push), so
+# the job result alone is not publish evidence -- it once claimed "gaia-web
+# was published" on a run that never built a web image.
 backend_orphaned=false
 frontend_orphaned=false
 if [ "$on_master" = "true" ]; then
-  if [ "$BACKEND_IMAGES_PUBLISHED" = "true" ] && [ "$backend_deploy" != "true" ]; then
+  if [ "$BACKEND_IMAGES_PUBLISHED" = "true" ] && [ "$backend_deploy" != "true" ] && [ "$deliberate_backend_skip" != "true" ]; then
     backend_orphaned=true
   fi
-  if [ "$DOCKER_WEB_RESULT" = "success" ] && [ "$frontend_deploy" != "true" ]; then
+  if [ "$WEB_AFFECTED" = "true" ] && [ "$DOCKER_WEB_RESULT" = "success" ] && [ "$frontend_deploy" != "true" ] && [ "$deliberate_frontend_skip" != "true" ]; then
     frontend_orphaned=true
   fi
   # A coupling hold strands BOTH sides together even when only one lane
   # actually failed -- e.g. web failed, backend published fine but is held
   # back anyway. Flag both explicitly so the healthy side isn't missed.
+  # (Coupling holds only occur in auto plans, never in the explicit manual
+  # modes, so the deliberate-skip suppression can't apply here.)
   if [ "$coupled_hold" = "true" ]; then
     backend_orphaned=true
     frontend_orphaned=true
