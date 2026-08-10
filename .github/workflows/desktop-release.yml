@@ -116,7 +116,7 @@ jobs:
       # downloadable workflow artifact so the build can be verified end-to-end.
       - name: Upload installers as artifact
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.target }}
           if-no-files-found: error
