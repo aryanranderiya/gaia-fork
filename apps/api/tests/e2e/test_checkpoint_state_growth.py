@@ -90,9 +90,12 @@ class TestPromptFramingIsPrunedFromCheckpointState:
         assert len(clocks) == 1, f"expected 1 time-context message, found {len(clocks)}"
         assert "T03:" in str(clocks[0].content), "kept clock is not the latest run's"
 
-    @pytest.mark.regression
     async def test_conversation_itself_survives_pruning(self):
-        """Pruning removes prompt framing only — user/assistant turns all stay."""
+        """Pruning removes prompt framing only — user/assistant turns all stay.
+
+        Deliberately NOT @regression: it guards against over-pruning (a gap-fill
+        test) and legitimately passes on base, where nothing is pruned at all.
+        """
         thread_id = f"keep-{uuid4()}"
         async with comms_graph(["reply one", "reply two"]) as graph:
             for run_no in (1, 2):
