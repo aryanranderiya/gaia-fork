@@ -293,11 +293,6 @@ ignore = [
   "RUF001",
   "RUF002",
   "RUF043",
-  # RUF100 (unused noqa) stays off until BLE001 is enabled. All 60 of its current
-  # findings are `# noqa: BLE001` markers on deliberate blind excepts — redundant
-  # only because BLE001 is ignored below. Removing them would delete the intent
-  # they document and have to be undone the moment BLE001 is turned on.
-  "RUF100",
   # Other naming / misc.
   "N803",   # arg name should be snake_case (pydantic-camelCase passthroughs)
   "N806",   # variable in function should be snake_case
@@ -623,7 +618,7 @@ disallow_untyped_decorators = false
 disallow_any_generics = false
 warn_return_any = true
 warn_unreachable = true
-warn_unused_ignores = false
+warn_unused_ignores = true
 # Builtin-skill resource files (templates/, scripts/) are sandbox-executed assets,
 # not importable API modules — they run in the docgen sandbox toolchain (Typst,
 # openpyxl, docx-js), so they are not type-checked against the API environment.

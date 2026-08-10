@@ -1,30 +1,6 @@
 {
   "entries": [
     {
-      "path": "apps/api/app/agents/core/background/executor_runner.py",
-      "kind": "noqa",
-      "count": 3,
-      "hash": "f62b7c2034fcbc8227ca4654b721b5934f5cf2f2428511ca1637fcbabec508a3"
-    },
-    {
-      "path": "apps/api/app/agents/core/background/result_delivery.py",
-      "kind": "type-ignore",
-      "count": 2,
-      "hash": "dce4a07504cde187125f0c9808cb2a8c3e42f628414c4cd5b713a35bd5ba846c"
-    },
-    {
-      "path": "apps/api/app/agents/core/background/subagent_runner.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "9eba8e004ff2870284d857b40baf13bf1556121d349c363d271cf667ad37e1a3"
-    },
-    {
-      "path": "apps/api/app/agents/core/nodes/executor_status.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "41ab5b9b2e6c1d2aad0900981a9bdfd8a21ff1c2a03aa4be2fb51f0baf01ee34"
-    },
-    {
       "path": "apps/api/app/agents/core/nodes/filter_messages.py",
       "kind": "type-ignore",
       "count": 1,
@@ -55,64 +31,28 @@
       "hash": "b58da247fb22df73c90a962716e6da0e83db1bd493cd0cb09aaf834066a1cc8f"
     },
     {
-      "path": "apps/api/app/agents/memory/email_processor.py",
-      "kind": "type-ignore",
-      "count": 2,
-      "hash": "0a79c684139c6d2064be019e66acadaf5ef98efd2220a57b3b685b22bf13e36c"
-    },
-    {
       "path": "apps/api/app/agents/middleware/runtime_adapter.py",
       "kind": "type-ignore",
       "count": 1,
       "hash": "0430daf8910ba71bbcc9e6e8c5049c3a0a64c7cbfefaaf9a1c5152a36b69f2eb"
     },
     {
-      "path": "apps/api/app/agents/skills/parser.py",
-      "kind": "type-ignore",
-      "count": 1,
-      "hash": "a52ae883a10dc3f5ea33be4d7aadd2281c46c23cce5a8243a94ef3026ae07c50"
-    },
-    {
-      "path": "apps/api/app/agents/tools/coding/_filter.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "5cf0e6388495ddfe8da55e13f7586ceede68f6c3befc20d158022e2181a543bb"
-    },
-    {
-      "path": "apps/api/app/agents/tools/coding/bash_tool.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "72152a5e7684dcf1500f2028b1226243f707939af40a8386cebb51cc30a125c9"
-    },
-    {
       "path": "apps/api/app/agents/tools/coding/bash_tool.py",
       "kind": "type-ignore",
       "count": 4,
-      "hash": "72152a5e7684dcf1500f2028b1226243f707939af40a8386cebb51cc30a125c9"
-    },
-    {
-      "path": "apps/api/app/agents/tools/coding/query_json_tool.py",
-      "kind": "type-ignore",
-      "count": 1,
-      "hash": "24353de31b4c44ee16924dd2fc7acf76eee06bd6cedecc3d0d9bff082f0c8c44"
+      "hash": "bbc965189efe67b272de38198ba5dcc17a8b036d8f0f339e3a9f00bc3078bcb7"
     },
     {
       "path": "apps/api/app/agents/tools/executor_tool.py",
       "kind": "noqa",
-      "count": 4,
-      "hash": "342db05e01983fb40d6c250d8c8a9d56debb00d6b83745e947183223d8b163bf"
+      "count": 1,
+      "hash": "8ade65a54882f50e518a69042bea38aff8ff38267b309754300767d66b494209"
     },
     {
       "path": "apps/api/app/agents/tools/integrations/google_sheets_tool.py",
       "kind": "type-ignore",
       "count": 1,
       "hash": "e23d5936894802f4815d8a914779f5bf0e168c5e54fada2917d36faf36f6b834"
-    },
-    {
-      "path": "apps/api/app/agents/tools/wait_for_subagents_tool.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "1bb5980620d9faee17c18a193687e655f04c583abf714016630ef398723c67a5"
     },
     {
       "path": "apps/api/app/agents/workspace/offload.py",
@@ -139,64 +79,34 @@
       "hash": "bef75b2778c5fc1ef4e22d8a10cb160b9bd5224d8f6817e1c987474e271b4660"
     },
     {
-      "path": "apps/api/app/core/lazy_loader.py",
-      "kind": "type-ignore",
-      "count": 7,
-      "hash": "e68de8a07674a0c43ebef25d7b9968c7e6a462a95fa82a96ae5262a52bb7dc4b"
-    },
-    {
       "path": "apps/api/app/db/chroma/chroma_store.py",
       "kind": "type-ignore",
-      "count": 3,
-      "hash": "3591ef1e1edc9a3cc96e80e1ee80410108f983d3c661529f4ec2b0ff7ab58e75"
+      "count": 2,
+      "hash": "9720777cdb75a58d0fb873dce2f2dc2b007ffbc03aab5e20a81bdb5ddf29e918"
     },
     {
       "path": "apps/api/app/db/chroma/chromadb.py",
       "kind": "type-ignore",
-      "count": 4,
-      "hash": "8823a6662ed8174f229d13972391a7fa6fd4197c2b1ce4f2539711a9bc6a7f07"
-    },
-    {
-      "path": "apps/api/app/helpers/agent_helpers.py",
-      "kind": "noqa",
       "count": 1,
-      "hash": "fd8fec19d90c673e261d88aa94707bd0f847355e4fd72ea536113a47bf7e8382"
-    },
-    {
-      "path": "apps/api/app/main.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "e9fa05135283af2ca5cb6f8a3d97f6db1db2a479d07362a7df4cff20edb64edc"
+      "hash": "66710549c96d2a251fd8b4d0d9b9fc21c064989bf39bb4dfbd308fd19960fa09"
     },
     {
       "path": "apps/api/app/main.py",
       "kind": "type-ignore",
       "count": 1,
-      "hash": "e9fa05135283af2ca5cb6f8a3d97f6db1db2a479d07362a7df4cff20edb64edc"
-    },
-    {
-      "path": "apps/api/app/memory/extraction.py",
-      "kind": "type-ignore",
-      "count": 1,
-      "hash": "2610d80a14065ced0ee801a82e14ed8a7da9d479492a1fd2828de1798ca9e68b"
+      "hash": "87cedc1688b2f2c97a2923ca51680ef84937d68dea8d4da63acfa1c7ae8d19ed"
     },
     {
       "path": "apps/api/app/override/langgraph_bigtool/create_agent.py",
       "kind": "type-ignore",
-      "count": 19,
-      "hash": "20363bf0691085bdd73e64a8a6969d2a014f0b63b80ffa36b23ca08354e9c9ed"
+      "count": 17,
+      "hash": "d06a9b008a90d44dfb1d1770ff5805d806983bdbd3e7e72a53ff4306da1c2414"
     },
     {
       "path": "apps/api/app/override/langgraph_bigtool/hooks.py",
       "kind": "type-ignore",
-      "count": 2,
-      "hash": "6a2b7174c35f5ea7725e387f920f8367fc380b9eef133396a320509b317e3812"
-    },
-    {
-      "path": "apps/api/app/patches/__init__.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "c375352fb69b9ef887f07bc538134333661bd41c9817f75994396cf7e9555b58"
+      "count": 1,
+      "hash": "38d5bac8034a184d791fb99b0f2bfb09c35a449b0f0d04e2280beb6d9d600c16"
     },
     {
       "path": "apps/api/app/patches/composio_langchain_patch.py",
@@ -205,142 +115,40 @@
       "hash": "a6f5c9d1b848451f5554289748989ea41c1f727e0e3ef72bb1314692ac302cc0"
     },
     {
-      "path": "apps/api/app/schemas/device/responses.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "d4a88440492bb788aaf1e4274bbed9be4887631e8bf4913393f7535ad67cfc74"
-    },
-    {
       "path": "apps/api/app/schemas/integrations/__init__.py",
       "kind": "noqa",
       "count": 2,
-      "hash": "a0bee82eec72dc1083cbcba291d9671b44f8afde07be6615baba906b18805f64"
-    },
-    {
-      "path": "apps/api/app/services/chat/artifact_forwarder.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "0bec81476789ec9f35b7ecbf4cc9ee84f0ede902dce86f402b4b7ac8b803bfec"
-    },
-    {
-      "path": "apps/api/app/services/chat/stream.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "f7a337b3a633559948927270ce86ac01dee0224331e5f85fffca862e15a61205"
-    },
-    {
-      "path": "apps/api/app/services/chat/workspace.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "dd56bd1e54eed3fddb2bb21ab21495d7f62ee3805aaa15560287432a80dc66fc"
+      "hash": "184a7529fba64d3dd7388798a7564ded3b8a8bfe0825c79cf3b8df9fe6df7cf9"
     },
     {
       "path": "apps/api/app/services/composio/composio_service.py",
       "kind": "noqa",
       "count": 1,
-      "hash": "48f57567decae1806e14d0f7c5d013568301d233e9878e93112229375efdea50"
-    },
-    {
-      "path": "apps/api/app/services/composio/composio_service.py",
-      "kind": "type-ignore",
-      "count": 2,
-      "hash": "48f57567decae1806e14d0f7c5d013568301d233e9878e93112229375efdea50"
-    },
-    {
-      "path": "apps/api/app/services/composio/langchain_composio_service.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "5848f2e5676d66a56fae8c86cde0bca4348139dcf1dd83b33d114dca5834ca15"
+      "hash": "2da071f58ab06182900fb966c37de4925dff5b35836fa0602853fcc689d90f1d"
     },
     {
       "path": "apps/api/app/services/composio/langchain_composio_service.py",
       "kind": "type-ignore",
       "count": 1,
-      "hash": "5848f2e5676d66a56fae8c86cde0bca4348139dcf1dd83b33d114dca5834ca15"
-    },
-    {
-      "path": "apps/api/app/services/hil/gate.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "a45b20e5f188a17b0aac8debda4792f44e1e8b99b8aa5732ac4a83d7c72e7848"
-    },
-    {
-      "path": "apps/api/app/services/hil/intent.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "8115a1fe0f944b76802a84b97d98ace2259a95a616521ccd1baca52c165bce1e"
-    },
-    {
-      "path": "apps/api/app/services/hil/resolution.py",
-      "kind": "noqa",
-      "count": 3,
-      "hash": "77f75b2e9673f07824315e8a44c845ba7985a86083f97cbd9500f21c64eb8706"
-    },
-    {
-      "path": "apps/api/app/services/mcp/device_connector.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "c4a375bbf9f9681d7d0abe5ca470ea6ae94d9329ff98c40d70599d409bd18be3"
+      "hash": "6fe587ff8fa5f7f517ca6af632f86abb2897608933f0498af6d501d8f8b7eb85"
     },
     {
       "path": "apps/api/app/services/notes_service.py",
       "kind": "type-ignore",
       "count": 1,
-      "hash": "bbead2fab8d1df62fc91d2d8d7840bbea2dca32a1aee4d7f67575b5987e87054"
-    },
-    {
-      "path": "apps/api/app/services/storage/bootstrap.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "3d1dd271243db8079bb1d9d68f14ebc6b7527c6ad9f548f497aa3f12d0d1e522"
-    },
-    {
-      "path": "apps/api/app/services/storage/metrics.py",
-      "kind": "noqa",
-      "count": 8,
-      "hash": "2356443fceef9f72aeedd59f3a6b2fa3d7017a0250fadd716cec69de45c15782"
-    },
-    {
-      "path": "apps/api/app/services/workspace_sync.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "51c9bf59b16cb8a7fdcaa7622cf56945b8982e2cb03820e6f81462d6ed3236be"
-    },
-    {
-      "path": "apps/api/app/utils/agent_utils.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "6eb6e927b4e8b089f639f6661c42beef1c29f537ae7e5f060571e99387ba5207"
-    },
-    {
-      "path": "apps/api/app/utils/auth_utils.py",
-      "kind": "type-ignore",
-      "count": 2,
-      "hash": "7e7472f8b16b3d159daccef1de2217cd2cf1b8667868f0fcd8257dd1055da30a"
-    },
-    {
-      "path": "apps/api/app/utils/composio_hooks/__init__.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "1fa7a313df42ca7b1e994c3ad76dea8826671068cbe8b54701abb90a74554776"
+      "hash": "6e3d4c5852a83d59961cba247a62a3485a6f0d2e00916934903cc4548210815c"
     },
     {
       "path": "apps/api/app/utils/composio_hooks/all_hooks.py",
       "kind": "noqa",
-      "count": 6,
-      "hash": "c10390abbb9cfc826cc4f650e373b761b8d218e9df39191f7e0d2f5a27cff738"
-    },
-    {
-      "path": "apps/api/app/utils/general_utils.py",
-      "kind": "type-ignore",
-      "count": 1,
-      "hash": "7f8b3828cf47714c8d1601f7636f10590d87eddf909d195435303008e0889992"
+      "count": 5,
+      "hash": "9192f3890058c6d79e80e09b13db027217412da9c748e3a692abbabd1972e907"
     },
     {
       "path": "apps/api/app/utils/mcp_utils.py",
       "kind": "type-ignore",
-      "count": 2,
-      "hash": "a4903db1af17ac55d487e6e2fb25b079322d7b9cfd1153b19f9cf7885abcc7d9"
+      "count": 1,
+      "hash": "530364233097e524b9dca6d2a436ac8799130a51cee74f65ffcb2759076521fa"
     },
     {
       "path": "apps/api/app/utils/twitter_utils.py",
@@ -355,190 +163,34 @@
       "hash": "9c6f5bb50a34eb42dd8ee0a4297e13b65072e82a45fccfa30390c1b454408b1e"
     },
     {
-      "path": "apps/api/app/workers/lifecycle/startup.py",
-      "kind": "noqa",
-      "count": 5,
-      "hash": "6022f037b8e20766403283051dd12b36dbbcc03c5d9783aa496b6bc77eb62c31"
-    },
-    {
-      "path": "apps/api/scripts/backfill_bot_conversation_source.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "6c1c1427a9fd2a8b62e5749279fe0c931d0046826ee3f24f0fa67d88188cf557"
-    },
-    {
-      "path": "apps/api/scripts/build_e2b_template.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "2bcd73eef259ffc893766239490058bfbc22d4793f3b3afbef39828516bb3af9"
-    },
-    {
-      "path": "apps/api/scripts/cleanup_workflows.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "a8a2b9bc867401e69da4bc550e4916755f6a33b7ea760665308993197abc5e4b"
-    },
-    {
-      "path": "apps/api/scripts/dedupe_graph_edges.py",
-      "kind": "noqa",
-      "count": 7,
-      "hash": "2c68b49fe34083c120dd862ad56c249ab93afce7175f91efc45c5e1c563bdff1"
-    },
-    {
-      "path": "apps/api/scripts/fix_marketplace_mcp.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "fee1bbddfe4dfc32ccb781f80db7d00f0c641e16e513c5ce7be346a2466e4b79"
-    },
-    {
-      "path": "apps/api/scripts/fix_subscription_data.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "3d98f2d43b9dfee2b51c50ec6d359a5957a6abc933b32ebef34956de22e11ae0"
-    },
-    {
-      "path": "apps/api/scripts/grant_pro_access.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "0ae94c67c411b9a807f7ffb04e351644d257503a67633a93cf6d1b10d824ddb0"
-    },
-    {
-      "path": "apps/api/scripts/index_workflows_chromadb.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "907bc71fe30b4bec95b1b467884fc27f5d1ef35dad4ad737a612ce947a53754c"
-    },
-    {
       "path": "apps/api/scripts/memory_benchmark/__main__.py",
       "kind": "type-ignore",
       "count": 5,
       "hash": "676a525576f71ebc5099fd99402cc37c0b17c31187308c6ba6462c6e67fdef85"
     },
     {
-      "path": "apps/api/scripts/memory_benchmark/longmemeval.py",
-      "kind": "noqa",
-      "count": 11,
-      "hash": "bf31e9a37cffe7762ce64b630da9bbf8a1b964603ca0ef7b00c80c10a8ec0ba3"
-    },
-    {
-      "path": "apps/api/scripts/memory_benchmark/runner.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "a4bd9604f7834ce66d62e7d63519dfe139bd23241eb27e67aa37ed7b4e4628e6"
-    },
-    {
       "path": "apps/api/scripts/memory_benchmark/runner.py",
       "kind": "type-ignore",
       "count": 1,
-      "hash": "a4bd9604f7834ce66d62e7d63519dfe139bd23241eb27e67aa37ed7b4e4628e6"
-    },
-    {
-      "path": "apps/api/scripts/migrate_mem0_memories.py",
-      "kind": "noqa",
-      "count": 8,
-      "hash": "7f47aece5de8a19db3a66214aa2e801b83757a6088e866ce0c2c5fe8d6e6c178"
-    },
-    {
-      "path": "apps/api/scripts/migrate_workflow_integration_fields.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "d9d43b6c4aef8a957daa3ea35c03a4e1e6bc81c83ad1371980d0bdd2b50da65d"
-    },
-    {
-      "path": "apps/api/scripts/migrate_workflow_schedule_types.py",
-      "kind": "noqa",
-      "count": 5,
-      "hash": "3df481e04d92d7091bba5cf63f1c697c329821e6d4a252d7faa0a12f121a156c"
-    },
-    {
-      "path": "apps/api/scripts/migrate_workflow_slugs.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "1c700d02797bf9353d6f3ec8c6c4b0b92ad7c1fdb61cd8aad2dcc55821c1299e"
-    },
-    {
-      "path": "apps/api/scripts/migrate_workflow_status_liveness.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "b997dd7b3d75acc5ccf9c4a5f1455cea849e4bcab50b25194b6f4e6021338f1f"
-    },
-    {
-      "path": "apps/api/scripts/payment_setup.py",
-      "kind": "noqa",
-      "count": 3,
-      "hash": "4fcc5fe0a0dabc70b8ea69559d117a9f1b7fd254ebc790d289fea544e8ce38b4"
+      "hash": "5bffa30cb1d129227f84cccab7c66158ff0952bf858264cac6440248fda89517"
     },
     {
       "path": "apps/api/scripts/populate_gaia_knowledge.py",
       "kind": "noqa",
-      "count": 5,
-      "hash": "b8ca8d002f729db4f7c408db33cb59604ba242f75a787d7c6f4c580015b598ac"
-    },
-    {
-      "path": "apps/api/scripts/probe_artifact_detection.py",
-      "kind": "noqa",
-      "count": 2,
-      "hash": "c8f79130721ecc18756bb4178bac7ad2cbb94444006df3f99a631fc080d3ffb4"
-    },
-    {
-      "path": "apps/api/scripts/recategorize_memories.py",
-      "kind": "noqa",
-      "count": 10,
-      "hash": "922d8870922013e5b5ee10700d6560b98caca4d1a906877cfde2f2fca37bcfc2"
-    },
-    {
-      "path": "apps/api/scripts/reembed_memories.py",
-      "kind": "noqa",
-      "count": 9,
-      "hash": "9f1151a360fc4644234ea033653dd82d9d1e88124c3d8662fb31533cd02f7c00"
-    },
-    {
-      "path": "apps/api/scripts/seed_explore_workflows.py",
-      "kind": "noqa",
-      "count": 9,
-      "hash": "7d93b2b129b0e7e8c33da13473d41b3cb82f750473e790fdd59ae387ba4b69ea"
-    },
-    {
-      "path": "apps/api/scripts/seed_models.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "de55bced38d8b10f50d85f5ade7aaa931f90e378dc2b011c82ec63fcaaba1ba6"
-    },
-    {
-      "path": "apps/api/scripts/sync_composio_tools.py",
-      "kind": "noqa",
-      "count": 3,
-      "hash": "55230687497695b2b7b83d9fa226133e17ff572e629a2bdf89c231db5cab878e"
+      "count": 1,
+      "hash": "b165bbd121307c4fa5dc83ab9239a8c35d2e3a2d452546faff9c6c3a2af89028"
     },
     {
       "path": "apps/api/scripts/sync_composio_tools.py",
       "kind": "type-ignore",
       "count": 1,
-      "hash": "55230687497695b2b7b83d9fa226133e17ff572e629a2bdf89c231db5cab878e"
-    },
-    {
-      "path": "apps/api/scripts/verify_sandbox_mounts.py",
-      "kind": "noqa",
-      "count": 7,
-      "hash": "a5fbaf7e114a03003dc6e64bd17fadea33171e3dffd0b59dc239bc8470a0e967"
-    },
-    {
-      "path": "apps/api/tests/conftest.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "737fbe00314aa589945284e00c4e6bf858fed0d58f07ab46adf145a4d3974ba6"
+      "hash": "6e107ff79e5261b79c1e5aa5ec7b71d24f07a0e30620960fa42ffbe8e9f4093d"
     },
     {
       "path": "apps/api/tests/e2e/test_create_todo_flow.py",
       "kind": "type-ignore",
       "count": 1,
       "hash": "84c2a177bf2da655d8b25926746b32de6fba940f0abf56837b2aea4e8643fa08"
-    },
-    {
-      "path": "apps/api/tests/e2e/test_workflow_execution.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "0c0fb3ffaad893d36266e252d7fbe21a760c54377ecc9a71f38b68d54580e7cd"
     },
     {
       "path": "apps/api/tests/helpers.py",
@@ -551,18 +203,6 @@
       "kind": "noqa",
       "count": 1,
       "hash": "e118468fba330ff97381f86ee3d184847c930f30ac1414864dad7bd9c00b9a02"
-    },
-    {
-      "path": "apps/api/tests/integration/agents/test_real_executor_agent.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "15c7c3adc8565b69da11b62c30576b4ba0378e96dc82c9375af27dcc4f3de2f9"
-    },
-    {
-      "path": "apps/api/tests/integration/agents/test_subagent_handoff.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "991fd4c95f9fd7608f679754f2caa17c7a364ad38ec8722d8681d7eed24d5f1f"
     },
     {
       "path": "apps/api/tests/integration/conftest.py",
@@ -632,15 +272,9 @@
     },
     {
       "path": "apps/api/tests/unit/agents/test_subagent_runner.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "b2627b296c08b2440b5d7f44155a314bfca5240dbc37c9d3fcda7e11c32e3233"
-    },
-    {
-      "path": "apps/api/tests/unit/agents/test_subagent_runner.py",
       "kind": "type-ignore",
       "count": 2,
-      "hash": "b2627b296c08b2440b5d7f44155a314bfca5240dbc37c9d3fcda7e11c32e3233"
+      "hash": "a6a28e1f73f7004dca8f664bd4357638a5e03619d84a6afb7eebf1e636e959d7"
     },
     {
       "path": "apps/api/tests/unit/api/test_integrations_config_endpoint.py",
@@ -671,6 +305,12 @@
       "kind": "type-ignore",
       "count": 1,
       "hash": "f35d6d831b486d9eaf39a7c5624a519ba19492af6d59bbb1ea1202b5fa9be9a0"
+    },
+    {
+      "path": "apps/api/tests/unit/core/test_lazy_loader.py",
+      "kind": "type-ignore",
+      "count": 1,
+      "hash": "6568d178e3c2a390887ac599d0c1e3e7687d551bce0fbec9df301ac39f404420"
     },
     {
       "path": "apps/api/tests/unit/helpers/test_email_helpers.py",
@@ -721,18 +361,6 @@
       "hash": "457c98a3c14dea99a4e043052ea6d0ec3b82757bcf33ddd84b6459cd232a005e"
     },
     {
-      "path": "apps/api/tests/unit/sandbox/test_lifecycle_eviction.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "720f6893f33dfb55a063292ddf87658a3b3dc62675561b5b62ce20678146dcdd"
-    },
-    {
-      "path": "apps/api/tests/unit/services/test_composio_custom_tool_patch.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "d00a5cdbce9a2f6212a9b474f55651c13a08c3bfe69f4a96e8a21b74ba0050e7"
-    },
-    {
       "path": "apps/api/tests/unit/services/test_integration_service.py",
       "kind": "type-ignore",
       "count": 1,
@@ -752,45 +380,15 @@
     },
     {
       "path": "apps/api/tests/unit/services/test_trigger_handlers.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "81bdaaf08726c8eeb26971b977b4e7b4f2ddbff4e59318aca3e060cec4896afc"
-    },
-    {
-      "path": "apps/api/tests/unit/services/test_trigger_handlers.py",
       "kind": "type-ignore",
       "count": 1,
-      "hash": "81bdaaf08726c8eeb26971b977b4e7b4f2ddbff4e59318aca3e060cec4896afc"
-    },
-    {
-      "path": "apps/api/tests/unit/services/test_trigger_handlers_extras.py",
-      "kind": "noqa",
-      "count": 6,
-      "hash": "e8c707b69d5ed48d2cd42915d9c1cc8e33105c8f451fa801032ed098f2cd7f88"
-    },
-    {
-      "path": "apps/api/tests/unit/services/test_trigger_handlers_notion.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "b8caa63dfc836487aaa1fc52257cfcf392f114f5ba424cd4c2536e4c15063d2c"
-    },
-    {
-      "path": "apps/api/tests/unit/services/test_trigger_service.py",
-      "kind": "noqa",
-      "count": 11,
-      "hash": "70f3e6848f27eb66516a83a87e7829b89490c943955be80ac3e33b488875c17e"
+      "hash": "e82011c9454940e5ab50ae0573947fd94c4f18324c089ce3075de517bd657842"
     },
     {
       "path": "apps/api/tests/unit/services/test_trigger_service.py",
       "kind": "type-ignore",
       "count": 2,
-      "hash": "70f3e6848f27eb66516a83a87e7829b89490c943955be80ac3e33b488875c17e"
-    },
-    {
-      "path": "apps/api/tests/unit/tools/coding/test_atomic_write.py",
-      "kind": "noqa",
-      "count": 1,
-      "hash": "9e54703dd59ad3d643f8d6611b852b122bd5b56a592ef7efbaa3fc9d3aef1e28"
+      "hash": "84df79e69abc2bd2dc165c5480a90be661dad8ae8ef8bff8d8de8aa6b074029f"
     },
     {
       "path": "apps/api/tests/unit/tools/test_integration_tool_standalone.py",
@@ -831,8 +429,8 @@
     {
       "path": "apps/api/tests/unit/utils/test_agent_utils.py",
       "kind": "type-ignore",
-      "count": 11,
-      "hash": "35759174707f65e26e437ebadd2b73620ebcf5ecc3d1c04fcbe611bc55a80bf4"
+      "count": 13,
+      "hash": "128979a3d184fa7ba06376cc93c505c77970c2676ee91471f5955e590bf3f867"
     },
     {
       "path": "apps/api/tests/unit/utils/test_auth_utils.py",
@@ -1017,14 +615,8 @@
     {
       "path": "apps/voice-agent/src/llm.py",
       "kind": "type-ignore",
-      "count": 2,
-      "hash": "22ddf6e350c7dc40f15ea1539762b7adf07aa5e8fae9fc1da4fde81b3bbbf30d"
-    },
-    {
-      "path": "apps/voice-agent/src/utils.py",
-      "kind": "type-ignore",
       "count": 1,
-      "hash": "421d78c1c9bde0b0fced4027ced0cc57366529a1c6e7b041cd5663c3bd845ef5"
+      "hash": "43956c72503c877080f3de58325e5756a4faf3ff0fe3d9869056069797e00edc"
     },
     {
       "path": "apps/web/src/app/[locale]/(main)/onboarding/demo/page.tsx",
@@ -1189,12 +781,6 @@
       "hash": "5f441cea3d1c27664ebff2e990082f1a42882db83d3e03ee3d2fcc64867c93f9"
     },
     {
-      "path": "libs/shared/py/tests/test_settings.py",
-      "kind": "type-ignore",
-      "count": 2,
-      "hash": "76a8f5666da4c469f6404cecc5c2d1d52c6d847c43d3a107c7759753594bda9e"
-    },
-    {
       "path": "packages/cli/src/ui/screens/init.tsx",
       "kind": "biome-ignore",
       "count": 1,
@@ -1211,18 +797,6 @@
       "kind": "biome-ignore",
       "count": 6,
       "hash": "c165d760342f6888ce522fe1573a201f100b0d3661aae3c47e0fcfc4565c8dde"
-    },
-    {
-      "path": "tools/lints/test_lints.py",
-      "kind": "noqa",
-      "count": 4,
-      "hash": "6637a5fd8441f0e69523ff76f34b5c594b9beb6fb0b1d951f1e5c7d1c4bc889a"
-    },
-    {
-      "path": "tools/llm-stub/server.py",
-      "kind": "noqa",
-      "count": 5,
-      "hash": "2643aec265eec26f9aea738788ea54e35780ef5ee9d0d8f3a16ca13502111bf7"
     }
   ]
 }
