@@ -438,6 +438,7 @@ def create_agent(
     async def aselect_tools(
         tool_calls: list[dict], config: RunnableConfig, *, store: BaseStore
     ) -> State:
+        """Async twin of ``select_tools`` — resolve retrieve_tools calls into bindings."""
         if retrieve_tools is None:
             raise RuntimeError("retrieve_tools is disabled and aselect_tools should not be called")
 
@@ -491,6 +492,7 @@ def create_agent(
     async def aexecute_end_graph_hooks_node(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> State:
+        """Run the end-graph hooks; persist only the keys they actually changed."""
         return _changed_hook_keys(state, await execute_hooks(end_graph_hooks, state, config, store))
 
     def _get_bound_tool_names(state: State) -> set[str]:
@@ -530,6 +532,7 @@ def create_agent(
         return {"messages": messages}  # type: ignore[return-value]
 
     async def areject_unbound_tools(tool_calls: list[dict], *, store: BaseStore) -> State:
+        """Async twin of ``reject_unbound_tools`` for the async graph path."""
         return reject_unbound_tools(tool_calls, store=store)
 
     def _last_tool_calling_message(state: State) -> AIMessage | None:
@@ -638,6 +641,7 @@ def create_agent(
         return {"messages": messages}  # type: ignore[return-value]
 
     async def afinish_task_node(tool_calls: list[ToolCall], *, store: BaseStore) -> State:
+        """Async twin of ``finish_task_node`` for the async graph path."""
         return finish_task_node(tool_calls, store=store)
 
     builder = StateGraph(State, context_schema=context_schema)
