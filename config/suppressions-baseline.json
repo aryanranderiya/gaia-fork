@@ -307,6 +307,12 @@
       "hash": "f35d6d831b486d9eaf39a7c5624a519ba19492af6d59bbb1ea1202b5fa9be9a0"
     },
     {
+      "path": "apps/api/tests/unit/core/test_lazy_loader.py",
+      "kind": "type-ignore",
+      "count": 2,
+      "hash": "b3b473e62ce776eb6bfe8d860749152fe7911a8505540bfda29556527df7999c"
+    },
+    {
       "path": "apps/api/tests/unit/helpers/test_email_helpers.py",
       "kind": "type-ignore",
       "count": 1,
@@ -423,8 +429,8 @@
     {
       "path": "apps/api/tests/unit/utils/test_agent_utils.py",
       "kind": "type-ignore",
-      "count": 11,
-      "hash": "35759174707f65e26e437ebadd2b73620ebcf5ecc3d1c04fcbe611bc55a80bf4"
+      "count": 13,
+      "hash": "128979a3d184fa7ba06376cc93c505c77970c2676ee91471f5955e590bf3f867"
     },
     {
       "path": "apps/api/tests/unit/utils/test_auth_utils.py",
