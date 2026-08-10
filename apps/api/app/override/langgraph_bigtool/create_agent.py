@@ -33,7 +33,13 @@ from typing import Any, cast
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.language_models import LanguageModelLike
-from langchain_core.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
+from langchain_core.messages import (
+    AIMessage,
+    HumanMessage,
+    RemoveMessage,
+    ToolCall,
+    ToolMessage,
+)
 from langchain_core.runnables import Runnable, RunnableConfig
 from langchain_core.tools import BaseTool, StructuredTool
 
@@ -70,6 +76,7 @@ from app.override.langgraph_bigtool.hooks import (
     sync_execute_hooks,
 )
 from app.override.langgraph_bigtool.utils import (
+    PRUNED_MESSAGE_IDS_KEY,
     RetrieveToolsResult,
     State,
     dedupe_str_list,
@@ -96,6 +103,45 @@ def _prepare_fallback(
     if fallback_llm is None or is_default_model_config(model_configurations):
         return None
     return lambda: fallback_llm.bind_tools(tools_to_bind)  # type: ignore[attr-defined]
+
+
+def _pop_pruned_tombstones(state: State) -> list[RemoveMessage]:
+    """Tombstones for the slot-stale messages the pre-model hooks dropped.
+
+    ``manage_system_prompts_node`` filters old prompt copies out of the
+    per-call view and relays their ids under ``PRUNED_MESSAGE_IDS_KEY``; the
+    model node emits these tombstones in its own channel update so the pruning
+    also reaches the checkpoint. Popped, never forwarded — the key is a relay,
+    not a state channel.
+    """
+    pruned = cast("dict[str, Any]", state).pop(PRUNED_MESSAGE_IDS_KEY, None) or []
+    return [RemoveMessage(id=message_id) for message_id in pruned]
+
+
+_UNSET = object()
+
+
+def _changed_hook_keys(before: State, after: State) -> State:
+    """Only the keys the end-graph hooks actually changed, by identity.
+
+    The end hooks are side-effecting (follow-up streaming, fire-and-forget
+    memory ingestion) and pass state through; echoing the full state back as
+    the node's update re-serializes the entire ``messages`` list into
+    ``checkpoint_writes`` on every run — on a long-lived workflow thread that
+    was ~4.8 MB per run of pure duplication. Identity (not equality) so a hook
+    that rebuilds the dict without touching the values still counts as
+    unchanged, and a genuinely new value always survives.
+    """
+    if after is before:
+        return cast("State", {})
+    return cast(
+        "State",
+        {
+            key: value
+            for key, value in after.items()
+            if cast("dict[str, Any]", before).get(key, _UNSET) is not value
+        },
+    )
 
 
 def create_agent(
@@ -211,6 +257,7 @@ def create_agent(
 
     def call_model(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
         state = sync_execute_hooks(pre_model_hooks, state, config, store)
+        tombstones = _pop_pruned_tombstones(state)
 
         if middleware_executor:
             raise RuntimeError(
@@ -240,7 +287,7 @@ def create_agent(
         if isinstance(response.content, str) and agent_name == "comms_agent":
             response.content = response.content + NEW_MESSAGE_BREAKER
 
-        return {"messages": [response]}  # type: ignore[return-value]
+        return {"messages": [*tombstones, response]}  # type: ignore[return-value]
 
     def _maybe_inject_wrapup(state: State) -> State:
         """Warn the model to finish when the recursion budget is nearly spent.
@@ -265,6 +312,7 @@ def create_agent(
     async def acall_model(state: State, config: RunnableConfig, *, store: BaseStore) -> State:
         """Async model invocation with middleware support."""
         state = await execute_hooks(pre_model_hooks, state, config, store)
+        tombstones = _pop_pruned_tombstones(state)
 
         if middleware_executor:
             state = await middleware_executor.execute_before_model(state, config, store)
@@ -331,8 +379,10 @@ def create_agent(
 
         # Return partial state update: new message + any keys added by
         # after_model (e.g. todos). Messages use an append reducer, so only
-        # return the new response — not the full list.
-        result: dict[str, object] = {"messages": [response]}
+        # return the new response — not the full list. Tombstones prune the
+        # slot-stale prompt copies the pre-model hooks dropped, so the
+        # checkpointed thread stays bounded too.
+        result: dict[str, object] = {"messages": [*tombstones, response]}
         base_keys = {"messages", "selected_tool_ids"}
         for key, value in updated_state.items():
             if key not in base_keys:
@@ -436,12 +486,12 @@ def create_agent(
     def execute_end_graph_hooks_node(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> State:
-        return sync_execute_hooks(end_graph_hooks, state, config, store)
+        return _changed_hook_keys(state, sync_execute_hooks(end_graph_hooks, state, config, store))
 
     async def aexecute_end_graph_hooks_node(
         state: State, config: RunnableConfig, *, store: BaseStore
     ) -> State:
-        return await execute_hooks(end_graph_hooks, state, config, store)
+        return _changed_hook_keys(state, await execute_hooks(end_graph_hooks, state, config, store))
 
     def _get_bound_tool_names(state: State) -> set[str]:
         """Return the set of tool names currently bound to the model."""

@@ -110,6 +110,16 @@ class State(_BigtoolState):
     remaining_steps: RemainingSteps
 
 
+# In-memory relay from `manage_system_prompts_node` to the model node: ids of
+# slot-stale messages (old system prompts / clock lines) the hook dropped from
+# the per-call view. The model node turns them into RemoveMessage tombstones in
+# its own channel update so the pruning also reaches the CHECKPOINT — without
+# this, every run's prompt stack stays in the thread forever (a production
+# workflow thread accumulated 39 copies, ~4.8 MB of checkpoint writes per run).
+# Never a state channel: the model node pops it before returning its update.
+PRUNED_MESSAGE_IDS_KEY = "_pruned_message_ids"
+
+
 class RetrieveToolsResult(TypedDict):
     """Result from retrieve_tools function.
 
