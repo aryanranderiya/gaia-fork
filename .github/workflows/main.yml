@@ -358,6 +358,7 @@ jobs:
 
   # --- Quality gate (branch protection target) ----------------------------
   quality-gate:
+    name: quality-gate
     if: always()
     needs:
       - detect

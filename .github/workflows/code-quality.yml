@@ -163,6 +163,7 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Per-file line count (default 400, relaxed 700, hard cap 1200)
         run: |
+          trap 'echo "::error::repro: pnpm run quality:size"' ERR
           echo "::group::File size scan"
           FILES=$(scripts/ci/changed-files.sh ts tsx js jsx mjs cjs)
           if [ "$FILES" = "__FULL__" ]; then
@@ -189,6 +190,7 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Type / interface / enum location enforcer
         run: |
+          trap 'echo "::error::repro: node scripts/ci/check-types-location.mjs --enforce"' ERR
           echo "::group::types-location check"
           FILES=$(scripts/ci/changed-files.sh ts tsx)
           if [ "$FILES" = "__FULL__" ]; then
@@ -215,6 +217,7 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Components-per-file enforcer
         run: |
+          trap 'echo "::error::repro: pnpm run quality:components"' ERR
           echo "::group::components-per-file check"
           FILES=$(scripts/ci/changed-files.sh tsx)
           if [ "$FILES" = "__FULL__" ]; then
@@ -241,6 +244,7 @@ jobs:
       - uses: ./.github/actions/setup-node-pnpm
       - name: Copy-paste detection (jscpd, fails over 3% on changed lines)
         run: |
+          trap 'echo "::error::repro: pnpm run quality:dupe"' ERR
           echo "::group::jscpd"
           # Timeout + low-speed guard: a stalled HTTPS fetch dies in <=60s rather
           # than hanging until the job's timeout-minutes cap (a `cancelled` lane
@@ -606,6 +610,7 @@ jobs:
       - name: Full observability score — API + voice-agent + bots (details in job summary)
         run: |
           set -euo pipefail
+          trap 'echo "::error::repro: python3 tools/evlog_map --min-score 100  /  node scripts/ci/evlog-map-bots.mjs --min-score 100"' ERR
           echo "evlog map — python surface (apps/api + apps/voice-agent)"
           python3 tools/evlog_map --github-summary --no-write --min-score 100
           echo "evlog map — bots surface (apps/bots + libs/shared/ts)"
