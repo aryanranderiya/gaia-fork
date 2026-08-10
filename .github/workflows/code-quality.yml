@@ -812,6 +812,11 @@ jobs:
         env:
           # Push events have no PR base ref; diff against the pre-push SHA
           # instead so a direct push to develop/master is ratcheted too.
+          # Exception: a push to master is the develop -> master promotion
+          # landing, so its base is the merge-base with develop — everything
+          # in that range was already ratcheted on the way into develop, and
+          # the pre-push master SHA would re-report all of it as new (the
+          # push-event twin of the promotion-PR exemption in `if:` above).
           # Through env, not inline ${{ }}, per this file's injection-safety
           # convention (see the type-check / build.yml AFFECTED_* comments).
           EVENT_BEFORE: ${{ github.event.before }}
@@ -821,6 +826,10 @@ jobs:
             timeout 60 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 \
               fetch --no-tags origin "$GITHUB_BASE_REF"
             BASE="origin/$GITHUB_BASE_REF"
+          elif [ "$GITHUB_REF" = "refs/heads/master" ]; then
+            timeout 60 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 \
+              fetch --no-tags origin develop
+            BASE="$(git merge-base HEAD origin/develop)"
           else
             BASE="$EVENT_BEFORE"
           fi
@@ -840,6 +849,12 @@ jobs:
   gitleaks:
     name: Secret scanning (gitleaks)
     needs: [changes]
+    # Dependabot-triggered runs get Dependabot secrets, not repo secrets, so
+    # GITLEAKS_LICENSE is empty and the action hard-fails before scanning.
+    # Skip (gate counts skipped as passing): its PRs are machine-generated
+    # manifest/lockfile bumps, and every human commit stays scanned. To scan
+    # them too, mirror GITLEAKS_LICENSE into Dependabot secrets and drop this.
+    if: github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

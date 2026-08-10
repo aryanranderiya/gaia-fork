@@ -1,5 +1,9 @@
 version: 2
 
+# All entries target develop: it is the integration branch, and main.yml's
+# "Enforce master promotion policy" check rejects any PR to master that is not
+# from develop/release-please/hotfix — dependabot PRs against the default
+# branch (master) were permanently BLOCKED.
 updates:
   # --- JavaScript/TypeScript (pnpm workspace) ------------------------------
   # Single pnpm-lock.yaml at the repo root covers every workspace member
@@ -10,6 +14,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
 
   # --- Python (uv workspace) ------------------------------------------------
   # Single uv.lock at the repo root covers every uv workspace member
@@ -20,6 +25,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
 
   # --- GitHub Actions --------------------------------------------------------
   # "/" covers .github/workflows/*.yml. Composite actions under
@@ -29,18 +35,22 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
 
   - package-ecosystem: "github-actions"
     directory: "/.github/actions/setup-node-pnpm"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
 
   - package-ecosystem: "github-actions"
     directory: "/.github/actions/restore-nextjs-cache"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
 
   - package-ecosystem: "github-actions"
     directory: "/.github/actions/setup-python-test-env"
     schedule:
       interval: "weekly"
+    target-branch: "develop"
