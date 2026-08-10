@@ -17,7 +17,7 @@ from shared.py.wide_events import log
 # Create the FastAPI application
 log.info(f"{LogTag.STARTUP} Starting application initialization...")
 app_creation_start = time.time()
-app: FastAPI = create_app()  # type: ignore[assignment, no-redef]
+app: FastAPI = create_app()  # type: ignore[no-redef]
 init_sentry()
 
 log.info(
