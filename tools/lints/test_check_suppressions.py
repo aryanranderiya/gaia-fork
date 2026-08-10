@@ -149,3 +149,57 @@ def test_renamed_and_edited_file_is_not_treated_as_a_free_rename(repo: Path) -> 
     r = run(repo)
     assert r.returncode == 1
     assert "renamed.py" in r.stderr
+
+
+def test_two_identical_files_do_not_collide_on_rename(repo: Path) -> None:
+    """Two files with byte-identical content share a hash. If one baseline
+    path vanishes, remapping it onto "the" current file with that hash would
+    be a guess whenever more than one current file shares it — this must not
+    happen; both are reported as new/stale instead of silently merged.
+    """
+    (repo / "a.py").write_text("x = 1  # noqa: E501\n")
+    (repo / "b.py").write_text("x = 1  # noqa: E501\n")
+    _commit(repo)
+    assert run(repo, "--update").returncode == 0
+
+    _git(repo, "mv", "a.py", "renamed.py")
+    _commit(repo, "rename one of the two identical files")
+
+    r = run(repo)
+    assert r.returncode == 1
+    assert "renamed.py" in r.stderr
+
+
+def test_noqa_inside_a_docstring_is_not_counted(repo: Path) -> None:
+    """The scanner's own module docstring documents `# noqa` as prose — a
+    naive line scanner would count that as a real suppression. It must not.
+    """
+    (repo / "a.py").write_text('"""Docs mention # noqa here."""\nx = 1\n')
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "0 suppression" in r.stdout
+
+
+def test_noqa_in_a_real_comment_is_counted(repo: Path) -> None:
+    (repo / "a.py").write_text('"""Docs mention noqa in prose."""\nx = 1  # noqa: E501\n')
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "1 suppression" in r.stdout
+
+
+def test_biome_ignore_inside_a_string_is_not_counted(repo: Path) -> None:
+    (repo / "a.ts").write_text('const msg = "see // biome-ignore lint: x for docs";\n')
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "0 suppression" in r.stdout
+
+
+def test_biome_ignore_in_a_real_comment_is_counted(repo: Path) -> None:
+    (repo / "a.ts").write_text("// biome-ignore lint: x\nconst n = 1;\n")
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "1 suppression" in r.stdout
