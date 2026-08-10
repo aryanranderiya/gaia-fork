@@ -332,6 +332,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: ruff check + format (PL, RUF, FAST, S, B, A, COM, C4, DTZ, ISC, RET, SIM, ARG, PTH, TRY, PERF, UP, FURB, LOG, G + more)
         # Pinned to the uv.lock ruff version — bump both together. Unpinned,
         # a ruff release can flip this lane red with zero code changes
@@ -388,6 +389,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Install api dev + backend dependencies (uv sync)
         run: |
           echo "::group::uv sync"
@@ -460,6 +462,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Docstring coverage on public API surface
         run: |
           echo "::group::interrogate"
@@ -489,6 +492,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Complexity scan (max-absolute F, max-modules E, max-average B)
         run: |
           echo "::group::xenon"
@@ -529,6 +533,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Bandit security scan (zero-warning policy)
         run: |
           echo "::group::bandit (low severity, low confidence — no exclusions)"
@@ -592,6 +597,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       # This lane's verdict is only worth what its rules are worth, and those
       # rules have been silently wrong (a discarded-error except matrix, route
       # resolution that found 2 of 283 paths). Both still printed a score — so
@@ -674,6 +680,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Emit real events from both runtimes and diff their shapes
         run: |
           echo "::group::wide-event conformance"
@@ -699,6 +706,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Install vulture (Python dead-code detector)
         run: |
           echo "::group::uv tool install vulture"
@@ -741,6 +749,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Install pint + promtool (pinned release binaries, same versions prod runs)
         run: |
           echo "::group::install"
@@ -926,6 +935,7 @@ jobs:
         with:
           version: "0.8.17"
           enable-cache: true
+          prune-cache: true
       - name: Sync Python dependencies
         run: uv sync --frozen --package gaia --group backend --group dev
       - name: Mutation check (zero survivors required, per changed module)
