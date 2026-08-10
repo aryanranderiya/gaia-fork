@@ -4,6 +4,14 @@ version: 2
 # "Enforce master promotion policy" check rejects any PR to master that is not
 # from develop/release-please/hotfix — dependabot PRs against the default
 # branch (master) were permanently BLOCKED.
+#
+# target-branch only routes VERSION updates. Dependabot SECURITY updates
+# always target the default branch (GitHub behavior, not configurable here),
+# so a security PR still lands on master and fails the promotion policy by
+# design — close it and take the bump through develop, where the weekly
+# version updates pick up patched releases anyway. If that noise isn't worth
+# it, turn off "Dependabot security updates" in repo Settings > Advanced
+# Security (version updates below are unaffected).
 updates:
   # --- JavaScript/TypeScript (pnpm workspace) ------------------------------
   # Single pnpm-lock.yaml at the repo root covers every workspace member
