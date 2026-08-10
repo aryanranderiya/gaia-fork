@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from urllib.parse import quote
 
 from fastapi import HTTPException
 
@@ -143,7 +144,7 @@ async def fetch_calendar_events(
     return GoogleCalendarEventsPage.model_validate(
         await _proxy(
             user_id,
-            endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events",
+            endpoint=f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}/events",
             method="GET",
             query=query,
         )
@@ -499,7 +500,7 @@ async def create_calendar_event(
     created_event = GoogleCalendarEventResource.model_validate(
         await _proxy(
             user_id,
-            endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events",
+            endpoint=f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}/events",
             method="POST",
             body=payload,
             query=query_params or None,
@@ -663,7 +664,7 @@ async def search_events_in_calendar(
     result = GoogleCalendarEventsPage.model_validate(
         await _proxy(
             user_id,
-            endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events",
+            endpoint=f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}/events",
             method="GET",
             query=params,
         )
