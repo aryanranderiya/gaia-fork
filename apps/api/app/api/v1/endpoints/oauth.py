@@ -208,7 +208,7 @@ async def workos_mobile_callback(
 
     try:
         if not code:
-            log.error(
+            log.warning(
                 f"{LogTag.OAUTH} No authorization code received from WorkOS (mobile)",
                 failure_reason="missing_code",
             )
@@ -315,7 +315,7 @@ async def workos_desktop_callback(
     try:
         # Validate code parameter
         if not code:
-            log.error(
+            log.warning(
                 f"{LogTag.OAUTH} No authorization code received from WorkOS (desktop)",
                 failure_reason="missing_code",
             )
@@ -410,7 +410,7 @@ async def workos_callback(
     try:
         # Validate code parameter
         if not code:
-            log.error(
+            log.warning(
                 f"{LogTag.OAUTH} No authorization code received from WorkOS",
                 failure_reason="missing_code",
             )
