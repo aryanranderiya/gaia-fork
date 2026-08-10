@@ -309,8 +309,8 @@
     {
       "path": "apps/api/tests/unit/core/test_lazy_loader.py",
       "kind": "type-ignore",
-      "count": 2,
-      "hash": "b3b473e62ce776eb6bfe8d860749152fe7911a8505540bfda29556527df7999c"
+      "count": 1,
+      "hash": "6568d178e3c2a390887ac599d0c1e3e7687d551bce0fbec9df301ac39f404420"
     },
     {
       "path": "apps/api/tests/unit/helpers/test_email_helpers.py",
