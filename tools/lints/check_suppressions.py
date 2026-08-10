@@ -17,11 +17,11 @@ no base ref, no merge-base. It counts three suppression kinds per tracked file:
 Only directives in actual comments count, never ones that merely appear inside
 a string or docstring (this module's own docstring, right here, is proof —
 ``tokenize`` is what tells the two apart for Python). TS/JS has no stdlib
-parser, so it uses a pragmatic heuristic instead: quoted spans (single,
-double, and backtick strings) are blanked out before matching ``//
-biome-ignore`` on each line. This is line-based, so a ``//`` sitting inside a
-*multi-line* template literal can still be misread as a comment — a known,
-accepted gap given no stdlib TS/JS parser exists.
+parser, so it uses a pragmatic heuristic instead: quoted spans are blanked
+out per line, and multi-line template literals are tracked by backtick
+parity across lines. Remaining accepted imprecision (no stdlib TS/JS parser
+exists): a backtick inside a ``${...}`` expression or inside a ``//`` comment
+flips the parity wrongly.
 
 and compares the counts against ``config/suppressions-baseline.json``, one entry
 per (path, kind). The baseline is line-number-free, so reordering lines within a
@@ -81,6 +81,7 @@ _PY_COMMENT_PATTERNS = (("noqa", _NOQA_RE), ("type-ignore", _TYPE_IGNORE_RE))
 # blanked out before matching `// biome-ignore` — see the module docstring
 # for the multi-line-template-literal limitation this heuristic accepts.
 _QUOTED_SPAN_RE = re.compile(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`(?:\\.|[^`\\])*`')
+_UNESCAPED_BACKTICK_RE = re.compile(r"(?<!\\)`")
 
 
 @dataclass(frozen=True)
@@ -139,18 +140,34 @@ def _scan_python_comments(path: Path) -> list[Hit]:
 
 
 def _scan_ts_comments(path: Path) -> list[Hit]:
-    """``// biome-ignore`` on a line, with quoted spans blanked out first so a
-    directive inside a string literal doesn't count (see module docstring for
-    the multi-line-template-literal limitation this heuristic accepts).
+    """``// biome-ignore`` on a line, with string contents blanked out first so a
+    directive inside a string literal doesn't count.
+
+    Same-line quote spans are blanked by regex; multi-line template literals are
+    handled by tracking backtick parity across lines — a line whose start is
+    inside an unterminated template body is skipped entirely. Remaining accepted
+    imprecision: a backtick inside a ``${...}`` expression or inside a ``//``
+    comment can flip the parity wrongly (see module docstring).
     """
     text = _read_text(path)
     if text is None:
         return []
     hits: list[Hit] = []
+    in_template = False
     for lineno, line in enumerate(text.splitlines(), start=1):
         blanked = _QUOTED_SPAN_RE.sub(lambda m: " " * len(m.group()), line)
-        if _BIOME_IGNORE_RE.search(blanked):
+        # Backticks surviving the regex open or close template literals that
+        # span lines. Split on them and keep only the code segments: with the
+        # line's starting state s and segments seg[0..n], seg[i] is code iff
+        # (i even) == (not s) — each backtick toggles string/code.
+        segments = _UNESCAPED_BACKTICK_RE.split(blanked)
+        code = "".join(
+            seg if (i % 2 == 0) != in_template else " " * len(seg) for i, seg in enumerate(segments)
+        )
+        if _BIOME_IGNORE_RE.search(code):
             hits.append(Hit("biome-ignore", lineno, line.strip()))
+        if len(segments) % 2 == 0:  # odd number of backticks -> state flips
+            in_template = not in_template
     return hits
 
 

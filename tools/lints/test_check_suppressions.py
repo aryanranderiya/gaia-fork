@@ -203,3 +203,21 @@ def test_biome_ignore_in_a_real_comment_is_counted(repo: Path) -> None:
     r = run(repo, "--update")
     assert r.returncode == 0
     assert "1 suppression" in r.stdout
+
+
+def test_biome_ignore_inside_a_multiline_template_is_not_counted(repo: Path) -> None:
+    """The backtick-parity tracker must see the template body as string text."""
+    (repo / "a.ts").write_text("const t = `\n// biome-ignore lint: x\n`;\nconst n = 1;\n")
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "0 suppression" in r.stdout
+
+
+def test_biome_ignore_after_a_template_closes_is_counted(repo: Path) -> None:
+    """Code after the closing backtick on the same line is code again."""
+    (repo / "a.ts").write_text("const t = `\nbody\n`; // biome-ignore lint: x\n")
+    _commit(repo)
+    r = run(repo, "--update")
+    assert r.returncode == 0
+    assert "1 suppression" in r.stdout
