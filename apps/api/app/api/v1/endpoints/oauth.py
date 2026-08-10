@@ -514,7 +514,7 @@ async def composio_callback(
     # Validate and consume state token
     state_data = await validate_and_consume_oauth_state(state)
     if not state_data:
-        log.error(f"{LogTag.OAUTH} Invalid OAuth state token", state_prefix=state[:8])
+        log.warning(f"{LogTag.OAUTH} Invalid OAuth state token", state_prefix=state[:8])
         return RedirectResponse(url=f"{settings.FRONTEND_URL}/redirect?oauth_error=invalid_state")
 
     redirect_path = state_data["redirect_path"]
