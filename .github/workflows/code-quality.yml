@@ -1,6 +1,6 @@
 name: Code Quality
 
-# Tech-debt prevention gates that run on every PR to develop or master.
+# Tech-debt prevention gates that run on every PR to master.
 # Each lane is independent so failures are isolated and parallelised. The
 # `quality-gate` job at the bottom is the single required check.
 #
@@ -16,11 +16,9 @@ name: Code Quality
 on:
   pull_request:
     branches:
-      - develop
       - master
   push:
     branches:
-      - develop
       - master
   workflow_dispatch:
 
@@ -792,16 +790,7 @@ jobs:
   suppression-ratchet:
     name: "Suppression ratchet (no new # noqa / # type: ignore / biome-ignore)"
     needs: [changes]
-    # The develop -> master promotion PR is exempt. Its diff is every commit
-    # since the last release, and each of those was already ratcheted against
-    # develop on the way in — re-measuring the whole range against master
-    # reports ~27 files of grandfathered suppressions as new, failing the
-    # release for work that was reviewed weeks ago. head_ref/base_ref are set
-    # only on pull_request, so pushes to develop/master stay ratcheted, as do
-    # all feature PRs into develop.
-    if: >-
-      (needs.changes.outputs.has_typescript == 'true' || needs.changes.outputs.has_python == 'true')
-      && !(github.base_ref == 'master' && github.head_ref == 'develop')
+    if: needs.changes.outputs.has_typescript == 'true' || needs.changes.outputs.has_python == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -811,12 +800,9 @@ jobs:
       - name: Diff vs base for newly introduced inline suppression comments
         env:
           # Push events have no PR base ref; diff against the pre-push SHA
-          # instead so a direct push to develop/master is ratcheted too.
-          # Exception: a push to master is the develop -> master promotion
-          # landing, so its base is the merge-base with develop — everything
-          # in that range was already ratcheted on the way into develop, and
-          # the pre-push master SHA would re-report all of it as new (the
-          # push-event twin of the promotion-PR exemption in `if:` above).
+          # instead so a direct push to master is ratcheted too. Every commit
+          # in that range arrived via a PR that was itself ratcheted, so no
+          # promotion-range exemption is needed under master-only flow.
           # Through env, not inline ${{ }}, per this file's injection-safety
           # convention (see the type-check / build.yml AFFECTED_* comments).
           EVENT_BEFORE: ${{ github.event.before }}
@@ -826,10 +812,6 @@ jobs:
             timeout 60 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 \
               fetch --no-tags origin "$GITHUB_BASE_REF"
             BASE="origin/$GITHUB_BASE_REF"
-          elif [ "$GITHUB_REF" = "refs/heads/master" ]; then
-            timeout 60 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=20 \
-              fetch --no-tags origin develop
-            BASE="$(git merge-base HEAD origin/develop)"
           else
             BASE="$EVENT_BEFORE"
           fi
