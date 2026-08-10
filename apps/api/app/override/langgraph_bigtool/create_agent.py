@@ -114,8 +114,14 @@ def _pop_pruned_tombstones(state: State) -> list[RemoveMessage]:
     also reaches the checkpoint. Popped, never forwarded — the key is a relay,
     not a state channel.
     """
-    pruned = cast("dict[str, Any]", state).pop(PRUNED_MESSAGE_IDS_KEY, None) or []
-    return [RemoveMessage(id=message_id) for message_id in pruned]
+    raw = cast("dict[str, Any]", state).pop(PRUNED_MESSAGE_IDS_KEY, None)
+    if raw is None:
+        # Absent is legitimate: the hook may not have run (or errored and
+        # returned state unchanged) — nothing to prune.
+        return []
+    if not isinstance(raw, list) or not all(isinstance(item, str) for item in raw):
+        raise TypeError(f"{PRUNED_MESSAGE_IDS_KEY} must be list[str], got {type(raw).__name__}")
+    return [RemoveMessage(id=message_id) for message_id in raw]
 
 
 _UNSET = object()
