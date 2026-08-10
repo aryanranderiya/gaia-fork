@@ -44,15 +44,17 @@ flowchart TD
     B_WEB_PUB --> B_WEB_DONE["docker-web complete"]:::build
     B_WEB_SKIP --> B_WEB_DONE
 
-    B_REL_DONE --> PLAN["deployment-plan<br/>(needs docker-release + docker-web)"]:::decision
+    B_REL_DONE --> PLAN["deployment-plan (if: always())<br/>needs docker-release + docker-web + docker-grafana<br/>runs even if a lane failed/cancelled"]:::decision
     B_WEB_DONE --> PLAN
 
-    PLAN --> PLAN_BE{"backend_deploy == true?"}:::decision
+    PLAN --> PLAN_BE{"docker-release succeeded<br/>AND api/bots affected?"}:::decision
     PLAN --> PLAN_FE{"frontend_deploy == true?"}:::decision
+    PLAN --> PLAN_ORPHAN{"image published but its<br/>deploy did not run?"}:::decision
   end
 
   PLAN_BE -- "Yes" --> DEPLOY_BACKEND["trigger-deploy -> deploy-swarm-prod.yml"]:::deploy
   PLAN_FE -- "Yes" --> DEPLOY_FRONTEND["trigger-web -> deploy-frontend.yml"]:::deploy
+  PLAN_ORPHAN -- "Yes" --> NOTIFY_ORPHAN["notify-publish-without-deploy<br/>Discord alert + gh workflow run<br/>build.yml -f deployment_mode=both remedy"]:::deploy
 
   subgraph BACKEND_DEPLOY["deploy-swarm-prod.yml (Swarm app stack)"]
     direction TB
@@ -107,11 +109,17 @@ flowchart TD
 4. `Quality gate (required)` (the single required status check) fails the merge if any lane is neither `success` nor `skipped`; a lane skipped by `changes` counts as passing, but a failed `changes` job fails the gate. All lanes are enforced — there is no informational tier.
 
 ### `.github/workflows/build.yml`
-1. Start two build lanes: `docker-release` and `docker-web`.
-2. `docker-release`: detect affected backend/bot projects, publish images to GHCR via Dagger, optionally sync Discord commands.
-3. `docker-web`: detect `web` changes and build/push web image via Dagger only when affected.
-4. `deployment-plan` waits for both lanes and computes `backend_deploy` / `frontend_deploy`.
-5. Trigger `deploy-swarm-prod.yml` and/or `deploy-frontend.yml` based on plan outputs.
+1. Start three build lanes: `docker-release`, `docker-web`, `docker-grafana`.
+2. `docker-release`: detect affected backend/bot projects, publish images to GHCR, optionally sync Discord commands. Records `images_published` right after its push steps (before Discord command sync), so a later, unrelated step failure never misreports a real publish as "nothing published".
+3. `docker-web`: detect `web` changes and build/push the web image only when affected.
+4. `docker-grafana`: builds/pushes the Grafana image unconditionally every run (tiny COPY layer; kept out of orphan detection — see `.github/CLAUDE.md`).
+5. `deployment-plan` runs with `if: always()` — it is never skipped by a lane failing or being cancelled — and needs all three build lanes purely for sequencing (deploy planning must not race ahead of the build lanes). It evaluates `docker-release`'s and `docker-web`'s `.result` explicitly via `scripts/ci/compute-deploy-plan.sh`:
+   - `backend_deploy` is `true` only when `docker-release` succeeded AND api/bots affected (or a manual mode says so). A failed/cancelled `docker-release` never deploys, but a failed `docker-web` no longer blocks it either — the old implicit needs-all-success gate did.
+   - `frontend_deploy` follows the existing rule (always true on a master push) and is not gated on `docker-web`'s result — the Vercel deploy path syncs from source, not from the `docker-web` image.
+   - `backend_orphaned` / `frontend_orphaned` flag when an image lane published to GHCR as `:latest` but its corresponding deploy did not run this time, for any reason (lane failure, cancellation, or the plan itself deciding not to deploy). Scoped to `master` only.
+   - Manual `workflow_dispatch` modes (`backend-only` / `frontend-only` / `both`) bypass both affected-detection and lane-result gating — this is the intended one-command remedy for drift: `gh workflow run build.yml --ref master -f deployment_mode=both` redeploys whatever is currently tagged `:latest` in GHCR regardless of what this run's own build lanes did.
+6. `notify-publish-without-deploy` fires a Discord alert (same webhook/action the deploy workflows use) when either orphan flag is set, naming which images are published-but-undeployed and the `gh workflow run` remedy above.
+7. Trigger `deploy-swarm-prod.yml` and/or `deploy-frontend.yml` based on `backend_deploy` / `frontend_deploy`.
 
 ### `.github/workflows/deploy-swarm-prod.yml`
 1. Install SSH private key from `PROD_VM_SSH_KEY` via the `setup-swarm-context` composite action and log in to GHCR.
