@@ -763,7 +763,10 @@ services:
         delay: 5s
       resources:
         limits:
-          memory: 256m
+          # cAdvisor's steady-state RSS on this node is ~245 MiB (33 containers,
+          # 30s housekeeping) — a 256m cap sat at 95% and OOM-killed it several
+          # times a day. 512m leaves real headroom for scrape/housekeeping spikes.
+          memory: 512m
           cpus: "0.25"
       placement:
         constraints:
@@ -968,6 +971,12 @@ services:
       GF_SMTP_FROM_ADDRESS: ${GRAFANA_SMTP_FROM_ADDRESS:-aryan@heygaia.io}
       GF_SMTP_FROM_NAME: "GAIA Alerts"
       GRAFANA_ALERT_EMAIL: ${GRAFANA_ALERT_EMAIL:-aryan@heygaia.io}
+      # Slack channel the alert contact points post to (contact-points.yaml →
+      # $__env{SLACK_ALERT_CHANNEL}). The webhook URL itself is the
+      # gaia_grafana_slack_webhook secret, read via $__file{} — never an env var.
+      # An unset value here makes alerting provisioning fail and Grafana
+      # crash-loop, so the default must stay in sync with the real channel.
+      SLACK_ALERT_CHANNEL: ${SLACK_ALERT_CHANNEL:-#server-alerts}
     secrets:
       - gaia_grafana_admin_password
       - gaia_grafana_slack_webhook
