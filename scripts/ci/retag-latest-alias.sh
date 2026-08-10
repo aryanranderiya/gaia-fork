@@ -13,8 +13,8 @@
 #                 at the images the rolled-back services now run, resolved
 #                 from the live service specs (env: ROLLBACK_MODE,
 #                 IMAGE_DIGEST, DOCKER_CONTEXT, STACK) — without this, a
-#                 rollback would leave :latest pointing at the bad build and
-#                 any container restart would re-pull it.
+#                 rollback would leave :latest naming the bad build, and the
+#                 next tag-less `docker stack deploy` would resolve it again.
 set -euo pipefail
 
 MODE="${1:?usage: retag-latest-alias.sh from-env|rolled-back}"
@@ -65,9 +65,12 @@ case "$MODE" in
     ;;
 
   rolled-back)
+    # No defaults: the caller owns the context/stack names (they are the same
+    # literals the rollback job's own docker commands use). A silent default
+    # here could target a different cluster than the rollback just touched.
     : "${ROLLBACK_MODE:?ROLLBACK_MODE is required}"
-    DOCKER_CONTEXT="${DOCKER_CONTEXT:-prod}"
-    STACK="${STACK:-gaia-prod}"
+    : "${DOCKER_CONTEXT:?DOCKER_CONTEXT is required}"
+    : "${STACK:?STACK is required}"
     if [ "$ROLLBACK_MODE" = "digest" ]; then
       # Digest rollback only touches gaia-backend/arq_worker, both on the gaia
       # repo — re-point exactly that repo's :latest at the pinned ref.

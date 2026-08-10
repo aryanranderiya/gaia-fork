@@ -356,6 +356,8 @@ jobs:
         env:
           ROLLBACK_MODE: ${{ inputs.rollback_mode }}
           IMAGE_DIGEST: ${{ inputs.image_digest }}
+          DOCKER_CONTEXT: prod
+          STACK: gaia-prod
         run: bash scripts/ci/retag-latest-alias.sh rolled-back
 
       - name: Push rollback annotation to Loki
