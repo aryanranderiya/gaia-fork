@@ -685,7 +685,10 @@ async def delete_calendar_event(
     try:
         await _proxy(
             user_id,
-            endpoint=f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events/{event.event_id}",
+            endpoint=(
+                f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}"
+                f"/events/{quote(event.event_id, safe='')}"
+            ),
             method="DELETE",
         )
         return EventDeleteResponse(success=True, message="Event deleted successfully")
@@ -763,7 +766,10 @@ async def update_calendar_event(
 ) -> GoogleCalendarEventResource:
     """Update a calendar event using the Google Calendar API."""
     calendar_id = event.calendar_id or "primary"
-    endpoint = f"{CALENDAR_API_BASE}/calendars/{calendar_id}/events/{event.event_id}"
+    endpoint = (
+        f"{CALENDAR_API_BASE}/calendars/{quote(calendar_id, safe='')}"
+        f"/events/{quote(event.event_id, safe='')}"
+    )
 
     try:
         existing_event = GoogleCalendarEventResource.model_validate(
