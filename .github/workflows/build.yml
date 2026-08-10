@@ -183,18 +183,6 @@ jobs:
             fi
           done
 
-      # Resolve the immutable tags the release steps just pushed (read from
-      # the local image store, never recomputed) and guarantee they exist in
-      # GHCR, so the deploy can pin services to exactly this run's images.
-      - name: Resolve immutable image tags
-        id: image-tags
-        if: steps.affected.outputs.api == 'true' || steps.affected.outputs.bots == 'true'
-        env:
-          VERSION_SCHEME: ${{ steps.version.outputs.scheme }}
-          APPS_RELEASE_OUTCOME: ${{ steps.release-apps.outcome }}
-          BOTS_RELEASE_OUTCOME: ${{ steps.release-bots.outcome }}
-        run: bash scripts/ci/resolve-image-tags.sh
-
       # Captured right after the push steps, before Discord command sync —
       # that step can fail on an unrelated Discord API error and must never
       # cause a real publish to be reported as "nothing published".
@@ -216,6 +204,22 @@ jobs:
             published=true
           fi
           echo "published=$published" >> "$GITHUB_OUTPUT"
+
+      # Resolve the immutable tags the release steps just pushed (read from the
+      # local image store, never recomputed) and guarantee they exist in GHCR,
+      # so the deploy can pin services to exactly this run's images. Placed
+      # after publish-status deliberately: this step can fail, and the publish
+      # outcome must already be recorded when it does — a resolve failure then
+      # fails the lane, blocks the deploy, and surfaces as an orphan alert
+      # rather than as a silent "nothing published".
+      - name: Resolve immutable image tags
+        id: image-tags
+        if: steps.affected.outputs.api == 'true' || steps.affected.outputs.bots == 'true'
+        env:
+          VERSION_SCHEME: ${{ steps.version.outputs.scheme }}
+          APPS_RELEASE_OUTCOME: ${{ steps.release-apps.outcome }}
+          BOTS_RELEASE_OUTCOME: ${{ steps.release-bots.outcome }}
+        run: bash scripts/ci/resolve-image-tags.sh
 
       # Discord command sync is only meaningful for production bot deploys.
       - name: Register Discord slash commands
