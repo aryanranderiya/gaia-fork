@@ -302,7 +302,7 @@ jobs:
           fi
 
       - name: Build and push Grafana image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: infra/docker/observability/grafana
           file: infra/docker/observability/grafana/Dockerfile
