@@ -189,6 +189,22 @@ class TestSweepDormantWorkflows:
         assert [c.user_id for c in result.candidates] == ["u1", "u2"]
         assert result.workflows_paused == 2
 
+    @pytest.mark.parametrize("bad", [timedelta(0), timedelta(days=-1)])
+    async def test_a_non_positive_threshold_is_refused(self, bad: timedelta):
+        """A zero threshold puts the cutoff at this instant, so EVERY prior
+        activity timestamp falls before it and every user reads as dormant —
+        `--days 0` would pause the whole product. A negative one is worse: the
+        cutoff moves into the future."""
+        find_dormant = AsyncMock(return_value=[])
+        with (
+            patch(f"{_MOD}.user_repository.find_dormant_since", find_dormant),
+            pytest.raises(ValueError, match="must be positive"),
+        ):
+            await sweep_dormant_workflows(threshold=bad)
+
+        # Refused at the boundary: the cohort query never even ran.
+        find_dormant.assert_not_awaited()
+
     async def test_both_activity_signals_are_asked_about_the_same_cutoff(self):
         """The cutoff must reach BOTH repositories, and reach usage_daily in the
         `YYYY-MM-DD` shape its `date` field is stored as. Nothing else pins this:

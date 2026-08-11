@@ -82,6 +82,15 @@ async def main() -> None:
     )
     args = parser.parse_args()
 
+    # `--days 0` would put the cutoff at this instant, so every prior activity
+    # timestamp falls before it and every user reads as dormant. The service
+    # raises on this too; rejecting here turns it into a usage error rather than
+    # a traceback. Same for a negative value, which puts the cutoff in the future.
+    if args.days is not None and args.days <= 0:
+        parser.error(f"--days must be positive, got {args.days}")
+    if args.max_users is not None and args.max_users <= 0:
+        parser.error(f"--max-users must be positive, got {args.max_users}")
+
     threshold = timedelta(days=args.days) if args.days is not None else DORMANCY_THRESHOLD
     print(f"Dormancy threshold: {threshold.days} days")
 

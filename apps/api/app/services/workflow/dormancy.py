@@ -29,7 +29,7 @@ from app.db.repositories.conversations import conversation_repository
 from app.db.repositories.usage_daily import usage_daily_repository
 from app.db.repositories.users import user_repository
 from app.db.repositories.workflows import workflow_repository
-from app.models.workflow_models import DeactivationReason
+from app.models.workflow_models import DeactivationReason, WorkflowDocument
 from app.services.workflow.service import WorkflowService
 from shared.py.wide_events import log
 
@@ -92,14 +92,24 @@ async def find_dormancy_candidates(
     is a burst of third-party calls — the bound lets an operator drain it in
     batches. Unbounded by default: the daily cron only ever sees newly dormant
     users once the backlog is cleared.
+
+    Raises ``ValueError`` for a non-positive ``threshold``: a zero threshold puts
+    the cutoff at the current instant, so every prior activity timestamp falls
+    before it and EVERY user reads as dormant. The guard sits here rather than
+    only in the CLI so no caller can reach the pause loop with it.
     """
-    cutoff = datetime.now(UTC) - threshold
+    if threshold <= timedelta(0):
+        raise ValueError(f"dormancy threshold must be positive, got {threshold!r}")
+
+    cutoff: datetime = datetime.now(UTC) - threshold
     candidates: list[DormantUserWorkflows] = []
 
     for user in await user_repository.find_dormant_since(cutoff):
         if max_users is not None and len(candidates) >= max_users:
             break
-        workflows = await workflow_repository.find_activated_for_user(user.id)
+        workflows: list[WorkflowDocument] = await workflow_repository.find_activated_for_user(
+            user.id
+        )
         if not workflows or not await _is_really_dormant(user.id, cutoff):
             continue
         candidates.append(
@@ -123,11 +133,12 @@ async def sweep_dormant_workflows(
     ``dry_run`` resolves the same cohort and reports it without writing anything.
     ``max_users`` bounds how many dormant users one run processes. A single
     workflow that fails to pause (e.g. Composio unregistration errors) is counted
-    and skipped rather than aborting the sweep for every other user.
+    and skipped rather than aborting the sweep for every other user. Raises
+    ``ValueError`` for a non-positive ``threshold`` (see ``find_dormancy_candidates``).
     """
     cutoff, candidates = await find_dormancy_candidates(threshold=threshold, max_users=max_users)
-    paused = 0
-    failures = 0
+    paused: int = 0
+    failures: int = 0
 
     if not dry_run:
         for candidate in candidates:
