@@ -65,16 +65,29 @@ def _render(result: DormancySweepResult, limit: int) -> None:
 
 async def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apply", action="store_true", help="actually pause the workflows")
-    parser.add_argument("--dry-run", action="store_true", help="preview only (default)")
+    # Mutually exclusive so `--apply --dry-run` is rejected by argparse instead of
+    # silently applying: --dry-run was parsed but never read, and the mode came
+    # from `not args.apply` alone. On a script that deactivates other people's
+    # automation, "I passed --dry-run and it wrote" is the wrong way to find out.
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--apply", action="store_true", help="actually pause the workflows")
+    mode.add_argument("--dry-run", action="store_true", help="preview only (default)")
     parser.add_argument("--days", type=int, default=None, help="dormancy threshold in days")
     parser.add_argument("--limit", type=int, default=25, help="users to list in the report")
+    parser.add_argument(
+        "--max-users",
+        type=int,
+        default=None,
+        help="stop after this many dormant users (batch a large first run)",
+    )
     args = parser.parse_args()
 
     threshold = timedelta(days=args.days) if args.days is not None else DORMANCY_THRESHOLD
     print(f"Dormancy threshold: {threshold.days} days")
 
-    result = await sweep_dormant_workflows(threshold=threshold, dry_run=not args.apply)
+    result = await sweep_dormant_workflows(
+        threshold=threshold, dry_run=not args.apply, max_users=args.max_users
+    )
     _render(result, args.limit)
 
     if not args.apply:

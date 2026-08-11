@@ -128,7 +128,12 @@ class TestSweepDormantWorkflows:
         assert result.workflows_paused == 1
         assert result.candidates[0].last_active_at is None
 
-    @pytest.mark.regression
+    # Deliberately carries no regression marker. That marker means "this bug
+    # existed on the base revision", and the regression-proof lane re-runs marked
+    # tests against base to prove they go red there. This whole module is new, so
+    # on base the file cannot even be collected — an error, which the lane rightly
+    # refuses to accept as proof. Both tests below are still mutation-checked on
+    # this branch (drop the `_is_really_dormant` call and they go red).
     async def test_recent_chat_keeps_a_user_out_of_the_cohort(self):
         """`last_active_at` is bumped only by a WorkOS web login, so a user who
         lives in a bot looks dormant on it while using GAIA daily. On production
@@ -151,7 +156,6 @@ class TestSweepDormantWorkflows:
             "wf_b", "really_gone", reason=DeactivationReason.USER_DORMANT
         )
 
-    @pytest.mark.regression
     async def test_recent_metered_usage_keeps_a_user_out_of_the_cohort(self):
         deactivate = AsyncMock()
         p = _patches(
@@ -165,6 +169,25 @@ class TestSweepDormantWorkflows:
 
         assert result.candidates == []
         deactivate.assert_not_awaited()
+
+    async def test_max_users_bounds_one_run(self):
+        """Pausing unregisters Composio triggers per workflow, so an unbounded
+        first run over a long backlog is a burst of third-party calls."""
+        deactivate = AsyncMock()
+        p = _patches(
+            users=[_user("u1"), _user("u2"), _user("u3")],
+            workflows_by_user={
+                "u1": [_workflow("wf_a")],
+                "u2": [_workflow("wf_b")],
+                "u3": [_workflow("wf_c")],
+            },
+            deactivate=deactivate,
+        )
+        with p[0], p[1], p[2], p[3], p[4]:
+            result = await sweep_dormant_workflows(max_users=2)
+
+        assert [c.user_id for c in result.candidates] == ["u1", "u2"]
+        assert result.workflows_paused == 2
 
     async def test_the_threshold_defaults_to_ninety_days(self):
         """30 days is where the signal choice still moves the answer by ~2,000

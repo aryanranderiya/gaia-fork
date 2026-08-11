@@ -52,6 +52,9 @@ class DormantUserWorkflows(BaseModel):
 
 
 class DormancySweepResult(BaseModel):
+    """What one sweep found and did. ``candidates`` is populated on a dry run too,
+    which is what the CLI reports before anything is written."""
+
     dry_run: bool
     cutoff: datetime
     dormant_users: int
@@ -75,7 +78,7 @@ async def _is_really_dormant(user_id: str, cutoff: datetime) -> bool:
 
 
 async def find_dormancy_candidates(
-    *, threshold: timedelta = DORMANCY_THRESHOLD
+    *, threshold: timedelta = DORMANCY_THRESHOLD, max_users: int | None = None
 ) -> tuple[datetime, list[DormantUserWorkflows]]:
     """Dormant users that still own at least one activated workflow, with the
     cutoff the cohort was resolved against.
@@ -83,11 +86,19 @@ async def find_dormancy_candidates(
     ``find_dormant_since`` is the pre-filter, not the verdict: a user dormant on
     every signal is necessarily dormant on ``last_active_at`` too, so it returns
     a superset that ``_is_really_dormant`` then narrows.
+
+    ``max_users`` stops after that many candidates. Pausing unregisters each
+    workflow's Composio triggers, so the first run over a long-standing backlog
+    is a burst of third-party calls — the bound lets an operator drain it in
+    batches. Unbounded by default: the daily cron only ever sees newly dormant
+    users once the backlog is cleared.
     """
     cutoff = datetime.now(UTC) - threshold
     candidates: list[DormantUserWorkflows] = []
 
     for user in await user_repository.find_dormant_since(cutoff):
+        if max_users is not None and len(candidates) >= max_users:
+            break
         workflows = await workflow_repository.find_activated_for_user(user.id)
         if not workflows or not await _is_really_dormant(user.id, cutoff):
             continue
@@ -102,15 +113,19 @@ async def find_dormancy_candidates(
 
 
 async def sweep_dormant_workflows(
-    *, threshold: timedelta = DORMANCY_THRESHOLD, dry_run: bool = False
+    *,
+    threshold: timedelta = DORMANCY_THRESHOLD,
+    dry_run: bool = False,
+    max_users: int | None = None,
 ) -> DormancySweepResult:
     """Pause every activated workflow owned by a user dormant for ``threshold``.
 
     ``dry_run`` resolves the same cohort and reports it without writing anything.
-    A single workflow that fails to pause (e.g. Composio unregistration errors)
-    is counted and skipped rather than aborting the sweep for every other user.
+    ``max_users`` bounds how many dormant users one run processes. A single
+    workflow that fails to pause (e.g. Composio unregistration errors) is counted
+    and skipped rather than aborting the sweep for every other user.
     """
-    cutoff, candidates = await find_dormancy_candidates(threshold=threshold)
+    cutoff, candidates = await find_dormancy_candidates(threshold=threshold, max_users=max_users)
     paused = 0
     failures = 0
 
