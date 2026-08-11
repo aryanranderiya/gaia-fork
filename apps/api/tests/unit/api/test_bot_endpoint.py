@@ -545,6 +545,36 @@ class TestBotChatStreamMetering:
         assert limiter.await_args.kwargs["feature_key"] == "chat_messages"
         assert limiter.await_args.kwargs["user_id"] == "u_bot_1"
 
+    @pytest.mark.regression
+    async def test_a_bot_turn_checks_the_daily_cost_wall_too(self, client: AsyncClient):
+        """Web chat charges TWO walls: how many messages, and how expensive the
+        day has been. Metering only the first left a bot user over budget with a
+        stream that opened and died partway instead of a clean refusal."""
+        limiter = AsyncMock(return_value={})
+        cost_wall = AsyncMock()
+        p = self._patches(limiter)
+        with (
+            p[0],
+            p[1],
+            p[2],
+            p[3],
+            p[4],
+            p[5],
+            p[6],
+            p[7],
+            patch("app.api.v1.endpoints.bot.enforce_daily_cost_budget", cost_wall),
+        ):
+            await client.post(
+                f"{BOT_BASE}/chat-stream",
+                json={
+                    "message": "hi",
+                    "platform": "telegram",
+                    "platform_user_id": "tg_42",
+                },
+            )
+
+        cost_wall.assert_awaited_once_with("u_bot_1", feature_key="chat_messages")
+
     async def test_an_unlinked_platform_user_is_not_charged(self, client: AsyncClient):
         """No GAIA account behind the platform id — there is nobody to bill."""
         limiter = AsyncMock(return_value={})
