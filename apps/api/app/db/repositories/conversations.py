@@ -120,6 +120,24 @@ class ConversationRepository(UserScopedRepository[ConversationDocument, Conversa
             }
         )
 
+    async def has_activity_since(self, user_id: str, since: datetime) -> bool:
+        """Whether the user touched any conversation at or after ``since``.
+
+        The transport-agnostic usage signal. Every chat turn appends messages,
+        which stamps ``updatedAt``, whether it arrived from the web app or a bot
+        — unlike ``users.last_active_at``, which only a WorkOS web login bumps.
+        ``createdAt`` is included for rows written before ``updatedAt`` existed.
+        """
+        return (
+            await self._count(
+                {
+                    "user_id": user_id,
+                    "$or": [{"updatedAt": {"$gte": since}}, {"createdAt": {"$gte": since}}],
+                }
+            )
+            > 0
+        )
+
     async def exists(self, conversation_id: str, *, user_id: str) -> bool:
         """Whether the user owns a conversation with this id."""
         return await self._count({"conversation_id": conversation_id, "user_id": user_id}) > 0

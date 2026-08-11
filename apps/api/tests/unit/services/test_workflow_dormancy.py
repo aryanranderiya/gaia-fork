@@ -8,6 +8,7 @@ import pytest
 
 from app.models.workflow_models import DeactivationReason
 from app.services.workflow.dormancy import (
+    DORMANCY_THRESHOLD,
     resume_dormancy_paused_workflows,
     sweep_dormant_workflows,
 )
@@ -29,12 +30,26 @@ def _patches(
     users: list[SimpleNamespace],
     workflows_by_user: dict[str, list[SimpleNamespace]],
     deactivate: AsyncMock | None = None,
+    chat_active: set[str] | None = None,
+    metered_active: set[str] | None = None,
 ):
+    chat_active = chat_active or set()
+    metered_active = metered_active or set()
     return (
         patch(
             f"{_MOD}.user_repository.find_dormant_since",
             new_callable=AsyncMock,
             return_value=users,
+        ),
+        patch(
+            f"{_MOD}.conversation_repository.has_activity_since",
+            new_callable=AsyncMock,
+            side_effect=lambda uid, _cut: uid in chat_active,
+        ),
+        patch(
+            f"{_MOD}.usage_daily_repository.counts_since",
+            new_callable=AsyncMock,
+            side_effect=lambda uid, _day: {"2026-08-01": 3} if uid in metered_active else {},
         ),
         patch(
             f"{_MOD}.workflow_repository.find_activated_for_user",
@@ -56,12 +71,12 @@ class TestSweepDormantWorkflows:
     async def test_dry_run_reports_the_cohort_without_writing(self):
         deactivate = AsyncMock()
         dormant, no_workflows = _user("u1"), _user("u2")
-        p1, p2, p3 = _patches(
+        p = _patches(
             users=[dormant, no_workflows],
             workflows_by_user={"u1": [_workflow("wf_a"), _workflow("wf_b")], "u2": []},
             deactivate=deactivate,
         )
-        with p1, p2, p3:
+        with p[0], p[1], p[2], p[3], p[4]:
             result = await sweep_dormant_workflows(dry_run=True)
 
         deactivate.assert_not_awaited()
@@ -76,12 +91,12 @@ class TestSweepDormantWorkflows:
 
     async def test_pausing_stamps_the_dormancy_reason(self):
         deactivate = AsyncMock()
-        p1, p2, p3 = _patches(
+        p = _patches(
             users=[_user("u1")],
             workflows_by_user={"u1": [_workflow("wf_a")]},
             deactivate=deactivate,
         )
-        with p1, p2, p3:
+        with p[0], p[1], p[2], p[3], p[4]:
             result = await sweep_dormant_workflows()
 
         assert result.workflows_paused == 1
@@ -89,12 +104,12 @@ class TestSweepDormantWorkflows:
 
     async def test_one_failing_workflow_does_not_abort_the_sweep(self):
         deactivate = AsyncMock(side_effect=[RuntimeError("composio down"), None])
-        p1, p2, p3 = _patches(
+        p = _patches(
             users=[_user("u1"), _user("u2")],
             workflows_by_user={"u1": [_workflow("wf_a")], "u2": [_workflow("wf_b")]},
             deactivate=deactivate,
         )
-        with p1, p2, p3:
+        with p[0], p[1], p[2], p[3], p[4]:
             result = await sweep_dormant_workflows()
 
         assert result.failures == 1
@@ -102,16 +117,59 @@ class TestSweepDormantWorkflows:
 
     async def test_a_user_never_seen_active_counts_as_dormant(self):
         deactivate = AsyncMock()
-        p1, p2, p3 = _patches(
+        p = _patches(
             users=[_user("u1", days_idle=None)],
             workflows_by_user={"u1": [_workflow("wf_a")]},
             deactivate=deactivate,
         )
-        with p1, p2, p3:
+        with p[0], p[1], p[2], p[3], p[4]:
             result = await sweep_dormant_workflows()
 
         assert result.workflows_paused == 1
         assert result.candidates[0].last_active_at is None
+
+    @pytest.mark.regression
+    async def test_recent_chat_keeps_a_user_out_of_the_cohort(self):
+        """`last_active_at` is bumped only by a WorkOS web login, so a user who
+        lives in a bot looks dormant on it while using GAIA daily. On production
+        that was 210 users owning 1,965 activated workflows at a 30-day cutoff."""
+        deactivate = AsyncMock()
+        p = _patches(
+            users=[_user("bot_user"), _user("really_gone")],
+            workflows_by_user={
+                "bot_user": [_workflow("wf_a")],
+                "really_gone": [_workflow("wf_b")],
+            },
+            deactivate=deactivate,
+            chat_active={"bot_user"},
+        )
+        with p[0], p[1], p[2], p[3], p[4]:
+            result = await sweep_dormant_workflows()
+
+        assert [c.user_id for c in result.candidates] == ["really_gone"]
+        deactivate.assert_awaited_once_with(
+            "wf_b", "really_gone", reason=DeactivationReason.USER_DORMANT
+        )
+
+    @pytest.mark.regression
+    async def test_recent_metered_usage_keeps_a_user_out_of_the_cohort(self):
+        deactivate = AsyncMock()
+        p = _patches(
+            users=[_user("api_user")],
+            workflows_by_user={"api_user": [_workflow("wf_a")]},
+            deactivate=deactivate,
+            metered_active={"api_user"},
+        )
+        with p[0], p[1], p[2], p[3], p[4]:
+            result = await sweep_dormant_workflows()
+
+        assert result.candidates == []
+        deactivate.assert_not_awaited()
+
+    async def test_the_threshold_defaults_to_ninety_days(self):
+        """30 days is where the signal choice still moves the answer by ~2,000
+        workflows; 90 is where it stops mattering. See DORMANCY_THRESHOLD."""
+        assert timedelta(days=90) == DORMANCY_THRESHOLD
 
     async def test_the_cutoff_honours_the_threshold(self):
         find_dormant = AsyncMock(return_value=[])

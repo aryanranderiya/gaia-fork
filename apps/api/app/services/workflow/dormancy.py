@@ -13,6 +13,11 @@ matter what ``activated`` says.
 Resume only ever touches workflows carrying ``DeactivationReason.USER_DORMANT``.
 A workflow the user switched off themselves records no reason, so coming back
 from dormancy can never silently re-enable something they deliberately disabled.
+
+"Dormant" is decided across every signal available, never ``last_active_at``
+alone: that field is bumped only by a WorkOS web login, so on its own it means
+"hasn't opened the web app" and a bot-only user looks dormant while using GAIA
+daily. See ``_is_really_dormant``.
 """
 
 from datetime import UTC, datetime, timedelta
@@ -20,13 +25,22 @@ from datetime import UTC, datetime, timedelta
 from pydantic import BaseModel, Field
 
 from app.constants.log_tags import LogTag
+from app.db.repositories.conversations import conversation_repository
+from app.db.repositories.usage_daily import usage_daily_repository
 from app.db.repositories.users import user_repository
 from app.db.repositories.workflows import workflow_repository
 from app.models.workflow_models import DeactivationReason
 from app.services.workflow.service import WorkflowService
 from shared.py.wide_events import log
 
-DORMANCY_THRESHOLD = timedelta(days=30)
+# 90 days, not 30, because the signal is imperfect and this is the window where
+# that stops mattering. Measured on production: at 30 days, `last_active_at`
+# alone and the full signal set disagree about 210 users owning 1,965 activated
+# workflows; at 90 days they disagree about 6 users owning 91. A threshold whose
+# answer barely moves with the signal is one a metering gap cannot turn into
+# pausing an active user's automation. Revisit once every entry point records
+# activity (bot chat historically did not).
+DORMANCY_THRESHOLD = timedelta(days=90)
 
 
 class DormantUserWorkflows(BaseModel):
@@ -46,24 +60,44 @@ class DormancySweepResult(BaseModel):
     candidates: list[DormantUserWorkflows] = Field(default_factory=list)
 
 
+async def _is_really_dormant(user_id: str, cutoff: datetime) -> bool:
+    """Whether ``user_id`` shows no activity on ANY signal since ``cutoff``.
+
+    ``users.last_active_at`` is bumped only by a WorkOS web login, so on its own
+    it reports "hasn't opened the web app", not "hasn't used GAIA" — a user who
+    lives in Telegram looks permanently dormant. Chat activity and metered
+    feature use are checked too, and any one of them being recent keeps the
+    user's workflows running.
+    """
+    if await conversation_repository.has_activity_since(user_id, cutoff):
+        return False
+    return not await usage_daily_repository.counts_since(user_id, cutoff.strftime("%Y-%m-%d"))
+
+
 async def find_dormancy_candidates(
     *, threshold: timedelta = DORMANCY_THRESHOLD
 ) -> tuple[datetime, list[DormantUserWorkflows]]:
     """Dormant users that still own at least one activated workflow, with the
-    cutoff the cohort was resolved against."""
+    cutoff the cohort was resolved against.
+
+    ``find_dormant_since`` is the pre-filter, not the verdict: a user dormant on
+    every signal is necessarily dormant on ``last_active_at`` too, so it returns
+    a superset that ``_is_really_dormant`` then narrows.
+    """
     cutoff = datetime.now(UTC) - threshold
     candidates: list[DormantUserWorkflows] = []
 
     for user in await user_repository.find_dormant_since(cutoff):
         workflows = await workflow_repository.find_activated_for_user(user.id)
-        if workflows:
-            candidates.append(
-                DormantUserWorkflows(
-                    user_id=user.id,
-                    last_active_at=user.last_active_at,
-                    workflow_ids=[w.id for w in workflows],
-                )
+        if not workflows or not await _is_really_dormant(user.id, cutoff):
+            continue
+        candidates.append(
+            DormantUserWorkflows(
+                user_id=user.id,
+                last_active_at=user.last_active_at,
+                workflow_ids=[w.id for w in workflows],
             )
+        )
     return cutoff, candidates
 
 

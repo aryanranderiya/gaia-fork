@@ -5,6 +5,10 @@ The manual companion to the daily ``sweep_dormant_user_workflows`` cron — for
 running the backlog once, on demand, and seeing exactly who it would touch
 before anything is written.
 
+Dormancy is judged across every signal (web login, chat activity, metered
+feature use), so a user who only ever talks to GAIA through a bot is not
+mistaken for an abandoned account.
+
 Run from the api directory (or /app inside the container):
 
     python scripts/pause_dormant_workflows.py --dry-run
@@ -49,7 +53,9 @@ def _render(result: DormancySweepResult, limit: int) -> None:
         print("\nNothing to do.")
         return
 
-    print(f"\n{'user_id':<28}{'last_active_at':<28}{'workflows':>10}")
+    # The stamp is the WEB LOGIN one specifically; chat and metered activity were
+    # already checked to get here, so "never" here does not mean "never used GAIA".
+    print(f"\n{'user_id':<28}{'last web login':<28}{'workflows':>10}")
     for candidate in result.candidates[:limit]:
         last_active = candidate.last_active_at.isoformat() if candidate.last_active_at else "never"
         print(f"{candidate.user_id:<28}{last_active:<28}{len(candidate.workflow_ids):>10}")
