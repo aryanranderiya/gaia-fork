@@ -126,13 +126,23 @@ class ConversationRepository(UserScopedRepository[ConversationDocument, Conversa
         The transport-agnostic usage signal. Every chat turn appends messages,
         which stamps ``updatedAt``, whether it arrived from the web app or a bot
         — unlike ``users.last_active_at``, which only a WorkOS web login bumps.
-        ``createdAt`` is included for rows written before ``updatedAt`` existed.
+        ``createdAt`` covers conversations created but never appended to.
+
+        The two are compared differently ON PURPOSE, per this module's timestamp
+        contract: ``updatedAt`` is a BSON date, ``createdAt`` an ISO string. Mongo
+        does not compare across BSON types, so a date ``$gte`` against
+        ``createdAt`` matches NOTHING — silently, which is how it read as "this
+        user has no activity". ISO-8601 sorts lexicographically in time order, so
+        the string form is a real comparison, not a workaround.
         """
         return (
             await self._count(
                 {
                     "user_id": user_id,
-                    "$or": [{"updatedAt": {"$gte": since}}, {"createdAt": {"$gte": since}}],
+                    "$or": [
+                        {"updatedAt": {"$gte": since}},
+                        {"createdAt": {"$gte": since.isoformat()}},
+                    ],
                 }
             )
             > 0
