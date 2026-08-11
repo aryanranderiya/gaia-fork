@@ -167,13 +167,26 @@ function generateTraceId(): string {
   return randomUUID().replaceAll("-", "").slice(0, 16);
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function mergeFields(
   target: Record<string, unknown>,
   fields: BotLogFields,
 ): void {
   for (const [key, value] of Object.entries(fields)) {
     if (value === undefined) continue;
-    target[key] = value;
+    // Merge a namespace INTO what is already there rather than replacing it, so
+    // every layer of a request accumulates onto one namespace instead of the
+    // last writer silently winning. One level deep, object-into-object only —
+    // a scalar still overwrites. Mirrors `set` in wide_events.py; the two log
+    // shapes are one contract (wide-event-conformance CI lane).
+    const existing = target[key];
+    target[key] =
+      isPlainObject(existing) && isPlainObject(value)
+        ? { ...existing, ...value }
+        : value;
   }
 }
 
@@ -222,20 +235,13 @@ export const wideLog = {
   },
 
   /**
-   * Read-merge into a nested namespace dict on the event. `set` shallow-merges
-   * at the top level, so re-setting a nested object clobbers earlier keys;
-   * `setNs` preserves fields accumulated across a multi-step path.
+   * Read-merge into a nested namespace dict on the event. Identical to
+   * `set({ [namespace]: fields })` — kept because naming the namespace
+   * explicitly reads better on a multi-step path. It delegates so the two can
+   * never drift apart again.
    */
   setNs(namespace: string, fields: BotLogFields): void {
-    const state = storage.getStore();
-    if (!state) return;
-    const existing = state.fields[namespace];
-    const base =
-      existing && typeof existing === "object" && !Array.isArray(existing)
-        ? { ...(existing as Record<string, unknown>) }
-        : {};
-    mergeFields(base, fields);
-    state.fields[namespace] = base;
+    this.set({ [namespace]: fields } as BotLogFields);
   },
 
   /** Real-time warn line + appended to the event's warnings[]; raises its final level. */
