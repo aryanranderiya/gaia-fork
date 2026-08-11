@@ -77,6 +77,45 @@ describe("wideLog.set namespace merging", () => {
     });
   });
 
+  it("does not merge a Date into the namespace it replaces", async () => {
+    // `typeof new Date()` is "object", so a naive guard treats a Date as a
+    // namespace and spreads it — leaking the PREVIOUS value's keys through,
+    // because a Date has no own enumerable properties of its own to overwrite
+    // them with. Python's isinstance(x, dict) rejects a datetime outright, so
+    // admitting one here also splits the two runtimes on the same input.
+    //
+    // The Date still serializes to `{}` rather than an ISO string: toJsonValue
+    // in logger.ts rebuilds every object from Object.entries(). That is a
+    // separate, pre-existing serializer bug — what this test pins is that the
+    // stale `a` key does not survive.
+    const event = await captureEvent(async () => {
+      wideLog.set({ ctx: { a: 1 } });
+      wideLog.set({
+        ctx: new Date("2021-01-01T00:00:00Z") as unknown as number,
+      });
+    });
+
+    expect(event.ctx).toEqual({});
+  });
+
+  it("replaces a class instance rather than merging into it", async () => {
+    // The preceding namespace carries a key the instance does NOT, so merging
+    // is observable: `stale` would survive a spread and must not survive a
+    // replace. Two instances of the same class would spread to the same result
+    // as replacing them, which proves nothing.
+    class Ctx {
+      constructor(readonly label: string) {}
+    }
+    const event = await captureEvent(async () => {
+      wideLog.set({ ctx: { stale: 1, label: "first" } });
+      wideLog.set({
+        ctx: new Ctx("second") as unknown as Record<string, unknown>,
+      });
+    });
+
+    expect(event.ctx).toEqual({ label: "second" });
+  });
+
   it("still replaces when either side is not a plain object", async () => {
     const event = await captureEvent(async () => {
       wideLog.set({ stage: "pending", todo: { operation: "create" } });

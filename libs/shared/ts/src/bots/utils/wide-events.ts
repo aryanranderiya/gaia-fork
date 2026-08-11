@@ -167,8 +167,18 @@ function generateTraceId(): string {
   return randomUUID().replaceAll("-", "").slice(0, 16);
 }
 
+// A namespace is a plain object literal. The prototype check is what keeps
+// Date/Map/Set/RegExp/class instances out: `typeof` reports "object" for all of
+// them, and spreading one keeps only its own enumerable properties — two Dates
+// merge to `{}`, destroying the value instead of overwriting it. Python's half
+// of this contract gets that for free (`isinstance(x, dict)` rejects a
+// datetime), so without this the two runtimes disagree on the same input.
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function mergeFields(
