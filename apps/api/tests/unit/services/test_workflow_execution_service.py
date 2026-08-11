@@ -13,13 +13,15 @@ _MOD = "app.services.workflow.execution_service"
 
 @pytest.mark.unit
 class TestExecutionWideEventFields:
-    @pytest.mark.regression
+    # These carry no regression marker any more. They pinned a whole-dict
+    # `log.set(workflow={...})` erasing the namespace — which erased trigger_type
+    # from 34,247 of 34,413 production workflow fires. #995 has since fixed that
+    # at the root: `log.set` now merges a namespace instead of replacing it, so
+    # the bug no longer exists on base and these correctly pass there. They stay
+    # as gap-fill coverage that this specific path accumulates across
+    # create -> complete, which the generic merge fix does not assert.
     async def test_completing_an_execution_keeps_the_trigger_type_the_caller_stamped(self):
-        """`log.set(workflow={...})` REPLACES the namespace; only `set_ns` merges.
-
-        The whole-dict write erased trigger_type from 34,247 of 34,413 production
-        workflow fires, leaving no way to tell a scheduled fire from a webhook one.
-        """
+        """Fields stamped by the caller survive the completion write."""
         log.reset()
         log.set_ns("workflow", id="wf_1", trigger_type="schedule", steps_count=3)
 
@@ -36,7 +38,6 @@ class TestExecutionWideEventFields:
         assert workflow["status"] == "success"
         assert workflow["duration_ms"] == 1500
 
-    @pytest.mark.regression
     async def test_creating_an_execution_keeps_the_steps_count_the_caller_stamped(self):
         log.reset()
         log.set_ns("workflow", id="wf_1", steps_count=3)

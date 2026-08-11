@@ -189,6 +189,34 @@ class TestSweepDormantWorkflows:
         assert [c.user_id for c in result.candidates] == ["u1", "u2"]
         assert result.workflows_paused == 2
 
+    async def test_both_activity_signals_are_asked_about_the_same_cutoff(self):
+        """The cutoff must reach BOTH repositories, and reach usage_daily in the
+        `YYYY-MM-DD` shape its `date` field is stored as. Nothing else pins this:
+        the doubles elsewhere discard the argument, so a wrong (or wrongly
+        formatted) cutoff would still report the user dormant — the direction
+        that pauses a live user's workflows."""
+        chat = AsyncMock(return_value=False)
+        metered = AsyncMock(return_value={})
+        with (
+            patch(
+                f"{_MOD}.user_repository.find_dormant_since",
+                new_callable=AsyncMock,
+                return_value=[_user("u1")],
+            ),
+            patch(f"{_MOD}.conversation_repository.has_activity_since", chat),
+            patch(f"{_MOD}.usage_daily_repository.counts_since", metered),
+            patch(
+                f"{_MOD}.workflow_repository.find_activated_for_user",
+                new_callable=AsyncMock,
+                return_value=[_workflow("wf_a")],
+            ),
+            patch(f"{_MOD}.WorkflowService.deactivate_workflow", new_callable=AsyncMock),
+        ):
+            result = await sweep_dormant_workflows(threshold=timedelta(days=90))
+
+        assert chat.await_args.args == ("u1", result.cutoff)
+        assert metered.await_args.args == ("u1", result.cutoff.strftime("%Y-%m-%d"))
+
     async def test_the_threshold_defaults_to_ninety_days(self):
         """30 days is where the signal choice still moves the answer by ~2,000
         workflows; 90 is where it stops mattering. See DORMANCY_THRESHOLD."""
