@@ -55,8 +55,9 @@ def _patches(
 class TestSweepDormantWorkflows:
     async def test_dry_run_reports_the_cohort_without_writing(self):
         deactivate = AsyncMock()
+        dormant, no_workflows = _user("u1"), _user("u2")
         p1, p2, p3 = _patches(
-            users=[_user("u1"), _user("u2")],
+            users=[dormant, no_workflows],
             workflows_by_user={"u1": [_workflow("wf_a"), _workflow("wf_b")], "u2": []},
             deactivate=deactivate,
         )
@@ -69,6 +70,9 @@ class TestSweepDormantWorkflows:
         # u2 owns nothing activated, so it is not a candidate at all.
         assert [c.user_id for c in result.candidates] == ["u1"]
         assert result.candidates[0].workflow_ids == ["wf_a", "wf_b"]
+        # The real stamp, not a placeholder: it is what the dry-run script prints
+        # for an operator to judge how stale the cohort actually is.
+        assert result.candidates[0].last_active_at == dormant.last_active_at
 
     async def test_pausing_stamps_the_dormancy_reason(self):
         deactivate = AsyncMock()
