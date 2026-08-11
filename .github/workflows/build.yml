@@ -53,7 +53,7 @@ jobs:
     steps:
       # Prepare repository + tooling so Nx can calculate affected projects.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -230,7 +230,7 @@ jobs:
       # which a shallow clone does not contain ("fatal: bad object" in the
       # affected check). docker-release fetches full history for the same reason.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -312,7 +312,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Log in to GHCR
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
@@ -367,7 +367,7 @@ jobs:
       docker_release_result: ${{ steps.plan.outputs.docker_release_result }}
       docker_web_result: ${{ steps.plan.outputs.docker_web_result }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Single decision point that translates lane results + affected +
       # manual mode into deploy booleans, applies the backend/web coupling
       # rule for pushes that touch both, and flags any image lane that
