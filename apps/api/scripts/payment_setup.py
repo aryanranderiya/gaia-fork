@@ -266,8 +266,14 @@ async def print_active_plans(
 
 async def invalidate_plan_cache() -> None:
     """Drop the cached plan catalogue so the API re-reads the new prices."""
-    for cache_key in PLANS_CACHE_KEYS:
-        await redis_cache.delete(cache_key)
+    failed = [key for key in PLANS_CACHE_KEYS if not await redis_cache.delete(key)]
+    if failed:
+        # The prices are already written, so a surviving cache key means the API
+        # keeps serving the old ones — louder than a success message that lies.
+        raise RuntimeError(
+            f"Plans were written but the cache was not cleared: {', '.join(failed)}. "
+            "The API will serve stale prices until these keys are dropped."
+        )
     print(f"🧹 Cleared cached plan catalogue: {', '.join(PLANS_CACHE_KEYS)}")
 
 
