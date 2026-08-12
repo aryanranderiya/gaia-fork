@@ -1,5 +1,4 @@
 import asyncio
-from collections.abc import Callable
 from functools import cache
 from typing import Any, TypeVar, cast
 
@@ -13,12 +12,17 @@ from langchain_core.runnables.utils import ConfigurableField
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openrouter import ChatOpenRouter
 from pydantic import BaseModel, SecretStr
-from typing_extensions import TypedDict
 
 from app.agents.llm.exceptions import (
     LLM_FALLBACK_EXCEPTIONS,
     LLM_RETRYABLE_EXCEPTIONS,
     LLMNotConfiguredError,
+)
+from app.agents.llm.types import (
+    LLMFallback,
+    LLMProvider,
+    LLMProviderKey,
+    ProviderLLM,
 )
 from app.config.settings import settings
 from app.constants.llm import (
@@ -47,11 +51,6 @@ from shared.py.wide_events import log
 
 _StructuredT = TypeVar("_StructuredT", bound=BaseModel)
 _ResultT = TypeVar("_ResultT")
-
-# A fallback may be passed as a ready runnable or as a zero-arg factory, so
-# expensive preparation (e.g. re-binding the full tool list) only happens in
-# the rare case the primary actually fails.
-LLMFallback = Runnable | Callable[[], Runnable | None] | None
 
 
 def with_llm_retry(runnable: Runnable, *, max_attempts: int = LLM_RETRY_MAX_ATTEMPTS) -> Runnable:
@@ -88,11 +87,6 @@ PROVIDER_PRIORITY = {
     2: "gemini",
     3: "custom",
 }
-
-
-class LLMProvider(TypedDict):
-    name: str
-    instance: BaseChatModel
 
 
 @cache
@@ -139,7 +133,7 @@ def _openrouter_wire_configurables(llm: ChatOpenRouter) -> LanguageModelLike:
 
 
 @lazy_provider(
-    name="gemini_llm",
+    name=LLMProviderKey.GEMINI,
     required_keys=[SIM_STUB_API_KEY if settings.GAIA_SIM_MODE else settings.GOOGLE_API_KEY],
     strategy=MissingKeyStrategy.WARN,
     warning_message="Google API key not configured. Models provided by Google Gemini will not work.",
@@ -157,7 +151,7 @@ def init_gemini_llm() -> LanguageModelLike:
 
 
 @lazy_provider(
-    name="openrouter_llm",
+    name=LLMProviderKey.OPENROUTER,
     required_keys=[SIM_STUB_API_KEY if settings.GAIA_SIM_MODE else settings.OPENROUTER_API_KEY],
     strategy=MissingKeyStrategy.WARN,
     warning_message="OpenRouter API key not configured. Models provided via OpenRouter (Grok, etc.) will not work.",
@@ -199,7 +193,7 @@ def init_openrouter_llm() -> LanguageModelLike:
 
 
 @lazy_provider(
-    name="custom_llm",
+    name=LLMProviderKey.CUSTOM,
     required_keys=[SIM_STUB_API_KEY]
     if settings.GAIA_SIM_MODE
     else [settings.DEV_LLM_BASE_URL, settings.DEV_LLM_API_KEY, settings.DEV_LLM_MODEL],
@@ -277,19 +271,22 @@ def init_llm(
     return _create_configurable_llm(primary_provider, alternative_providers)
 
 
-def _get_available_providers() -> dict[str, Any]:
+def _get_available_providers() -> dict[str, ProviderLLM]:
     """Retrieve available LLM provider instances from the global registry,
     mapped by provider name."""
-    # Mapping of provider names to their instance keys in the providers registry
     provider_instance_mapping = {
-        "gemini": "gemini_llm",
-        "openrouter": "openrouter_llm",
-        "custom": "custom_llm",
+        "gemini": LLMProviderKey.GEMINI,
+        "openrouter": LLMProviderKey.OPENROUTER,
+        "custom": LLMProviderKey.CUSTOM,
     }
 
-    available = {}
+    available: dict[str, ProviderLLM] = {}
     for provider_name, instance_key in provider_instance_mapping.items():
-        instance = providers.get(instance_key)
+        # custom_llm is only registered in development; providers.get() raises
+        # KeyError on an unregistered name, which took every agent graph down.
+        if not providers.is_available(instance_key):
+            continue
+        instance = cast(ProviderLLM | None, providers.get(instance_key))
         if instance is not None:
             available[provider_name] = instance
 
@@ -297,13 +294,13 @@ def _get_available_providers() -> dict[str, Any]:
 
 
 def _get_ordered_providers(
-    available_providers: dict[str, Any],
+    available_providers: dict[str, ProviderLLM],
     preferred_provider: str | None,
     fallback_enabled: bool,
 ) -> list[LLMProvider]:
     """Order providers by preference and availability, returning LLMProvider
     objects in priority order."""
-    ordered = []
+    ordered: list[LLMProvider] = []
     remaining_providers = available_providers.copy()
 
     # If a preferred provider is specified and available, prioritize it

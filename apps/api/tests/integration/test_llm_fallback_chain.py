@@ -28,6 +28,7 @@ from app.agents.llm.client import (
     _get_ordered_providers,
     ainvoke_llm,
     init_llm,
+    register_llm_providers,
 )
 from app.config.model_pricing import (
     DEFAULT_PRICING,
@@ -35,6 +36,7 @@ from app.config.model_pricing import (
     calculate_token_cost,
     get_model_pricing,
 )
+from app.config.settings import settings
 from app.constants.llm import DEFAULT_LLM_PROVIDER
 from app.core.lazy_loader import MissingKeyStrategy, ProviderRegistry
 
@@ -386,6 +388,34 @@ class TestGetAvailableProviders:
             available = _get_available_providers()
 
         assert available == {}
+
+
+@pytest.mark.integration
+class TestProductionProviderRegistration:
+    """Drives the REAL register_llm_providers().
+
+    `_build_registry` above always registers all four slots and varies only the
+    keys, so production's actual state — custom_llm never registered, because it
+    is gated on ENV=development — was unrepresentable, and the KeyError it raised
+    went unseen by every tier.
+    """
+
+    @pytest.mark.regression
+    def test_production_registration_leaves_init_llm_working(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        registry = ProviderRegistry()
+        # Registration writes to lazy_loader.providers, the lookup reads
+        # client.providers; both must point at the throwaway or the global
+        # singleton leaks into every later test.
+        monkeypatch.setattr("app.core.lazy_loader.providers", registry)
+        monkeypatch.setattr("app.agents.llm.client.providers", registry)
+        monkeypatch.setattr(settings, "ENV", "production")
+
+        register_llm_providers()
+
+        assert "custom" not in _get_available_providers()
+        assert init_llm() is not None
 
 
 @pytest.mark.integration
