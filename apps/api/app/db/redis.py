@@ -362,21 +362,17 @@ class RedisCache:
             )
             return False
 
-    async def delete(self, key: str) -> bool:
+    async def delete(self, key: str) -> None:
         """
-        Delete a cached key. Returns whether the key was actually dropped.
-
-        Request paths may ignore the result — a cache miss is recoverable — but a
-        caller invalidating stale data needs to know the key is really gone.
+        Delete a cached key.
         """
         if not self.redis:
             log.warning(f"{LogTag.STORAGE} Redis is not initialized. Skipping delete operation.")
-            return False
+            return
 
         try:
             await self.redis.delete(key)
             log.info(f"{LogTag.STORAGE} Cache deleted for key", key=key)
-            return True
         except Exception as e:
             log.error(
                 "redis_op_failed",
@@ -385,7 +381,6 @@ class RedisCache:
                 error_type=type(e).__name__,
                 error=str(e),
             )
-            return False
 
     @property
     def client(self) -> AsyncRedisCommands:

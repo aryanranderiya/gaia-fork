@@ -2,12 +2,17 @@
 
 Two behaviors decide whether a production run is safe: the script must not
 rewrite a plan whose content already matches (so `--dry-run` predicts the real
-run), and it must refuse to report success when the plan cache survives the
-write (so the API cannot keep serving the previous prices).
+run), and a failure to clear the plan cache must surface rather than print a
+success the API contradicts.
+
+No `regression` markers here — every symbol under test is introduced by this
+change, so these tests cannot run against the base revision at all, and an
+import error is not proof of anything. The mutation check that backs them is
+in the PR: reverting either behavior turns these red.
 """
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from scripts.payment_setup import (
@@ -30,7 +35,6 @@ def _stored_document(plan, **overrides):
     return stored
 
 
-@pytest.mark.regression
 async def test_reconcile_leaves_an_already_matching_plan_untouched() -> None:
     """A plan whose content matches is not rewritten just to move updated_at."""
     plan = build_plan_catalogue("monthly-id", "yearly-id")[1]
@@ -43,7 +47,6 @@ async def test_reconcile_leaves_an_already_matching_plan_untouched() -> None:
     collection.update_one.assert_not_awaited()
 
 
-@pytest.mark.regression
 async def test_dry_run_and_write_agree_on_whether_a_plan_changes() -> None:
     """Whatever the dry run reports for a plan, the real run must do."""
     plan = build_plan_catalogue("monthly-id", "yearly-id")[1]
@@ -96,15 +99,24 @@ async def test_dry_run_writes_nothing_for_a_missing_plan() -> None:
     collection.update_one.assert_not_awaited()
 
 
-@pytest.mark.regression
-async def test_invalidate_plan_cache_raises_when_a_key_survives() -> None:
-    """A cache the API still reads from must fail the run, not print success."""
-    with patch("scripts.payment_setup.redis_cache.delete", AsyncMock(return_value=False)):
-        with pytest.raises(RuntimeError, match="cache was not cleared"):
-            await invalidate_plan_cache()
+async def test_invalidate_plan_cache_drops_every_key() -> None:
+    """Both catalogue keys are deleted in one command."""
+    client = MagicMock()
+    client.delete = AsyncMock(return_value=2)
 
-
-async def test_invalidate_plan_cache_passes_when_every_key_is_dropped() -> None:
-    """All keys dropped is the success path."""
-    with patch("scripts.payment_setup.redis_cache.delete", AsyncMock(return_value=True)):
+    with patch("scripts.payment_setup.redis_cache") as cache:
+        cache.client = client
         await invalidate_plan_cache()
+
+    assert set(client.delete.await_args.args) == {"plans:active", "plans:all"}
+
+
+async def test_invalidate_plan_cache_propagates_a_redis_failure() -> None:
+    """A cache the API still reads from must fail the run, not print success."""
+    client = MagicMock()
+    client.delete = AsyncMock(side_effect=ConnectionError("redis down"))
+
+    with patch("scripts.payment_setup.redis_cache") as cache:
+        cache.client = client
+        with pytest.raises(ConnectionError):
+            await invalidate_plan_cache()

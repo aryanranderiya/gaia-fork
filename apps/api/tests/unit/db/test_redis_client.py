@@ -415,40 +415,35 @@ class TestRedisCacheDelete:
     """Tests for RedisCache.delete() method."""
 
     async def test_delete_removes_key(self) -> None:
-        """Should call redis.delete with the key and report success."""
+        """Should call redis.delete with the key."""
         cache = RedisCache.__new__(RedisCache)
         cache.redis = AsyncMock()
 
         with patch("app.db.redis.log"):
-            deleted = await cache.delete("user:123")
+            await cache.delete("user:123")
 
         cache.redis.delete.assert_awaited_once_with("user:123")
-        assert deleted is True
 
-    @pytest.mark.regression
     async def test_delete_skips_when_redis_not_initialized(self) -> None:
-        """Should warn and report failure when redis is None."""
+        """Should warn and return when redis is None."""
         cache = RedisCache.__new__(RedisCache)
         cache.redis = None
 
         with patch("app.db.redis.log") as mock_log:
-            deleted = await cache.delete("key")
+            await cache.delete("key")
 
         mock_log.warning.assert_called()
-        assert deleted is False
 
-    @pytest.mark.regression
     async def test_delete_catches_exception(self) -> None:
-        """Should log the failure and report it, not swallow it silently."""
+        """Should catch and log exceptions during delete."""
         cache = RedisCache.__new__(RedisCache)
         cache.redis = AsyncMock()
         cache.redis.delete.side_effect = Exception("delete failed")
 
         with patch("app.db.redis.log") as mock_log:
-            deleted = await cache.delete("key")
+            await cache.delete("key")
 
         mock_log.error.assert_called()
-        assert deleted is False
 
 
 # ---------------------------------------------------------------------------
