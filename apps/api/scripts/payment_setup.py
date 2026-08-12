@@ -46,23 +46,11 @@ try:
     from app.config.secrets import inject_infisical_secrets
 
     inject_infisical_secrets()
-    # Debug: Print Infisical ENV and credentials
+    # Presence only — this script is run against production, so its stdout must
+    # never carry the machine-identity credentials or the Dodo API key.
     print(f"[DEBUG] ENV: {os.environ.get('ENV')}")
-    print(f"[DEBUG] INFISICAL_PROJECT_ID: {os.environ.get('INFISICAL_PROJECT_ID')}")
-    print(
-        f"[DEBUG] INFISICAL_MACHINE_IDENTITY_CLIENT_ID: {os.environ.get('INFISICAL_MACHINE_IDENTITY_CLIENT_ID')}"
-    )
-    print(
-        f"[DEBUG] INFISICAL_MACHINE_IDENTITY_CLIENT_SECRET: {os.environ.get('INFISICAL_MACHINE_IDENTITY_CLIENT_SECRET')}"
-    )
-    # Debug: Print if DODO_PAYMENTS_API_KEY is present after injection
-    dodo_key = os.environ.get("DODO_PAYMENTS_API_KEY")
-    if dodo_key:
-        print(
-            f"[DEBUG] DODO_PAYMENTS_API_KEY is present after Infisical injection (starts with: {dodo_key[:6]})"
-        )
-    else:
-        print("[DEBUG] DODO_PAYMENTS_API_KEY is NOT present after Infisical injection")
+    for key in ("INFISICAL_PROJECT_ID", "DODO_PAYMENTS_API_KEY"):
+        print(f"[DEBUG] {key}: {'present' if os.environ.get(key) else 'MISSING'} after injection")
 except Exception as e:
     print(f"[WARN] Could not inject Infisical secrets: {e}")
 
@@ -74,7 +62,9 @@ sys.path.insert(0, str(backend_dir))
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from app.config.settings import settings
+from app.constants.cache import PLANS_CACHE_KEYS
 from app.constants.memory import FREE_MEMORY_FACT_LIMIT
+from app.db.redis import redis_cache
 from app.models.payment_models import PlanDocument
 
 
@@ -97,9 +87,20 @@ async def cleanup_old_indexes(collection):
         print(f"⚠️  Warning: Could not clean up old indexes: {e}")
 
 
-async def setup_payment_plans(monthly_product_id: str, yearly_product_id: str):
+def diff_plan(existing: dict, incoming: dict) -> dict:
+    """Fields whose stored value differs from what the setup would write."""
+    return {
+        field: (existing.get(field), value)
+        for field, value in incoming.items()
+        if existing.get(field) != value
+    }
+
+
+async def setup_payment_plans(
+    monthly_product_id: str, yearly_product_id: str, dry_run: bool = False
+):
     """Set up GAIA subscription plans in the database using Dodo product IDs."""
-    print("🚀 GAIA Payment Setup")
+    print("🚀 GAIA Payment Setup" + (" (DRY RUN — no writes)" if dry_run else ""))
     print("=" * 50)
 
     # Try to fetch DODO_PAYMENTS_API_KEY from Infisical-injected env, fallback to settings
@@ -110,7 +111,7 @@ async def setup_payment_plans(monthly_product_id: str, yearly_product_id: str):
         print("❌ DODO_PAYMENTS_API_KEY not found in Infisical or environment variables/settings")
         return False
 
-    print(f"🔗 Using Dodo Payments API Key: {dodo_payments_api_key[:10]}...")
+    print("🔗 Dodo Payments API key resolved")
     print(f"📦 Monthly Product ID: {monthly_product_id}")
     print(f"📦 Yearly Product ID: {yearly_product_id}")
     print()
@@ -199,7 +200,8 @@ async def setup_payment_plans(monthly_product_id: str, yearly_product_id: str):
         collection = db["subscription_plans"]
 
         # Clean up old payment gateway indexes first
-        await cleanup_old_indexes(collection)
+        if not dry_run:
+            await cleanup_old_indexes(collection)
 
         print("📊 Setting up subscription plans...")
         print()
@@ -239,19 +241,34 @@ async def setup_payment_plans(monthly_product_id: str, yearly_product_id: str):
                     }
                 )
 
+                update_fields = plan_doc.model_dump(by_alias=True, exclude={"id", "created_at"})
+
                 if existing_plan:
-                    # Update existing plan
-                    await collection.update_one(
-                        {"_id": existing_plan["_id"]},
-                        {"$set": plan_doc.model_dump(by_alias=True, exclude={"id", "created_at"})},
-                    )
+                    if dry_run:
+                        changes = diff_plan(existing_plan, update_fields)
+                        changes.pop("updated_at", None)
+                        if changes:
+                            print("   📝 Would update existing plan:")
+                            for field, (before, after) in changes.items():
+                                print(f"      - {field}: {before!r} → {after!r}")
+                        else:
+                            print("   ➖ Would leave existing plan unchanged")
+                    else:
+                        await collection.update_one(
+                            {"_id": existing_plan["_id"]},
+                            {"$set": update_fields},
+                        )
+                        print("   ✅ Updated existing plan")
                     updated_count += 1
-                    print("   ✅ Updated existing plan")
                 else:
-                    # Insert new plan
-                    await collection.insert_one(plan_doc.model_dump(by_alias=True, exclude={"id"}))
+                    if dry_run:
+                        print("   📝 Would create new plan")
+                    else:
+                        await collection.insert_one(
+                            plan_doc.model_dump(by_alias=True, exclude={"id"})
+                        )
+                        print("   ✅ Created new plan")
                     created_count += 1
-                    print("   ✅ Created new plan")
 
                 print(
                     f"   💰 Amount: ${int(plan_item['amount']) / 100:.2f} {plan_item['currency']}"
@@ -267,8 +284,8 @@ async def setup_payment_plans(monthly_product_id: str, yearly_product_id: str):
 
         print("=" * 50)
         print("📈 Setup Summary:")
-        print(f"   • Created: {created_count} plans")
-        print(f"   • Updated: {updated_count} plans")
+        print(f"   • {'Would create' if dry_run else 'Created'}: {created_count} plans")
+        print(f"   • {'Would update' if dry_run else 'Updated'}: {updated_count} plans")
         print(f"   • Total: {created_count + updated_count} plans processed")
         print()
 
@@ -276,15 +293,25 @@ async def setup_payment_plans(monthly_product_id: str, yearly_product_id: str):
         plans_cursor = collection.find({"is_active": True}).sort("amount", 1)
         plans = await plans_cursor.to_list(length=None)
 
-        print("📋 Active Plans:")
+        print(
+            "📋 Active Plans (current state, before any write):" if dry_run else "📋 Active Plans:"
+        )
         for plan in plans:
             print(f"   • {plan['name']} ({plan['duration']}) - ${plan['amount'] / 100:.2f}")
             print(f"     Dodo Product ID: {plan.get('dodo_product_id') or 'N/A'}")
 
         print()
-        print("✅ Payment system setup complete!")
-        print("🔗 Frontend can now fetch plans via GET /api/v1/payments/plans")
-        print("🎯 Users can create subscriptions via POST /api/v1/payments/subscriptions")
+        if dry_run:
+            print("✅ Dry run complete — nothing was written.")
+        else:
+            # The plan catalogue is cached for an hour, so without this the API
+            # keeps serving the old prices long after the write lands.
+            for cache_key in PLANS_CACHE_KEYS:
+                await redis_cache.delete(cache_key)
+            print(f"🧹 Cleared cached plan catalogue: {', '.join(PLANS_CACHE_KEYS)}")
+            print("✅ Payment system setup complete!")
+            print("🔗 Frontend can now fetch plans via GET /api/v1/payments/plans")
+            print("🎯 Users can create subscriptions via POST /api/v1/payments/subscriptions")
 
         return True
 
@@ -310,12 +337,23 @@ async def main():
         required=True,
         help="Dodo product ID for yearly Pro plan",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the changes that would be made without writing to the database",
+    )
 
     args = parser.parse_args()
 
     try:
-        await setup_payment_plans(args.monthly_product_id, args.yearly_product_id)
-        print("\n🎉 Payment setup completed successfully!")
+        await setup_payment_plans(
+            args.monthly_product_id, args.yearly_product_id, dry_run=args.dry_run
+        )
+        print(
+            "\n🎉 Dry run finished!"
+            if args.dry_run
+            else "\n🎉 Payment setup completed successfully!"
+        )
     except Exception as e:
         print(f"\n💥 Setup failed with error: {e}")
 
