@@ -138,13 +138,16 @@ class ChatDexie extends Dexie {
   public messages!: Table<IMessage, string>;
 
   /**
-   * Resolves once we know whether IndexedDB can be opened on this device.
-   * iOS Safari refuses to open it entirely under private browsing, storage
-   * pressure, or the long-standing WebKit bug — the open throws
+   * Resolves to whether IndexedDB persistence is usable for this session.
+   * iOS Safari refuses to open the database entirely under private browsing,
+   * storage pressure, or the long-standing WebKit bug — the open throws
    * `DOMException: UnknownError: Unable to open database file on disk`.
-   * Probed once and cached; see `run`.
+   * Probed once and cached; see `run`. Also flips to `false` when a later
+   * operation rejects (a transaction can fail after a successful open, e.g.
+   * under storage pressure), so one failure degrades the whole session
+   * instead of leaking uncaught rejections.
    */
-  private openable: Promise<boolean> | null = null;
+  private usable: Promise<boolean> | null = null;
 
   constructor() {
     super("ChatDatabase");
@@ -159,13 +162,14 @@ class ChatDexie extends Dexie {
   }
 
   /**
-   * Whether IndexedDB is usable. Attempts to open the database once and caches
-   * the verdict; a failed open resolves to `false` rather than rejecting, so
-   * callers degrade gracefully instead of surfacing an uncaught rejection.
+   * Whether IndexedDB persistence is usable this session. Attempts to open the
+   * database once and caches the verdict; a failed open resolves to `false`
+   * rather than rejecting, so callers degrade gracefully instead of surfacing
+   * an uncaught rejection.
    */
-  private isOpenable(): Promise<boolean> {
-    if (this.openable === null) {
-      this.openable = this.open()
+  private isUsable(): Promise<boolean> {
+    if (this.usable === null) {
+      this.usable = this.open()
         .then(() => true)
         .catch((error: unknown) => {
           console.error(
@@ -175,19 +179,31 @@ class ChatDexie extends Dexie {
           return false;
         });
     }
-    return this.openable;
+    return this.usable;
   }
 
   /**
-   * Run a Dexie operation, degrading to `fallback` when IndexedDB cannot be
-   * opened. This is the single guard for the whole store: callers keep awaiting
-   * a resolved promise instead of every write becoming an uncaught rejection on
-   * iOS Safari. Event emissions live outside this gate, so the in-memory store
-   * still updates live and only cross-reload persistence is lost.
+   * Run a Dexie operation, degrading to `fallback` when IndexedDB persistence
+   * is unavailable. This is the single guard for the whole store: callers keep
+   * awaiting a resolved promise instead of every write becoming an uncaught
+   * rejection on iOS Safari. A rejection from the operation itself (open
+   * succeeded but the write/transaction failed) degrades the same way — the
+   * session latches to unavailable and the fallback is returned. Event
+   * emissions live outside this gate, so the in-memory store still updates
+   * live and only cross-reload persistence is lost.
    */
   private async run<T>(fallback: T, operation: () => Promise<T>): Promise<T> {
-    if (!(await this.isOpenable())) return fallback;
-    return operation();
+    if (!(await this.isUsable())) return fallback;
+    try {
+      return await operation();
+    } catch (error: unknown) {
+      console.error(
+        "IndexedDB unavailable — chat history will not persist this session:",
+        error,
+      );
+      this.usable = Promise.resolve(false);
+      return fallback;
+    }
   }
 
   public getConversation(id: string): Promise<IConversation | undefined> {

@@ -69,8 +69,10 @@ export default function QueryProvider({ children }: { children: ReactNode }) {
       }),
   );
 
-  // Setup indexedDB for storage of cached queries
-  const persister = createIDBPersister();
+  // Setup indexedDB for storage of cached queries. Created once so the
+  // persister's disabled latch survives re-renders — a fresh persister per
+  // render would reset it and retry IndexedDB after the first failure.
+  const [persister] = useState(() => createIDBPersister());
 
   return (
     <PersistQueryClientProvider
