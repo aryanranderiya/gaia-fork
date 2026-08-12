@@ -11,7 +11,8 @@ from fastapi import HTTPException
 
 from app.config.settings import settings
 from app.constants.cache import (
-    PLANS_CACHE_KEYS,
+    ACTIVE_PLANS_CACHE_KEY,
+    ALL_PLANS_CACHE_KEY,
     SUBSCRIPTION_PLAN_CACHE_PREFIX,
     SUBSCRIPTION_PLAN_CACHE_TTL,
 )
@@ -66,7 +67,7 @@ class DodoPaymentService:
 
     async def get_plans(self, active_only: bool = True) -> list[PlanResponse]:
         """Get subscription plans with caching."""
-        cache_key = PLANS_CACHE_KEYS[0] if active_only else PLANS_CACHE_KEYS[1]
+        cache_key = ACTIVE_PLANS_CACHE_KEY if active_only else ALL_PLANS_CACHE_KEY
 
         # Try cache first
         cached = await redis_cache.get(cache_key)

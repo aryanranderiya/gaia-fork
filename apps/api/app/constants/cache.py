@@ -27,8 +27,10 @@ SUBAGENT_CACHE_TTL = ONE_HOUR_TTL
 SUBSCRIPTION_PLAN_CACHE_PREFIX = "subscription:"
 SUBSCRIPTION_PLAN_CACHE_TTL = FIVE_MINUTES_TTL
 # The plan catalogue itself, keyed by whether inactive plans are included. Seeded
-# by scripts/payment_setup.py, which drops both keys after writing.
-PLANS_CACHE_KEYS = ("plans:active", "plans:all")
+# by scripts/payment_setup.py, which drops every key after writing.
+ACTIVE_PLANS_CACHE_KEY = "plans:active"
+ALL_PLANS_CACHE_KEY = "plans:all"
+PLANS_CACHE_KEYS = (ACTIVE_PLANS_CACHE_KEY, ALL_PLANS_CACHE_KEY)
 OAUTH_STATE_TTL = TEN_MINUTES_TTL
 OAUTH_DISCOVERY_TTL = ONE_DAY_TTL
 MCP_TOOLS_CACHE_TTL = ONE_DAY_TTL
