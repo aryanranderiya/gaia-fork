@@ -22,6 +22,7 @@ from app.agents.llm.types import (
     LLMFallback,
     LLMProvider,
     LLMProviderKey,
+    LLMProviderName,
     ProviderLLM,
 )
 from app.config.settings import settings
@@ -75,17 +76,17 @@ def is_default_model_config(configurable: AgentConfigurable) -> bool:
     )
 
 
-PROVIDER_MODELS = {
-    "gemini": DEFAULT_GEMINI_MODEL_NAME,
-    "openrouter": DEFAULT_MODEL_NAME,
+PROVIDER_MODELS: dict[LLMProviderName, str] = {
+    LLMProviderName.GEMINI: DEFAULT_GEMINI_MODEL_NAME,
+    LLMProviderName.OPENROUTER: DEFAULT_MODEL_NAME,
     # The env-defined custom dev endpoint; empty when unset — the provider is
     # only registered in development with all DEV_LLM_* settings present.
-    "custom": settings.DEV_LLM_MODEL or "",
+    LLMProviderName.CUSTOM: settings.DEV_LLM_MODEL or "",
 }
-PROVIDER_PRIORITY = {
-    1: "openrouter",
-    2: "gemini",
-    3: "custom",
+PROVIDER_PRIORITY: dict[int, LLMProviderName] = {
+    1: LLMProviderName.OPENROUTER,
+    2: LLMProviderName.GEMINI,
+    3: LLMProviderName.CUSTOM,
 }
 
 
@@ -143,7 +144,7 @@ def init_gemini_llm() -> LanguageModelLike:
     if settings.GAIA_SIM_MODE:
         return _sim_llm()
     llm = ChatGoogleGenerativeAI(
-        model=PROVIDER_MODELS["gemini"],
+        model=PROVIDER_MODELS[LLMProviderName.GEMINI],
         temperature=DEFAULT_LLM_TEMPERATURE,
         streaming=True,
     ).configurable_fields(model=_MODEL_FIELD)
@@ -173,7 +174,7 @@ def init_openrouter_llm() -> LanguageModelLike:
     # mode's job (_sim_llm); this construction is identical to pre-sim behavior.
     return _openrouter_wire_configurables(
         ChatOpenRouter(
-            model=PROVIDER_MODELS["openrouter"],
+            model=PROVIDER_MODELS[LLMProviderName.OPENROUTER],
             temperature=DEFAULT_LLM_TEMPERATURE,
             streaming=True,
             stream_usage=True,
@@ -212,7 +213,7 @@ def init_custom_llm() -> LanguageModelLike:
         return _sim_llm()
     return _openrouter_wire_configurables(
         ChatOpenRouter(
-            model=PROVIDER_MODELS["custom"],
+            model=PROVIDER_MODELS[LLMProviderName.CUSTOM],
             temperature=DEFAULT_LLM_TEMPERATURE,
             streaming=True,
             stream_usage=True,
@@ -232,13 +233,15 @@ def init_llm(
     Without a preferred_provider, uses the default priority order. Raises
     ValueError on an unknown provider, RuntimeError if none are configured.
     """
-    # Validate preferred provider if specified
+    # preferred_provider is untrusted input (a request configurable), so it stays
+    # a plain str on the signature and is narrowed to the enum once validated.
     if preferred_provider and preferred_provider not in PROVIDER_MODELS:
         valid_providers = list(PROVIDER_MODELS.keys())
         raise ValueError(
             f"Invalid preferred_provider '{preferred_provider}'. "
             f"Valid providers are: {valid_providers}"
         )
+    preferred = LLMProviderName(preferred_provider) if preferred_provider else None
 
     # Get available provider instances from global providers registry
     available_providers = _get_available_providers()
@@ -247,9 +250,7 @@ def init_llm(
         raise RuntimeError("No LLM providers are properly configured.")
 
     # Determine provider order based on preferred provider or default priority
-    ordered_providers = _get_ordered_providers(
-        available_providers, preferred_provider, fallback_enabled
-    )
+    ordered_providers = _get_ordered_providers(available_providers, preferred, fallback_enabled)
 
     if not ordered_providers:
         raise RuntimeError(
@@ -271,16 +272,16 @@ def init_llm(
     return _create_configurable_llm(primary_provider, alternative_providers)
 
 
-def _get_available_providers() -> dict[str, ProviderLLM]:
+def _get_available_providers() -> dict[LLMProviderName, ProviderLLM]:
     """Retrieve available LLM provider instances from the global registry,
     mapped by provider name."""
-    provider_instance_mapping = {
-        "gemini": LLMProviderKey.GEMINI,
-        "openrouter": LLMProviderKey.OPENROUTER,
-        "custom": LLMProviderKey.CUSTOM,
+    provider_instance_mapping: dict[LLMProviderName, LLMProviderKey] = {
+        LLMProviderName.GEMINI: LLMProviderKey.GEMINI,
+        LLMProviderName.OPENROUTER: LLMProviderKey.OPENROUTER,
+        LLMProviderName.CUSTOM: LLMProviderKey.CUSTOM,
     }
 
-    available: dict[str, ProviderLLM] = {}
+    available: dict[LLMProviderName, ProviderLLM] = {}
     for provider_name, instance_key in provider_instance_mapping.items():
         # custom_llm is only registered in development; providers.get() raises
         # KeyError on an unregistered name, which took every agent graph down.
@@ -294,8 +295,8 @@ def _get_available_providers() -> dict[str, ProviderLLM]:
 
 
 def _get_ordered_providers(
-    available_providers: dict[str, ProviderLLM],
-    preferred_provider: str | None,
+    available_providers: dict[LLMProviderName, ProviderLLM],
+    preferred_provider: LLMProviderName | None,
     fallback_enabled: bool,
 ) -> list[LLMProvider]:
     """Order providers by preference and availability, returning LLMProvider
@@ -334,8 +335,8 @@ def _create_configurable_llm(
         # Return primary instance directly if no alternatives
         return primary["instance"]
 
-    # Create configurable alternatives mapping
-    alternatives_mapping = {alt["name"]: alt["instance"] for alt in alternatives}
+    # Keyword-expanded below, so the keys must be plain str, not enum members.
+    alternatives_mapping = {str(alt["name"]): alt["instance"] for alt in alternatives}
 
     primary_instance = primary["instance"]
 
